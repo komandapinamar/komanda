@@ -46,10 +46,10 @@ First run ./print-service/setup_raspberry_print_service.sh to install dependenci
 
 Wifi should be set up in advance using raspi-config or nmtui, this is really important to have the raspi working autonomously.
 
-Example Unit file:
+Example Unit file in /etc/systemd/system/print-service.servic:
 ```
 [Unit]
-Description=Raspberry Pi Print Service
+Description=Print Service
 After=network-online.target
 Wants=network-online.target
 
@@ -65,6 +65,12 @@ Environment=PYTHONUNBUFFERED=1
 [Install]
 WantedBy=multi-user.target
 ```
+
+sudo systemctl daemon-reload
+sudo systemctl enable print-service.service
+sudo systemctl start print-service.service
+sudo systemctl status print-service.service
+
 # Data modelling
 
 As per now, Sprapi v5 does not support polymorphic relations, so the way to model the entities was repetitve and dull at best, but it is what it is. The entities are:
