@@ -4,7 +4,31 @@
 - Api route on $url + /api/menu to get updated menu from strapi
 - Strapi running on port 1337 so it is allowed in "remotePatterns" in next.config.ts
 
-## Database:
+link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-id=17-48&t=KNZSgvzYHZo4vrVB-1>
+
+# Specs
+
+ 1. SPEC-001 Multi-tenant base.
+ 2. SPEC-002 Auth y roles.
+ 3. SPEC-003 Catálogo en Postgres.
+ 4. SPEC-004 Órdenes persistentes.
+ 5. SPEC-005 Payment abstraction.
+ 6. SPEC-006 Admin de catálogo.
+ 7. SPEC-007 Importador Excel/CSV.
+ 8. SPEC-008 MercadoPago multi-tenant.
+ 9. SPEC-009 Print queue robusta.
+10. SPEC-010 Panel de pedidos.
+11. SPEC-012 Módulo de mesas.
+12. SPEC-011 Apple Pay.
+13. SPEC-014 App de impresión.
+14. SPEC-013 Home builder.
+15. SPEC-015 OpenTofu.
+16. SPEC-016 Observabilidad.
+17. SPEC-017 Analytics.
+18. SPEC-018 Integraciones.
+19. SPEC-019 Migración final desde Strapi.
+
+## Database
 
 Using Neon + Drizzle inside chikenstop-nextjs
 
@@ -195,4 +219,3 @@ DATABASE_SSL=false
 - create dashbord (dbt connected to neon from checkout_payments table) with:
   - hourly sales
   - daily sales
-
