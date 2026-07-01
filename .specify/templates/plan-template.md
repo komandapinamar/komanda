@@ -6,9 +6,9 @@
 
 **Note**: This template is filled in by the `/speckit-plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
-**Owning Repository**: [Acquisition (Astro) / Core (Next.js)]
+**Owning Repository**: Core (Next.js)
 
-**Secondary Repository Impact**: [None, or repository plus reason]
+**External Consumer Impact**: [None, or affected repository/client plus reason]
 
 ## Summary
 
@@ -50,7 +50,7 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- **Repository ownership**: [PASS/FAIL — one owner and source of truth identified]
+- **Core ownership**: [PASS/FAIL — Core capability and source of truth identified]
 - **Independent delivery**: [PASS/FAIL — deploy, rollback, and degraded mode remain independent]
 - **Contract and mobile readiness**: [PASS/FAIL — versioned adapter-independent contract defined]
 - **Tenant isolation**: [PASS/FAIL — explicit context and two-tenant test strategy defined]
@@ -78,7 +78,7 @@ specs/[###-feature]/
   real paths (e.g., apps/admin, packages/something). The delivered plan must
   not include Option labels. Respect the constitutional repository boundary:
   show only paths in the owning repository and describe work in another
-  repository through a versioned contract and its own delivery plan.
+  repository through a versioned contract and a separate consumer delivery plan.
 -->
 
 ```text
@@ -126,5 +126,5 @@ directories captured above]
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., cross-repository coordinated release] | [specific need] | [why a backward-compatible contract is insufficient] |
+| [e.g., coordinated consumer release] | [specific need] | [why a backward-compatible contract is insufficient] |
 | [e.g., framework-bound domain logic] | [specific need] | [why an adapter-independent service is insufficient] |

@@ -10,10 +10,10 @@
 
 ## System Boundaries *(mandatory)*
 
-- **Owning Repository**: [Acquisition (Astro) or Core (Next.js)]
-- **Affected Surfaces**: [komanda.com, app.komanda.com, tenant storefront, integrations, mobile]
-- **Source of Truth**: [repository and capability that authoritatively own changed data/rules]
-- **Cross-Repository Contract**: [contract and compatibility impact, or None]
+- **Owning Repository**: Core (Next.js)
+- **Affected Surfaces**: [app.komanda.com, tenant storefront, integrations, background jobs, mobile]
+- **Source of Truth**: [Core capability that authoritatively owns changed data/rules]
+- **External Contract**: [versioned contract and consumer compatibility impact, or None]
 - **Failure Isolation**: [observable behavior when the other repository or a dependency is unavailable]
 - **Tenant Impact**: [tenant-owned data/actions affected and isolation expectations, or None]
 - **Future Client Compatibility**: [portable capability exposed to Expo/other clients, or None with reason]
