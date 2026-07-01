@@ -15,9 +15,9 @@ the constitution. For other work, include tests when requested by the specificat
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
-**Repository Scope**: Every task MUST identify its owning repository through its path
-or description. Cross-repository work MUST be separated by contract and independently
-deployable phases; do not model two repositories as one shared source tree.
+**Repository Scope**: Every task MUST belong to this Core repository through its path
+or description. External-consumer work MUST be separated by a versioned contract and
+its own delivery plan; do not model multiple repositories as one shared source tree.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -27,7 +27,6 @@ deployable phases; do not model two repositories as one shared source tree.
 
 ## Path Conventions
 
-- **Acquisition repository**: Astro landing, plans, registration experience, and acquisition analytics only
 - **Core repository**: Next.js tenant storefront, business administration, versioned API, domain logic, and operational data
 - **Single project**: `src/`, `tests/` at repository root
 - **Web app**: `backend/src/`, `frontend/src/`
@@ -171,7 +170,6 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX Run quickstart.md validation
 - [ ] TXXX Validate producer and consumer contract compatibility
 - [ ] TXXX Validate future mobile client compatibility for changed Core capabilities
-- [ ] TXXX Record performance-budget evidence for Acquisition changes
 - [ ] TXXX Validate independent deployment, rollback, and degraded-mode behavior
 
 ---

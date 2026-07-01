@@ -1,20 +1,15 @@
-# KOMANDA SYSTEM
+# KOMANDA CORE
 
 ## Target Architecture
 
-Komanda is evolving into two independently deployable product repositories:
+This repository owns Komanda's operational product: `app.komanda.com`, tenant
+storefronts, business administration, catalog, authentication, tenant provisioning,
+orders, payments, printing, and authoritative multi-tenant data.
 
-- **Acquisition repository (Astro)**: `komanda.com`, commercial plans, public content,
-  gastronomic-business registration experience, and acquisition analytics.
-- **Core repository (this Next.js project)**: `app.komanda.com`, tenant storefronts,
-  business administration, catalog, authentication, orders, payments, printing, and
-  authoritative multi-tenant data.
-
-The Acquisition repository owns the registration funnel, but it provisions accounts,
-tenants, initial locations, and owner memberships through a versioned Core contract.
-It must not access the Core database directly. Future Expo or other mobile clients
-will consume the same versioned Core contracts rather than depend on Next.js pages or
-Server Actions.
+The public acquisition site lives in the separate `komanda-business` repository. It
+consumes versioned Core contracts and never accesses this database directly. Future
+Expo or other mobile clients consume those same contracts rather than depend on
+Next.js pages or Server Actions.
 
 See [the project constitution](.specify/memory/constitution.md) for repository
 ownership, fault-containment, tenant-isolation, performance, and delivery rules.
