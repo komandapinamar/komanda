@@ -1,5 +1,26 @@
 # KOMANDA SYSTEM
 
+## Target Architecture
+
+Komanda is evolving into two independently deployable product repositories:
+
+- **Acquisition repository (Astro)**: `komanda.com`, commercial plans, public content,
+  gastronomic-business registration experience, and acquisition analytics.
+- **Core repository (this Next.js project)**: `app.komanda.com`, tenant storefronts,
+  business administration, catalog, authentication, orders, payments, printing, and
+  authoritative multi-tenant data.
+
+The Acquisition repository owns the registration funnel, but it provisions accounts,
+tenants, initial locations, and owner memberships through a versioned Core contract.
+It must not access the Core database directly. Future Expo or other mobile clients
+will consume the same versioned Core contracts rather than depend on Next.js pages or
+Server Actions.
+
+See [the project constitution](.specify/memory/constitution.md) for repository
+ownership, fault-containment, tenant-isolation, performance, and delivery rules.
+
+## Current Legacy State
+
 - Menu changes made only from Strapi CRM
 - Api route on $url + /api/menu to get updated menu from strapi
 - Strapi running on port 1337 so it is allowed in "remotePatterns" in next.config.ts
@@ -122,17 +143,17 @@ As per now, Sprapi v5 does not support polymorphic relations, so the way to mode
 ---
 
 # VPS Configuration
->[!NOTE] 
+>[!NOTE]
 >This system was tested used with dokploy. For now, migrations and configurations will be centered around this tool.
 
 ### Migrating Dokploy to a different VPS
 Transfer the entire filesystem using rsync:
 ```bash
-rsync -aAXv --delete \ --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found","/swapfile"} \ -e "ssh -i /path/to/private_key" user@source_vps_ip:/ / 
+rsync -aAXv --delete \ --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found","/swapfile"} \ -e "ssh -i /path/to/private_key" user@source_vps_ip:/ /
 ```
 After the migration, update the server IP in the Dokploy database:
 ```sql
-UPDATE admin SET "serverIp" = 'new_server_ip' WHERE "serverIp" = 'old_server_ip'; 
+UPDATE admin SET "serverIp" = 'new_server_ip' WHERE "serverIp" = 'old_server_ip';
 ```
 >[!IMPORTANT]
 >Environment variables should be saved in advance for each service running inside dokploy.

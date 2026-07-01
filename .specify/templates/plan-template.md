@@ -4,7 +4,11 @@
 
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit-plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+
+**Owning Repository**: [Acquisition (Astro) / Core (Next.js)]
+
+**Secondary Repository Impact**: [None, or repository plus reason]
 
 ## Summary
 
@@ -36,11 +40,22 @@
 
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
+**Cross-Repository Contracts**: [versioned contracts changed or None]
+
+**Supported Clients**: [web surfaces plus mobile compatibility expectations]
+
+**Degraded Mode**: [behavior when the other repository or an external dependency is unavailable]
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Repository ownership**: [PASS/FAIL — one owner and source of truth identified]
+- **Independent delivery**: [PASS/FAIL — deploy, rollback, and degraded mode remain independent]
+- **Contract and mobile readiness**: [PASS/FAIL — versioned adapter-independent contract defined]
+- **Tenant isolation**: [PASS/FAIL — explicit context and two-tenant test strategy defined]
+- **Performance and operations**: [PASS/FAIL — budgets, diagnostics, and critical tests defined]
+- **Migration and rollback**: [PASS/FAIL/N/A — stateful or breaking changes are reversible and reconcilable]
 
 ## Project Structure
 
@@ -48,12 +63,12 @@
 
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+├── plan.md              # This file (/speckit-plan command output)
+├── research.md          # Phase 0 output (/speckit-plan command)
+├── data-model.md        # Phase 1 output (/speckit-plan command)
+├── quickstart.md        # Phase 1 output (/speckit-plan command)
+├── contracts/           # Phase 1 output (/speckit-plan command)
+└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
 ```
 
 ### Source Code (repository root)
@@ -61,7 +76,9 @@ specs/[###-feature]/
   ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
   for this feature. Delete unused options and expand the chosen structure with
   real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
+  not include Option labels. Respect the constitutional repository boundary:
+  show only paths in the owning repository and describe work in another
+  repository through a versioned contract and its own delivery plan.
 -->
 
 ```text
@@ -109,5 +126,5 @@ directories captured above]
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| [e.g., cross-repository coordinated release] | [specific need] | [why a backward-compatible contract is insufficient] |
+| [e.g., framework-bound domain logic] | [specific need] | [why an adapter-independent service is insufficient] |
