@@ -1,0 +1,9 @@
+project_name              = "komanda-core"
+region_id                 = "aws-sa-east-1"
+postgres_version          = 17
+min_compute_units         = 0.25
+max_compute_units         = 0.5
+history_retention_seconds = 21600
+
+# Neon development accepts synthetic data only.
+allowed_ips = []

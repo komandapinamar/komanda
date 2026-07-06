@@ -1,0 +1,139 @@
+name: Core CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "print-service/**"
+      - ".github/workflows/core-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "print-service/**"
+      - ".github/workflows/core-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  static-checks:
+    name: Static checks and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm audit --audit-level=high
+
+  postgres-integration:
+    name: PostgreSQL integration and isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: komanda_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d komanda_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      KOMANDA_TEST_MODE: "1"
+      DATABASE_DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/komanda_test
+      DATABASE_URL: postgresql://komanda_test_runtime:runtime-test-only@127.0.0.1:5432/komanda_test
+      DATABASE_RUNTIME_TEST_USER: komanda_test_runtime
+      DATABASE_RUNTIME_TEST_PASSWORD: runtime-test-only
+      DATABASE_TEST_INTEGRATION: "1"
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: npm run db:migrate:test
+      - run: npm run db:verify-roles:test
+      - name: Run integration suites present in this increment
+        run: |
+          npm run test:integration -- --passWithNoTests
+          npm run test:contracts -- --passWithNoTests
+          npm run test:tenant-isolation -- --passWithNoTests
+          npm run test:migration -- --passWithNoTests
+
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run browser suite when scenarios exist
+        run: |
+          if find tests/e2e -type f -name '*.spec.ts' -print -quit 2>/dev/null | grep -q .; then
+            npm run test:e2e
+          else
+            echo "No browser scenarios in this increment."
+          fi
+
+  print-worker:
+    name: Print worker tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: print-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: print-service/requirements-print.txt
+      - run: python -m pip install -r requirements-print.txt
+      - name: Run worker tests or validate the initial worker
+        run: |
+          if find tests -type f -name 'test_*.py' -print -quit 2>/dev/null | grep -q .; then
+            python -m pytest
+          else
+            python -m py_compile print_worker.py
+          fi

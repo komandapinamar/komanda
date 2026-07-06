@@ -1,3 +1,6 @@
 python-escpos
 pyusb
 requests
+pytest
+pytest-timeout
+responses

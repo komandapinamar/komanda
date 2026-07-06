@@ -1,0 +1,7 @@
+resource_group_name  = "komanda-infra-rg"
+storage_account_name = "komandatfstate9c4e27"
+container_name       = "tfstate"
+key                  = "komanda/database/azure/staging.tfstate"
+
+use_azuread_auth = true
+use_cli          = true

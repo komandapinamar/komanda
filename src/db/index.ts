@@ -4,10 +4,12 @@ import { neonConfig, Pool } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "@/db/schema";
 
-const databaseUrl = process.env.DATABASE_URL ?? process.env.DATABASE_DIRECT_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("Missing DATABASE_URL or DATABASE_DIRECT_URL environment variable.");
+  throw new Error(
+    "Missing DATABASE_URL. Runtime code must never fall back to the migration-owner connection.",
+  );
 }
 
 if (typeof WebSocket !== "undefined") {
@@ -19,10 +21,11 @@ const globalForDb = globalThis as typeof globalThis & {
 };
 
 // singleton pattern for the database connection
-const pool = globalForDb.__komandaDbPool ?? new Pool({ connectionString: databaseUrl });
+export const runtimePool =
+  globalForDb.__komandaDbPool ?? new Pool({ connectionString: databaseUrl });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.__komandaDbPool = pool;
+  globalForDb.__komandaDbPool = runtimePool;
 }
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle(runtimePool, { schema });

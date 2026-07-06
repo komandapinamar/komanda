@@ -46,6 +46,16 @@ link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-
 
 ## Database
 
+Database infrastructure is declared with OpenTofu under
+[`infra/database`](infra/database/README.md). Neon is restricted to synthetic
+development; independent Azure PostgreSQL instances serve staging and
+production. The non-owner runtime role is created separately with
+`npm --prefix src run db:bootstrap-roles` and is verified without `BYPASSRLS`.
+
+Never apply database infrastructure with local state or `-auto-approve` in
+production. Follow the reviewed plan and remote-state workflow in the linked
+runbook.
+
 Using Neon + Drizzle inside chikenstop-nextjs
 
 - Table schema in /db/schema.ts
@@ -174,9 +184,9 @@ MP_ACCESS_TOKEN=APP_USR-your_access_token_here
 MP_WEBHOOK_URL=https://your-production-domain.example.com/api/payments/webhook
 MP_WEBHOOK_SECRET=your_mercadopago_webhook_secret_here
 
-# keep Neon credentials secure: do not expose them to client-side code
-# runtime/app traffic should use the Neon pooler
-DATABASE_URL="postgresql://db_user:db_password@your-neon-pooler-host/database_name?sslmode=require&pgbouncer=true&connect_timeout=15"
+# keep database credentials secure: do not expose them to client-side code
+# runtime/app traffic uses the environment-specific runtime role
+DATABASE_URL="postgresql://komanda_runtime:db_password@environment-database-host/database_name?sslmode=require&connect_timeout=15"
 
 # schema changes and migrations should use the direct connection
 DATABASE_DIRECT_URL="postgresql://db_user:db_password@your-neon-direct-host/database_name?sslmode=require"
@@ -195,9 +205,9 @@ ADMIN_JWT_SECRET=your_admin_jwt_secret_here
 
 ADMIN_PASSWORD=change_this_to_a_strong_password
 ```
-DATABASE_URL: main database connection for the app. Pooler connection. (NeonDB)
+DATABASE_URL: runtime database connection. Neon development or Azure staging/production.
 
-DATABASE_DIRECT_URL: direct database connection for migrations. (NeonDB)
+DATABASE_DIRECT_URL: migration-owner connection for the current environment.
 
 CRON_CART_CLEANUP_SECRET: generated using ```openssl rand -hex 32
 

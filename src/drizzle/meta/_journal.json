@@ -22,6 +22,27 @@
       "when": 1773933457354,
       "tag": "0002_tense_fat_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783288119034,
+      "tag": "0003_multitenant_platform_expand",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783288119035,
+      "tag": "0004_multitenant_foundation_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783288119036,
+      "tag": "0005_provisioning_entitlements",
+      "breakpoints": true
     }
   ]
 }
