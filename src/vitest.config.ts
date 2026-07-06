@@ -87,6 +87,16 @@ export default defineConfig({
           sequence: { concurrent: false },
         },
       }),
+      defineProject({
+        ...sharedProject,
+        test: {
+          ...shared,
+          name: "database-compatibility",
+          include: ["tests/database-compatibility/**/*.test.ts"],
+          sequence: { concurrent: false },
+          testTimeout: 30_000,
+        },
+      }),
     ],
   },
 });

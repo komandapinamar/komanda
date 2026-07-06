@@ -51,7 +51,7 @@
 - [X] T020 Implement public, administrative, webhook, agent, background and maintenance context resolvers in `src/lib/tenant-context/resolvers.ts`
 - [X] T021 Replace global admin-token authority with revocable session and live membership services in `src/features/identity/application/session.service.ts`
 - [X] T022 Create deterministic tenant A/B isolation fixtures plus a separate one-tenant non-production bootstrap that reuses the provisioning schema/service in `src/tests/fixtures/multitenant.ts`, `src/tests/fixtures/mock-provisioning.ts`, `src/scripts/seed-multitenant-acceptance.ts` and `src/scripts/seed-mock-tenant.ts`
-- [ ] T023 Verify default-deny RLS, `FORCE ROW LEVEL SECURITY`, composite FK rejection, missing context and role ownership in `src/tests/tenant-isolation/foundation.integration.test.ts`
+- [X] T023 Verify default-deny RLS, `FORCE ROW LEVEL SECURITY`, composite FK rejection, missing context and role ownership in `src/tests/tenant-isolation/foundation.integration.test.ts`
 
 **Checkpoint**: The foundation resolves one verified tenant, executes through the runtime role, fails closed and records safe diagnostics.
 
@@ -75,7 +75,7 @@
 - [X] T028 [P] [US1] Define provisioning, email-verification, plan, entitlement and handoff validation schemas in `src/features/provisioning/domain/provisioning.schemas.ts`
 - [X] T029 [US1] Implement migration-managed plan-version resolution and a default-deny application-service entitlement guard in `src/features/entitlements/application/entitlement.service.ts`
 - [X] T030 [US1] Implement atomic pending owner, verification challenge, tenant, location, membership, settings, snapshot and idempotency persistence in `src/features/provisioning/infrastructure/provisioning.repository.ts`
-- [ ] T031 [US1] Orchestrate provisioning rollback, Core-issued/consumed verification challenges, delivery-port invocation and single-use onboarding handoffs in `src/features/provisioning/application/provision-tenant.service.ts`, `src/features/identity/application/identity-verification.service.ts` and `src/features/identity/infrastructure/verification-delivery.port.ts`
+- [X] T031 [US1] Orchestrate provisioning rollback, Core-issued/consumed verification challenges, delivery-port invocation and single-use onboarding handoffs in `src/features/provisioning/application/provision-tenant.service.ts`, `src/features/identity/application/identity-verification.service.ts` and `src/features/identity/infrastructure/verification-delivery.port.ts`
 - [X] T032 [P] [US1] Authenticate and rotate the `komanda-business` service credential without trusting browser input in `src/features/identity/application/service-auth.service.ts`
 - [X] T033 [US1] Expose service-authenticated provisioning and public single-use verification confirmation in `src/app/api/v1/provisioning/tenants/route.ts` and `src/app/api/v1/auth/email-verifications/confirm/route.ts`
 - [X] T034 [US1] Expose create/revoke session adapters in `src/app/api/v1/auth/sessions/route.ts` and `src/app/api/v1/auth/sessions/current/route.ts`
@@ -95,23 +95,23 @@
 
 ### Tests for User Story 2
 
-- [ ] T038 [P] [US2] Add producer-contract tests for category, item, add-on, combo and media operations in `src/tests/contract/catalog-admin.contract.test.ts`
-- [ ] T039 [P] [US2] Add cross-tenant IDs, mixed-tenant relationships and optimistic-version conflicts in `src/tests/tenant-isolation/catalog.integration.test.ts`
-- [ ] T040 [P] [US2] Add publishing, archival, invalid-combo, add-on-bound and missing `catalog_management` denial cases in `src/tests/integration/catalog-rules.integration.test.ts`
+- [X] T038 [P] [US2] Add producer-contract tests for category, item, add-on, combo and media operations in `src/tests/contract/catalog-admin.contract.test.ts`
+- [X] T039 [P] [US2] Add cross-tenant IDs, mixed-tenant relationships and optimistic-version conflicts in `src/tests/tenant-isolation/catalog.integration.test.ts`
+- [X] T040 [P] [US2] Add publishing, archival, invalid-combo, add-on-bound and missing `catalog_management` denial cases in `src/tests/integration/catalog-rules.integration.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T041 [US2] Define media, category, item, add-on, join and combo tables with composite tenant FKs and RLS in `src/db/schema/catalog.ts` and `src/drizzle/0006_multitenant_catalog.sql`
-- [ ] T042 [P] [US2] Implement catalog state, readiness, add-on bounds, combo composition and archival rules in `src/features/catalog/domain/catalog.rules.ts`
-- [ ] T043 [US2] Implement transaction-scoped catalog queries and compare-and-set updates in `src/features/catalog/infrastructure/catalog.repository.ts`
-- [ ] T044 [US2] Implement tenant-aware catalog CRUD, historical-safety orchestration and `catalog_management` entitlement enforcement in `src/features/catalog/application/catalog.service.ts`
-- [ ] T045 [P] [US2] Implement checksum-verified presigned uploads and tenant-prefixed storage keys in `src/features/catalog/infrastructure/media.repository.ts`
-- [ ] T046 [US2] Expose category list/create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/categories/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/categories/[categoryId]/route.ts`
-- [ ] T047 [US2] Expose item list/create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/items/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/items/[itemId]/route.ts`
-- [ ] T048 [US2] Expose add-on group create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/addon-groups/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/addon-groups/[addonGroupId]/route.ts`
-- [ ] T049 [US2] Expose combo create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/combos/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/combos/[comboId]/route.ts`
-- [ ] T050 [US2] Expose media upload creation and completion in `src/app/api/v1/tenants/[tenantId]/media/uploads/route.ts` and `src/app/api/v1/tenants/[tenantId]/media/[assetId]/complete/route.ts`
-- [ ] T051 [US2] Build tenant-scoped catalog editors with conflict feedback in `src/app/(admin)/admin/[tenantId]/catalog/page.tsx` and `src/features/catalog/web/CatalogEditor.tsx`
+- [X] T041 [US2] Define media, category, item, add-on, join and combo tables with composite tenant FKs and RLS in `src/db/schema/catalog.ts` and `src/drizzle/0006_multitenant_catalog.sql`
+- [X] T042 [P] [US2] Implement catalog state, readiness, add-on bounds, combo composition and archival rules in `src/features/catalog/domain/catalog.rules.ts`
+- [X] T043 [US2] Implement transaction-scoped catalog queries and compare-and-set updates in `src/features/catalog/infrastructure/catalog.repository.ts`
+- [X] T044 [US2] Implement tenant-aware catalog CRUD, historical-safety orchestration and `catalog_management` entitlement enforcement in `src/features/catalog/application/catalog.service.ts`
+- [X] T045 [P] [US2] Implement checksum-verified presigned uploads and tenant-prefixed storage keys in `src/features/catalog/infrastructure/media.repository.ts`
+- [X] T046 [US2] Expose category list/create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/categories/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/categories/[categoryId]/route.ts`
+- [X] T047 [US2] Expose item list/create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/items/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/items/[itemId]/route.ts`
+- [X] T048 [US2] Expose add-on group create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/addon-groups/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/addon-groups/[addonGroupId]/route.ts`
+- [X] T049 [US2] Expose combo create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/combos/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/combos/[comboId]/route.ts`
+- [X] T050 [US2] Expose media upload creation and completion in `src/app/api/v1/tenants/[tenantId]/media/uploads/route.ts` and `src/app/api/v1/tenants/[tenantId]/media/[assetId]/complete/route.ts`
+- [X] T051 [US2] Build tenant-scoped catalog editors with conflict feedback in `src/app/(admin)/admin/[tenantId]/catalog/page.tsx` and `src/features/catalog/web/CatalogEditor.tsx`
 - [ ] T052 [US2] Validate independent A/B catalog publication and first-use workflow in `src/tests/e2e/catalog-administration.spec.ts`
 
 **Checkpoint**: US2 manages a complete tenant catalog in Core without Strapi writes or cross-tenant visibility.
@@ -126,20 +126,20 @@
 
 ### Tests for User Story 3
 
-- [ ] T053 [P] [US3] Add producer-contract tests for public catalog, cart create/read and payment-session input in `src/tests/contract/storefront-cart.contract.test.ts`
+- [X] T053 [P] [US3] Add producer-contract tests for public catalog, cart create/read and payment-session input in `src/tests/contract/storefront-cart.contract.test.ts`
 - [ ] T054 [P] [US3] Add cart/catalog composite-FK, foreign slug/ID and missing-context denial cases in `src/tests/tenant-isolation/storefront-cart.integration.test.ts`
-- [ ] T055 [P] [US3] Add stale price, availability, combo and add-on revalidation cases in `src/tests/integration/cart-revalidation.integration.test.ts`
+- [X] T055 [P] [US3] Add stale price, availability, combo and add-on revalidation cases in `src/tests/integration/cart-revalidation.integration.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T056 [US3] Define carts, cart lines and selected option snapshots with tenant/location ownership and RLS in `src/db/schema/commerce.ts` and `src/drizzle/0007_multitenant_carts.sql`
-- [ ] T057 [P] [US3] Normalize hosts and versioned storefront paths without performing authorization in `src/proxy.ts`
-- [ ] T058 [US3] Resolve active public tenants and same-tenant public catalog projections in `src/features/tenancy/application/public-tenant.service.ts`
-- [ ] T059 [US3] Implement cart persistence, pricing snapshots, expiry and tenant-qualified optimistic updates in `src/features/cart/infrastructure/cart.repository.ts`
-- [ ] T060 [US3] Implement cart creation, separation and pre-payment revalidation in `src/features/cart/application/cart.service.ts`
-- [ ] T061 [US3] Expose public catalog and cart create/read endpoints in `src/app/api/v1/storefronts/[tenantSlug]/catalog/route.ts`, `src/app/api/v1/storefronts/[tenantSlug]/carts/route.ts` and `src/app/api/v1/storefronts/[tenantSlug]/carts/[cartId]/route.ts`
-- [ ] T062 [US3] Adapt storefront menu rendering to Core public catalog projections in `src/features/shop/menu/services/menu.service.ts` and `src/app/page.tsx`
-- [ ] T063 [US3] Scope browser cart state by normalized tenant slug and invalidate it on tenant changes in `src/features/shop/cart/context/cart.context.tsx`
+- [X] T056 [US3] Define carts, cart lines and selected option snapshots with tenant/location ownership and RLS in `src/db/schema/commerce.ts` and `src/drizzle/0007_multitenant_carts.sql`
+- [X] T057 [P] [US3] Normalize hosts and versioned storefront paths without performing authorization in `src/proxy.ts`
+- [X] T058 [US3] Resolve active public tenants and same-tenant public catalog projections in `src/features/tenancy/application/public-tenant.service.ts`
+- [X] T059 [US3] Implement cart persistence, pricing snapshots, expiry and tenant-qualified optimistic updates in `src/features/cart/infrastructure/cart.repository.ts`
+- [X] T060 [US3] Implement cart creation, separation and pre-payment revalidation in `src/features/cart/application/cart.service.ts`
+- [X] T061 [US3] Expose public catalog and cart create/read endpoints in `src/app/api/v1/storefronts/[tenantSlug]/catalog/route.ts`, `src/app/api/v1/storefronts/[tenantSlug]/carts/route.ts` and `src/app/api/v1/storefronts/[tenantSlug]/carts/[cartId]/route.ts`
+- [X] T062 [US3] Adapt storefront menu rendering to Core public catalog projections in `src/features/shop/menu/services/menu.service.ts` and `src/app/page.tsx`
+- [X] T063 [US3] Scope browser cart state by normalized tenant slug and invalidate it on tenant changes in `src/features/shop/cart/context/cart.context.tsx`
 - [ ] T064 [US3] Adapt checkout validation to the application service and preserve customer-confirmed snapshots in `src/features/shop/checkout/services/checkout.service.ts`
 - [ ] T065 [US3] Validate A/B shopping, stale-cart confirmation, unavailable tenants and suspension in `src/tests/e2e/storefront-checkout.spec.ts`
 
@@ -155,16 +155,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T066 [P] [US4] Add producer-contract tests for settings, OAuth, integration status, payment sessions and webhooks in `src/tests/contract/payments.contract.test.ts`
-- [ ] T067 [P] [US4] Add encryption round-trip, key rotation, AAD mismatch and response-redaction cases in `src/tests/unit/secret-envelope.test.ts`
+- [X] T066 [P] [US4] Add producer-contract tests for settings, OAuth, integration status, payment sessions and webhooks in `src/tests/contract/payments.contract.test.ts`
+- [X] T067 [P] [US4] Add encryption round-trip, key rotation, AAD mismatch and response-redaction cases in `src/tests/unit/secret-envelope.test.ts`
 - [ ] T068 [P] [US4] Add seller/cart/resource mismatch, signature, replay and out-of-order callback cases in `src/tests/tenant-isolation/payment-webhook.integration.test.ts`
 - [ ] T069 [P] [US4] Add provider timeout, retry, approved-payment idempotency, OAuth-only and missing `online_payments` denial cases in `src/tests/integration/payment-lifecycle.integration.test.ts`
 
 ### Implementation for User Story 4
 
 - [ ] T070 [US4] Add integration accounts, provider resource routes, payment attempts, webhook events and least-privilege policies in `src/db/schema/integrations.ts`, `src/db/schema/commerce.ts` and `src/drizzle/0008_multitenant_payments.sql`
-- [ ] T071 [P] [US4] Implement Mercado Pago OAuth, refresh, revoke and health-check provider calls in `src/features/payments/infrastructure/mercadopago-oauth.client.ts`
-- [ ] T072 [P] [US4] Implement signed webhook verification and sanitized provider payload parsing in `src/features/payments/infrastructure/mercadopago-webhook.verifier.ts`
+- [X] T071 [P] [US4] Implement Mercado Pago OAuth, refresh, revoke and health-check provider calls in `src/features/payments/infrastructure/mercadopago-oauth.client.ts`
+- [X] T072 [P] [US4] Implement signed webhook verification and sanitized provider payload parsing in `src/features/payments/infrastructure/mercadopago-webhook.verifier.ts`
 - [ ] T073 [US4] Persist encrypted tenant seller accounts and minimal global resource routes in `src/features/payments/infrastructure/integration.repository.ts`
 - [ ] T074 [US4] Implement settings compare-and-set, readiness and sales/printing preference updates in `src/features/tenancy/application/tenant-settings.service.ts`
 - [ ] T075 [US4] Implement OAuth-only start/callback/revoke and seller-account readiness orchestration with no manual-token path in `src/features/payments/application/integration.service.ts`

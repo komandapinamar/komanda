@@ -84,6 +84,7 @@ describe("komanda-business provisioning contract", () => {
     for (const path of [
       "/api/v1/provisioning/tenants",
       "/api/v1/auth/email-verifications/confirm",
+      "/api/v1/auth/onboarding-handoffs/consume",
       "/api/v1/auth/sessions",
       "/api/v1/auth/sessions/current",
       "/api/v1/tenants",

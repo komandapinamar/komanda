@@ -19,8 +19,6 @@ type CartApiResponse = {
   expiresAt?: string;
 };
 
-const CART_API_BASE_PATH = "/api/cart";
-
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -29,7 +27,11 @@ function toNumber(value: unknown, fallback = 0) {
 function normalizeCartLine(line: unknown): OfficialCartLine {
   const source = (line ?? {}) as Record<string, unknown>;
   const unitPrice = toNumber(
-    source.unitPrice ?? source.price ?? source.unit_price,
+    source.unitPrice ??
+      source.unitPriceSnapshot ??
+      source.unit_price_snapshot ??
+      source.price ??
+      source.unit_price,
     0,
   );
   const quantity = toNumber(source.quantity, 0);
@@ -43,10 +45,13 @@ function normalizeCartLine(line: unknown): OfficialCartLine {
         "",
     ),
     quantity,
-    name: String(source.name ?? source.title ?? "Producto"),
+    name: String(source.name ?? source.nameSnapshot ?? source.title ?? "Producto"),
     unitPrice,
-    lineTotal: toNumber(source.lineTotal ?? source.total, unitPrice * quantity),
-    image: String(source.image ?? ""),
+    lineTotal: toNumber(
+      source.lineTotal ?? source.line_total ?? source.total,
+      unitPrice * quantity,
+    ),
+    image: String(source.image ?? source.imageUrlSnapshot ?? ""),
     available: source.available === undefined ? true : Boolean(source.available),
     note: source.note ? String(source.note) : undefined,
   };
@@ -75,10 +80,11 @@ function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
 }
 
 async function requestCart(
+  tenantSlug: string,
   path: string,
   options: RequestInit,
 ): Promise<OfficialCart> {
-  const response = await fetch(`${CART_API_BASE_PATH}${path}`, {
+  const response = await fetch(`/api/v1/storefronts/${tenantSlug}/carts${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -102,22 +108,39 @@ async function requestCart(
 
 export function buildCartSnapshot(lines: CartSnapshotLine[]) {
   return lines.map((line) => ({
-    documentId: line.documentId,
+    kind: "item" as const,
+    resourceId: line.documentId,
     quantity: line.quantity,
+    optionIds: [],
+    confirmedUnitPrice: line.unitPrice.toFixed(2),
   }));
 }
 
-export async function createCart(lines: CartSnapshotLine[]) {
-  const payload = { items: buildCartSnapshot(lines) };
+export async function createCart(tenantSlug: string, lines: CartSnapshotLine[]) {
+  const payload = { lines: buildCartSnapshot(lines) };
 
-  return requestCart("", {
+  return requestCart(tenantSlug, "", {
     method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify(payload),
   });
 }
 
-export async function getCart(cartId: string) {
-  return requestCart(`/${cartId}`, {
+function tenantSlugFromBrowser() {
+  const path = typeof window === "undefined" ? "" : window.location.pathname;
+  const match = path.match(/^\/storefronts\/([^/]+)/);
+  const slug = match?.[1] ?? process.env.NEXT_PUBLIC_MOCK_TENANT_SLUG;
+  if (!slug) throw new Error("An explicit tenant storefront is required.");
+  return slug;
+}
+
+export async function getCart(
+  tenantSlugOrCartId: string,
+  optionalCartId?: string,
+) {
+  const tenantSlug = optionalCartId ? tenantSlugOrCartId : tenantSlugFromBrowser();
+  const cartId = optionalCartId ?? tenantSlugOrCartId;
+  return requestCart(tenantSlug, `/${cartId}`, {
     method: "GET",
     cache: "no-store",
   });

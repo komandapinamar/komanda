@@ -24,9 +24,11 @@ async function configureRuntimeRole(
         );
       end if;
 
-      if exists (select 1 from pg_roles where rolname = 'neon_superuser') then
-        revoke neon_superuser from ${RUNTIME_ROLE};
-      end if;
+      -- Provider-managed administrative roles (for example Neon\'s
+      -- neon_superuser) cannot necessarily be granted/revoked by the project
+      -- owner. Newly created PostgreSQL roles do not inherit those memberships,
+      -- and the explicit verification below fails the transaction if an
+      -- existing runtime role ever acquired one.
     end
     $bootstrap$;
   `);

@@ -43,6 +43,27 @@
       "when": 1783288119036,
       "tag": "0005_provisioning_entitlements",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783290000000,
+      "tag": "0006_multitenant_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783291000000,
+      "tag": "0007_multitenant_carts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783292000000,
+      "tag": "0008_multitenant_payments",
+      "breakpoints": true
     }
   ]
 }

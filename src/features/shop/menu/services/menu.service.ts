@@ -1,175 +1,84 @@
+import { PublicTenantService } from "@/features/tenancy/application/public-tenant.service";
 import type { Category, Combo, MenuItem } from "@/types/types";
 
-const STRAPI_URL = process.env.STRAPI_URL;
-const STRAPI_FULL_ACCESS_TOKEN = process.env.STRAPI_FULL_ACCESS_TOKEN;
-const STRAPI_HEADERS = {
-  Authorization: `Bearer ${STRAPI_FULL_ACCESS_TOKEN}`,
-};
+type PublicCatalog = Awaited<ReturnType<PublicTenantService["catalog"]>>;
 
-// could be on .env but I'm not planning on chaging routes anytime soon
-// it is the strapi route
-const menuItemPopulate =
-  "populate[image]=true&populate[category]=true&populate[combos][populate][image]=true&populate[combos][populate][category]=true";
-const itemsRoute = `/api/menu-items?${menuItemPopulate}`;
-
-const categoryPopulate =
-  "populate[menu_items][populate][image]=true&populate[menu_items][populate][category]=true&populate[menu_items][populate][combos][populate][image]=true&populate[combos][populate][image]=true";
-const categoriesRoute = `/api/categories?${categoryPopulate}`;
-
-function menuItemPath(documentId: string): string {
-  return `/api/menu-items/${documentId}?${menuItemPopulate}`;
-}
-
-type StrapiMedia = {
-  url?: string;
-} | string | null | undefined;
-
-type StrapiCategory = {
-  documentId: string;
-  name: string;
-} | null;
-
-type StrapiCombo = {
-  documentId: string;
-  name: string;
-  price: number | string;
-  description: string | null;
-  image?: string;
-  category?: StrapiCategory;
-};
-
-type StrapiMenuItem = {
-  documentId: string;
-  name: string;
-  price: number | string;
-  description: string | null;
-  image: string;
-  category?: StrapiCategory;
-  combos?: StrapiCombo[] | null;
-};
-
-type MenuItemsResponse = {
-  data: StrapiMenuItem[];
-};
-
-type MenuItemResponse = {
-  data: StrapiMenuItem;
-};
-
-type StrapiCategoriesResponse = {
-  data: Array<{
-    documentId: string;
-    name: string;
-    menu_items?: StrapiMenuItem[] | { data: StrapiMenuItem[] } | null;
-    combos?: StrapiCombo[] | { data: StrapiCombo[] } | null;
-  }>;
-};
-
-// this makes sure that the image is a string and not an object
-function toMediaUrl(image: StrapiMedia): string {
-  if (!image) return "";
-  const url = typeof image === "string" ? image : image?.url;
-  return url ? `${STRAPI_URL}${url}` : "";
-}
-
-function mapCategory(entry?: StrapiCategory): Category | null {
-  if (!entry) {
-    return null;
-  }
-
+function mapItem(
+  item: PublicCatalog["categories"][number]["items"][number],
+  category: Category,
+): MenuItem {
   return {
-    documentId: entry.documentId,
-    name: entry.name,
-    menu_items: null,
+    documentId: item.id,
+    name: item.name,
+    price: Number(item.price),
+    description: item.description,
+    image: item.imageUrl ?? "",
+    category,
     combos: null,
   };
 }
 
-function mapCombo(entry: StrapiCombo): Combo {
+function mapCombo(
+  combo: PublicCatalog["categories"][number]["combos"][number],
+  category: Category,
+): Combo {
   return {
-    documentId: entry.documentId,
-    name: entry.name,
-    price: Number(entry.price),
-    description: entry.description,
-    image: toMediaUrl(entry.image),
-    category: mapCategory(entry.category),
+    documentId: combo.id,
+    name: combo.name,
+    price: Number(combo.price),
+    description: combo.description,
+    image: combo.imageUrl ?? "",
+    category,
     menu_items: null,
   };
 }
 
-function mapStrapiMenuItem(entry: StrapiMenuItem): MenuItem {
-  return {
-    documentId: entry.documentId,
-    name: entry.name,
-    price: Number(entry.price),
-    description: entry.description,
-    image: toMediaUrl(entry.image),
-    category: mapCategory(entry.category),
-    combos: entry.combos?.map(mapCombo) ?? null,
-  };
+export async function getPublicCatalog(tenantSlug: string) {
+  return new PublicTenantService().catalog(tenantSlug);
 }
 
-async function fetchStrapiMenu<T>(
-  path: string,
-  errorMessage: string,
-  options?: RequestInit,
-): Promise<T> {
-  const response = await fetch(`${STRAPI_URL}${path}`, {
-    ...options,
-    headers: {
-      ...STRAPI_HEADERS,
-      ...(options?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(errorMessage);
-  }
-
-  return (await response.json()) as T;
+function requiredTenantSlug(tenantSlug?: string) {
+  const resolved =
+    tenantSlug ?? process.env.INITIAL_TENANT_SLUG ?? process.env.MOCK_TENANT_SLUG;
+  if (!resolved) throw new Error("An explicit tenant slug is required.");
+  return resolved;
 }
 
-export async function getMenuItems(): Promise<MenuItem[]> {
-  const data = await fetchStrapiMenu<MenuItemsResponse>(
-    itemsRoute,
-    "Failed to fetch menu items",
-    { next: { revalidate: 60 } },
-  );
-  return data.data.map(mapStrapiMenuItem);
-}
-
-function toArray<T>(value: T[] | { data: T[] } | null | undefined): T[] {
-  if (!value) return [];
-  return Array.isArray(value) ? value : value.data ?? [];
-}
-
-export async function getCategories(): Promise<Category[]> {
-  const data = await fetchStrapiMenu<StrapiCategoriesResponse>(
-    categoriesRoute,
-    "Failed to fetch categories",
-    { next: { revalidate: 60 } },
-  );
-
-  return data.data.map((cat) => {
-    const items = toArray(cat.menu_items).map(mapStrapiMenuItem);
-    const combos = toArray(cat.combos).map(mapCombo);
-
+export async function getCategories(tenantSlug?: string): Promise<Category[]> {
+  const catalog = await getPublicCatalog(requiredTenantSlug(tenantSlug));
+  return catalog.categories.map((source) => {
+    const category: Category = {
+      documentId: source.id,
+      name: source.name,
+      menu_items: null,
+      combos: null,
+    };
+    const items = source.items.map((item) => mapItem(item, category));
+    const combos = source.combos.map((combo) => mapCombo(combo, category));
     return {
-      documentId: cat.documentId,
-      name: cat.name,
+      ...category,
       menu_items: items.length > 0 ? items : null,
       combos: combos.length > 0 ? combos : null,
     };
   });
 }
 
-// resolve a single menu item using Strapi's v5 document identifier.
-export async function getMenuItem(documentId: string): Promise<MenuItem> {
-  const data = await fetchStrapiMenu<MenuItemResponse>(
-    menuItemPath(documentId),
-    `Failed to fetch menu item with documentId ${documentId}`,
-    { cache: "no-store" },
-  );
+export async function getMenuItems(tenantSlug?: string): Promise<MenuItem[]> {
+  const categories = await getCategories(tenantSlug);
+  return categories.flatMap((category) => category.menu_items ?? []);
+}
 
-  return mapStrapiMenuItem(data.data);
+export async function getMenuItem(
+  tenantSlugOrItemId: string,
+  optionalItemId?: string,
+): Promise<MenuItem> {
+  const tenantSlug = optionalItemId
+    ? tenantSlugOrItemId
+    : requiredTenantSlug();
+  const itemId = optionalItemId ?? tenantSlugOrItemId;
+  const item = (await getMenuItems(tenantSlug)).find(
+    ({ documentId }) => documentId === itemId,
+  );
+  if (!item) throw new Error("Menu item not found.");
+  return item;
 }

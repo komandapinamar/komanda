@@ -42,6 +42,13 @@ export const onboardingHandoffSchema = z
   })
   .strict();
 
+export const onboardingHandoffConsumeSchema = z
+  .object({
+    tenantId: z.uuid(),
+    token: z.string().min(32).max(512),
+  })
+  .strict();
+
 export const provisionTenantResponseSchema = z
   .object({
     tenant: z.object({

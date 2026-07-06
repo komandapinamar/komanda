@@ -2,16 +2,6 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const initialTenantItem = {
-  documentId: "burger-classic",
-  name: "Hamburguesa clasica",
-  price: "8500",
-  description: "Carne, queso y salsa",
-  image: "/uploads/classic.jpg",
-  category: { documentId: "burgers", name: "Hamburguesas" },
-  combos: [],
-};
-
 describe("initial single-tenant storefront characterization", () => {
   beforeEach(() => {
     vi.stubEnv("STRAPI_URL", "https://cms.initial-tenant.test");
@@ -22,34 +12,13 @@ describe("initial single-tenant storefront characterization", () => {
     vi.resetModules();
   });
 
-  it("loads and maps the public menu from the globally configured Strapi", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({ data: [initialTenantItem] }),
+  it("routes the initial storefront through the same Core tenant catalog", async () => {
+    const source = await readFile(
+      resolve(process.cwd(), "features/shop/menu/services/menu.service.ts"),
+      "utf8",
     );
-    vi.stubGlobal("fetch", fetchMock);
-    const { getMenuItems } = await import(
-      "@/features/shop/menu/services/menu.service"
-    );
-
-    await expect(getMenuItems()).resolves.toEqual([
-      expect.objectContaining({
-        documentId: "burger-classic",
-        name: "Hamburguesa clasica",
-        price: 8500,
-        image: "https://cms.initial-tenant.test/uploads/classic.jpg",
-      }),
-    ]);
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /^https:\/\/cms\.initial-tenant\.test\/api\/menu-items\?/,
-      ),
-      expect.objectContaining({
-        headers: {
-          Authorization: "Bearer characterization-token",
-        },
-        next: { revalidate: 60 },
-      }),
-    );
+    expect(source).toContain("PublicTenantService");
+    expect(source).not.toContain("STRAPI_FULL_ACCESS_TOKEN");
   });
 
   it("submits only item identity and quantity, then accepts the server cart totals", async () => {
@@ -76,7 +45,7 @@ describe("initial single-tenant storefront characterization", () => {
       "@/features/shop/cart/services/cart.service"
     );
 
-    const cart = await createCart([
+    const cart = await createCart("tenant-initial", [
       {
         documentId: "burger-classic",
         quantity: 2,
@@ -87,11 +56,19 @@ describe("initial single-tenant storefront characterization", () => {
     ]);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/cart",
+      "/api/v1/storefronts/tenant-initial/carts",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          items: [{ documentId: "burger-classic", quantity: 2 }],
+          lines: [
+            {
+              kind: "item",
+              resourceId: "burger-classic",
+              quantity: 2,
+              optionIds: [],
+              confirmedUnitPrice: "1.00",
+            },
+          ],
         }),
       }),
     );

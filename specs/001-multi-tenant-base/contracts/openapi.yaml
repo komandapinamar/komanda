@@ -73,6 +73,27 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/v1/auth/onboarding-handoffs/consume:
+    post:
+      tags: [Auth]
+      operationId: consumeOnboardingHandoff
+      description: >
+        Atomically consumes the short-lived handoff after Core email
+        verification and establishes the owner's revocable Core session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingHandoffConsumeRequest"
+      responses:
+        "204":
+          description: Handoff consumed and secure session cookie set.
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /api/v1/provisioning/tenants:
     post:
       tags: [Provisioning]
@@ -1202,6 +1223,17 @@ components:
       type: object
       required: [token]
       properties:
+        token:
+          type: string
+          minLength: 32
+    OnboardingHandoffConsumeRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, token]
+      properties:
+        tenantId:
+          type: string
+          format: uuid
         token:
           type: string
           minLength: 32

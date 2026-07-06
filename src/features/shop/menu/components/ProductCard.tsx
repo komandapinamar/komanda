@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { MenuItem } from "@/types/types";
 import { useState } from "react";
 

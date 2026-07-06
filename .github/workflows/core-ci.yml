@@ -84,6 +84,7 @@ jobs:
       - run: npm ci
       - run: npm run db:migrate:test
       - run: npm run db:verify-roles:test
+      - run: npm run test:database-compatibility
       - name: Run integration suites present in this increment
         run: |
           npm run test:integration -- --passWithNoTests

@@ -23,7 +23,15 @@ async function inspect(connectionString: string) {
              c.relrowsecurity as rowsecurity,
              c.relforcerowsecurity as forcerowsecurity
       from pg_class c
-      where c.relname in ('tenants', 'tenant_locations', 'tenant_memberships', 'tenant_settings', 'tenant_counters', 'outbox_events', 'idempotency_records', 'audit_events')
+      where c.relname in (
+        'tenants', 'tenant_locations', 'tenant_memberships', 'tenant_settings',
+        'tenant_counters', 'outbox_events', 'idempotency_records', 'audit_events',
+        'tenant_entitlement_snapshots', 'media_assets', 'catalog_categories',
+        'catalog_items', 'addon_groups', 'addon_options', 'item_addon_groups',
+        'catalog_combos', 'combo_items', 'carts', 'cart_lines',
+        'cart_line_options', 'integration_accounts', 'payment_attempts',
+        'provider_resource_routes', 'webhook_events'
+      )
       order by c.relname
     `);
     return { role: role.rows[0], tables: tables.rows };

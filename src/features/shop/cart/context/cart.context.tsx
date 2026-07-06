@@ -19,8 +19,6 @@ import type {
   OfficialCart,
 } from "@/types/types";
 
-const CART_STORAGE_KEY = "chikenstop.cart";
-
 type PersistedCartState = {
   cartId: string | null;
   items: CartLine[];
@@ -83,16 +81,25 @@ function isPersistedCartLine(line: unknown): line is CartLine {
   );
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({
+  children,
+  tenantSlug,
+}: {
+  children: ReactNode;
+  tenantSlug: string;
+}) {
   const [items, setItems] = useState<CartLine[]>([]);
   const [cartId, setCartId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<CartSyncStatus>("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const storageKey = `komanda.cart.${tenantSlug}`;
 
   useEffect(() => {
     try {
-      const storedCart = window.localStorage.getItem(CART_STORAGE_KEY);
+      setItems([]);
+      setCartId(null);
+      const storedCart = window.localStorage.getItem(storageKey);
 
       if (!storedCart) {
         setIsHydrated(true);
@@ -116,11 +123,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       setCartId(parsedCart.cartId ?? null);
     } catch {
-      window.localStorage.removeItem(CART_STORAGE_KEY);
+      window.localStorage.removeItem(storageKey);
     } finally {
       setIsHydrated(true);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -132,8 +139,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
     };
 
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(persistedState));
-  }, [cartId, isHydrated, items]);
+    window.localStorage.setItem(storageKey, JSON.stringify(persistedState));
+  }, [cartId, isHydrated, items, storageKey]);
 
   const addItem = useCallback((item: MenuItem) => {
     setCartId(null);
@@ -234,7 +241,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setSyncError(null);
 
     try {
-      const syncedCart = await createCart(items.map(cartLineToSnapshot));
+      const syncedCart = await createCart(
+        tenantSlug,
+        items.map(cartLineToSnapshot),
+      );
       applyOfficialCart(syncedCart);
       return syncedCart;
     } catch (error) {
@@ -244,7 +254,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
       return null;
     }
-  }, [applyOfficialCart, items]);
+  }, [applyOfficialCart, items, tenantSlug]);
 
   const beginCheckout = useCallback(async () => syncCart(), [syncCart]);
 
