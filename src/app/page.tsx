@@ -7,8 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const tenantSlug =
-    (await headers()).get("x-komanda-tenant-slug") ??
-    process.env.MOCK_TENANT_SLUG;
+    (await headers()).get("x-komanda-tenant-slug");
   if (!tenantSlug) notFound();
   let catalog;
   try {

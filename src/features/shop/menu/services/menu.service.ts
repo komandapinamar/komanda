@@ -38,8 +38,7 @@ export async function getPublicCatalog(tenantSlug: string) {
 }
 
 function requiredTenantSlug(tenantSlug?: string) {
-  const resolved =
-    tenantSlug ?? process.env.INITIAL_TENANT_SLUG ?? process.env.MOCK_TENANT_SLUG;
+  const resolved = tenantSlug?.trim();
   if (!resolved) throw new Error("An explicit tenant slug is required.");
   return resolved;
 }

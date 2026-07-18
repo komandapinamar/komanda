@@ -25,6 +25,7 @@ type PersistedCartState = {
 };
 
 type CartContextValue = {
+  tenantSlug: string;
   items: CartLine[];
   // snapshot is a minimal version of "items" to sync with backend before payment
   snapshot: CartSnapshotLine[];
@@ -260,6 +261,7 @@ export function CartProvider({
 
   const value = useMemo(
     () => ({
+      tenantSlug,
       items,
       snapshot,
       itemCount,
@@ -292,6 +294,7 @@ export function CartProvider({
       syncCart,
       syncError,
       syncStatus,
+      tenantSlug,
     ],
   );
 

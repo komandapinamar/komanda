@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { TenantReadinessService } from "@/features/tenancy/application/tenant-readiness.service";
+import { TenantActivationPanel } from "@/features/tenancy/web/TenantActivationPanel";
 
 const labels: Record<string, string> = {
   identity_verified: "Identidad verificada",
@@ -53,9 +54,7 @@ export default async function TenantOnboardingPage({
           </li>
         ))}
       </ul>
-      <button disabled={!readiness.ready} className="rounded-md bg-amber-400 px-5 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40">
-        Activar ventas
-      </button>
+      <TenantActivationPanel tenantId={tenantId} ready={readiness.ready} />
     </main>
   );
 }

@@ -8,6 +8,18 @@ export type MercadoPagoTokens = {
 
 export class MercadoPagoDependencyError extends Error {}
 
+function testEndpoint(name: string, fallback: string) {
+  const value = process.env[name]?.trim();
+  if (!value) return fallback;
+  if (
+    process.env.KOMANDA_TEST_MODE !== "1" ||
+    process.env.NODE_ENV === "production"
+  ) {
+    throw new Error(`${name} can only override Mercado Pago in test mode.`);
+  }
+  return value;
+}
+
 export class MercadoPagoOAuthClient {
   constructor(
     private readonly config: {
@@ -19,7 +31,12 @@ export class MercadoPagoOAuthClient {
   ) {}
 
   authorizationUrl(input: { state: string; codeChallenge: string }) {
-    const url = new URL("https://auth.mercadopago.com.ar/authorization");
+    const url = new URL(
+      testEndpoint(
+        "MERCADOPAGO_AUTHORIZATION_URL",
+        "https://auth.mercadopago.com.ar/authorization",
+      ),
+    );
     url.searchParams.set("client_id", this.config.clientId);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("platform_id", "mp");
@@ -48,7 +65,7 @@ export class MercadoPagoOAuthClient {
 
   async revoke(accessToken: string) {
     const response = await this.request(
-      "https://api.mercadopago.com/oauth/token",
+      `${this.apiBaseUrl()}/oauth/token`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -60,7 +77,7 @@ export class MercadoPagoOAuthClient {
   }
 
   async verify(accessToken: string) {
-    const response = await this.request("https://api.mercadopago.com/users/me", {
+    const response = await this.request(`${this.apiBaseUrl()}/users/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!response.ok) {
@@ -72,7 +89,7 @@ export class MercadoPagoOAuthClient {
   }
 
   private async tokenRequest(body: Record<string, string>) {
-    const response = await this.request("https://api.mercadopago.com/oauth/token", {
+    const response = await this.request(`${this.apiBaseUrl()}/oauth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -114,6 +131,13 @@ export class MercadoPagoOAuthClient {
       signal: AbortSignal.timeout(this.config.timeoutMs ?? 5_000),
       cache: "no-store",
     });
+  }
+
+  private apiBaseUrl() {
+    return testEndpoint(
+      "MERCADOPAGO_API_BASE_URL",
+      "https://api.mercadopago.com",
+    ).replace(/\/$/, "");
   }
 }
 

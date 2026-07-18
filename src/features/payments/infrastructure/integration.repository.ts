@@ -14,6 +14,11 @@ import {
 } from "@/lib/encryption/secret-envelope";
 import type { MercadoPagoTokens } from "./mercadopago-oauth.client";
 
+export type MercadoPagoIntegrationAccount =
+  typeof integrationAccounts.$inferSelect;
+
+export class PaymentAttemptIdempotencyConflictError extends Error {}
+
 function encryptionConfig() {
   const encoded = process.env.APP_ENCRYPTION_KEY_BASE64;
   const version = Number(process.env.APP_ENCRYPTION_KEY_VERSION);
@@ -184,28 +189,44 @@ export class IntegrationRepository {
         ),
       )
       .limit(1);
+    if (existing && existing.cartId !== input.cartId) {
+      throw new PaymentAttemptIdempotencyConflictError(
+        "Idempotency key belongs to another cart.",
+      );
+    }
     return existing!;
   }
 
-  async attachPreference(attemptId: string, preferenceId: string) {
-    await this.transaction
+  async attachPreference(input: {
+    attemptId: string;
+    integrationAccountId: string;
+    preferenceId: string;
+  }) {
+    const [updated] = await this.transaction
       .update(paymentAttempts)
-      .set({ providerPreferenceId: preferenceId, status: "processing" })
+      .set({ providerPreferenceId: input.preferenceId, status: "processing" })
       .where(
         and(
           eq(paymentAttempts.tenantId, this.tenantId),
-          eq(paymentAttempts.id, attemptId),
+          eq(paymentAttempts.id, input.attemptId),
+          eq(paymentAttempts.integrationAccountId, input.integrationAccountId),
         ),
+      )
+      .returning({ id: paymentAttempts.id });
+    if (!updated) {
+      throw new PaymentAttemptIdempotencyConflictError(
+        "Payment attempt no longer matches its integration account.",
       );
+    }
     await this.transaction
       .insert(providerResourceRoutes)
       .values({
         provider: "mercadopago",
         resourceType: "preference",
-        externalId: preferenceId,
+        externalId: input.preferenceId,
         tenantId: this.tenantId,
-        integrationAccountId: (await this.currentMercadoPago())!.id,
-        localResourceId: attemptId,
+        integrationAccountId: input.integrationAccountId,
+        localResourceId: input.attemptId,
       })
       .onConflictDoNothing();
   }
@@ -214,12 +235,17 @@ export class IntegrationRepository {
 export class WebhookRoutingRepository {
   constructor(private readonly transaction: TenantTransaction) {}
 
-  async resolve(routingKey: string, resourceId: string) {
+  async resolveAccount(routingKey: string) {
     const [account] = await this.transaction
       .select()
       .from(integrationAccounts)
       .where(eq(integrationAccounts.webhookRoutingKey, routingKey))
       .limit(1);
+    return account ?? null;
+  }
+
+  async resolve(routingKey: string, resourceId: string) {
+    const account = await this.resolveAccount(routingKey);
     if (!account) return null;
     const [route] = await this.transaction
       .select()
@@ -235,12 +261,102 @@ export class WebhookRoutingRepository {
     return route ? { account, route } : null;
   }
 
+  async findRoute(input: {
+    tenantId: string;
+    integrationAccountId: string;
+    resourceType: "payment" | "preference";
+    externalId: string;
+  }) {
+    const [route] = await this.transaction
+      .select()
+      .from(providerResourceRoutes)
+      .where(
+        and(
+          eq(providerResourceRoutes.provider, "mercadopago"),
+          eq(providerResourceRoutes.resourceType, input.resourceType),
+          eq(providerResourceRoutes.externalId, input.externalId),
+          eq(providerResourceRoutes.tenantId, input.tenantId),
+          eq(providerResourceRoutes.integrationAccountId, input.integrationAccountId),
+        ),
+      )
+      .limit(1);
+    return route ?? null;
+  }
+
+  async findPaymentAttempt(input: {
+    tenantId: string;
+    integrationAccountId: string;
+    attemptId: string;
+  }) {
+    const [attempt] = await this.transaction
+      .select()
+      .from(paymentAttempts)
+      .where(
+        and(
+          eq(paymentAttempts.tenantId, input.tenantId),
+          eq(paymentAttempts.integrationAccountId, input.integrationAccountId),
+          eq(paymentAttempts.id, input.attemptId),
+        ),
+      )
+      .limit(1);
+    return attempt ?? null;
+  }
+
+  async attachPaymentResource(input: {
+    tenantId: string;
+    integrationAccountId: string;
+    paymentAttemptId: string;
+    providerPaymentId: string;
+  }) {
+    await this.transaction
+      .insert(providerResourceRoutes)
+      .values({
+        provider: "mercadopago",
+        resourceType: "payment",
+        externalId: input.providerPaymentId,
+        tenantId: input.tenantId,
+        integrationAccountId: input.integrationAccountId,
+        localResourceId: input.paymentAttemptId,
+      })
+      .onConflictDoNothing();
+  }
+
+  async updatePaymentAttemptFromWebhook(input: {
+    tenantId: string;
+    integrationAccountId: string;
+    paymentAttemptId: string;
+    providerPaymentId: string;
+    status: typeof paymentAttempts.$inferSelect.status;
+    processedAt: Date | null;
+    failureCode?: string | null;
+  }) {
+    const [updated] = await this.transaction
+      .update(paymentAttempts)
+      .set({
+        providerPaymentId: input.providerPaymentId,
+        status: input.status,
+        processedAt: input.processedAt,
+        failureCode: input.failureCode ?? null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(paymentAttempts.tenantId, input.tenantId),
+          eq(paymentAttempts.integrationAccountId, input.integrationAccountId),
+          eq(paymentAttempts.id, input.paymentAttemptId),
+        ),
+      )
+      .returning();
+    return updated ?? null;
+  }
+
   async persistEvent(input: {
     tenantId: string;
     providerEventId: string;
     topic: string;
     correlationId: string;
     payload: Record<string, unknown>;
+    status?: typeof webhookEvents.$inferSelect.status;
   }) {
     const [event] = await this.transaction
       .insert(webhookEvents)
@@ -248,6 +364,7 @@ export class WebhookRoutingRepository {
         ...input,
         provider: "mercadopago",
         signatureValid: true,
+        status: input.status ?? "received",
       })
       .onConflictDoNothing()
       .returning();

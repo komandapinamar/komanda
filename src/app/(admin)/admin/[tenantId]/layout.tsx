@@ -31,7 +31,10 @@ export default async function TenantAdminLayout({
           </div>
           <nav className="flex items-center gap-4 text-sm">
             <Link href={`/admin/${tenantId}/onboarding`}>Estado</Link>
+            <Link href={`/admin/${tenantId}/orders`}>Pedidos</Link>
             <Link href={`/admin/${tenantId}/catalog`}>Catálogo</Link>
+            <Link href={`/admin/${tenantId}/settings`}>Configuración</Link>
+            <Link href={`/admin/${tenantId}/integrations`}>Integraciones</Link>
             <Link href="/admin/select-business" className="text-amber-400">Cambiar negocio</Link>
           </nav>
         </div>

@@ -15,6 +15,7 @@ type CartApiResponse = {
   subtotal?: number | string;
   discountTotal?: number | string;
   total?: number | string;
+  version?: number | string;
   updatedAt?: string;
   expiresAt?: string;
 };
@@ -22,6 +23,11 @@ type CartApiResponse = {
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toOptionalNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function normalizeCartLine(line: unknown): OfficialCartLine {
@@ -74,6 +80,7 @@ function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
     subtotal,
     discountTotal,
     total: toNumber(payload.total, subtotal - discountTotal),
+    version: toOptionalNumber(payload.version),
     updatedAt: payload.updatedAt,
     expiresAt: payload.expiresAt,
   };
@@ -129,7 +136,7 @@ export async function createCart(tenantSlug: string, lines: CartSnapshotLine[]) 
 function tenantSlugFromBrowser() {
   const path = typeof window === "undefined" ? "" : window.location.pathname;
   const match = path.match(/^\/storefronts\/([^/]+)/);
-  const slug = match?.[1] ?? process.env.NEXT_PUBLIC_MOCK_TENANT_SLUG;
+  const slug = match?.[1];
   if (!slug) throw new Error("An explicit tenant storefront is required.");
   return slug;
 }

@@ -1,6 +1,7 @@
 import OrderProductCard from "@/features/shop/order/components/OrderProductCard";
 import OrderShell from "@/features/shop/order/components/OrderShell";
 import { getCategories, getMenuItems } from "@/features/shop/menu/services/menu.service";
+import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
 import type { MenuItem } from "@/types/types";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -9,13 +10,21 @@ export const dynamic = "force-dynamic";
 
 export default async function Order() {
   const tenantSlug =
-    (await headers()).get("x-komanda-tenant-slug") ??
-    process.env.MOCK_TENANT_SLUG;
+    (await headers()).get("x-komanda-tenant-slug");
   if (!tenantSlug) notFound();
-  const [categories, items] = await Promise.all([
-    getCategories(tenantSlug),
-    getMenuItems(tenantSlug),
-  ]);
+  let categories;
+  let items;
+  try {
+    [categories, items] = await Promise.all([
+      getCategories(tenantSlug),
+      getMenuItems(tenantSlug),
+    ]);
+  } catch (error) {
+    if (error instanceof PublicTenantNotFoundError) {
+      notFound();
+    }
+    throw error;
+  }
 
   const itemsByCategory = new Map<string, MenuItem[]>();
 

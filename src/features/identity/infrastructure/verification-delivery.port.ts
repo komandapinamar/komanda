@@ -7,6 +7,8 @@ export type VerificationDelivery = {
   }): Promise<void>;
 };
 
+type VerificationMessage = Parameters<VerificationDelivery["deliver"]>[0];
+
 export class CaptureVerificationDelivery implements VerificationDelivery {
   readonly messages: Array<{
     email: string;
@@ -45,17 +47,71 @@ export class FileCaptureVerificationDelivery implements VerificationDelivery {
   }
 }
 
-export function verificationDeliveryFromEnvironment(): VerificationDelivery {
-  if (
-    process.env.NODE_ENV === "production" ||
-    process.env.IDENTITY_VERIFICATION_DELIVERY !== "capture"
+export class HttpVerificationDelivery implements VerificationDelivery {
+  constructor(
+    private readonly endpoint: string,
+    private readonly token: string,
+    private readonly publicBaseUrl: string,
   ) {
-    throw new Error(
-      "A production verification delivery adapter must be configured explicitly.",
+    if (!endpoint || !token || !publicBaseUrl) {
+      throw new Error("HTTP verification delivery is not safely configured.");
+    }
+  }
+
+  async deliver(input: VerificationMessage) {
+    const verificationUrl = new URL(
+      "/api/v1/auth/email-verifications/confirm",
+      this.publicBaseUrl,
+    ).toString();
+    const response = await fetch(this.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        expiresAt: input.expiresAt.toISOString(),
+        verificationUrl,
+      }),
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error("HTTP verification delivery failed.");
+    }
+  }
+}
+
+function deploymentEnvironment() {
+  return process.env.KOMANDA_ENVIRONMENT ?? process.env.NODE_ENV ?? "development";
+}
+
+export function verificationDeliveryFromEnvironment(): VerificationDelivery {
+  const delivery = process.env.IDENTITY_VERIFICATION_DELIVERY;
+  if (delivery === "http") {
+    return new HttpVerificationDelivery(
+      process.env.IDENTITY_VERIFICATION_HTTP_ENDPOINT ?? "",
+      process.env.IDENTITY_VERIFICATION_HTTP_TOKEN ?? "",
+      process.env.KOMANDA_PUBLIC_BASE_URL ?? "",
     );
   }
-  return new FileCaptureVerificationDelivery(
-    process.env.IDENTITY_VERIFICATION_CAPTURE_PATH ??
-      ".test-artifacts/verification.jsonl",
+
+  if (delivery === "capture" && deploymentEnvironment() === "staging") {
+    return new FileCaptureVerificationDelivery(
+      process.env.IDENTITY_VERIFICATION_CAPTURE_PATH ??
+        ".test-artifacts/verification.jsonl",
+    );
+  }
+
+  if (delivery === "capture" && process.env.NODE_ENV !== "production") {
+    return new FileCaptureVerificationDelivery(
+      process.env.IDENTITY_VERIFICATION_CAPTURE_PATH ??
+        ".test-artifacts/verification.jsonl",
+    );
+  }
+
+  throw new Error(
+    "A production verification delivery adapter must be configured explicitly.",
   );
 }

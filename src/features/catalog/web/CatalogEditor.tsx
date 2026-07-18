@@ -116,6 +116,42 @@ export function CatalogEditor({
     }
   }
 
+  async function publish(
+    kind: "categories" | "items",
+    resource: Category | Item,
+  ) {
+    setMessage(null);
+    try {
+      const updated = (await jsonOrThrow(
+        await fetch(`/api/v1/tenants/${tenantId}/catalog/${kind}/${resource.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/merge-patch+json",
+            "If-Match": String(resource.version),
+          },
+          body: JSON.stringify({ status: "active" }),
+        }),
+      )) as Category | Item;
+
+      if (kind === "categories") {
+        setCategories((current) =>
+          current.map((category) =>
+            category.id === updated.id ? (updated as Category) : category,
+          ),
+        );
+      } else {
+        setItems((current) =>
+          current.map((item) =>
+            item.id === updated.id ? (updated as Item) : item,
+          ),
+        );
+      }
+      setMessage("Recurso publicado.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Error inesperado.");
+    }
+  }
+
   async function createAddonGroup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -195,11 +231,26 @@ export function CatalogEditor({
           </form>
           <ul className="mt-4 space-y-2">
             {categories.map((category) => (
-              <li key={category.id} className="flex items-center justify-between rounded border border-zinc-800 p-3">
+              <li key={category.id} className="flex items-center justify-between gap-3 rounded border border-zinc-800 p-3">
                 <span>{category.name}</span>
-                <button onClick={() => archive("categories", category)} className="text-sm text-red-300">
-                  Archivar
-                </button>
+                <span className="flex shrink-0 gap-3">
+                  {category.status === "draft" ? (
+                    <button
+                      type="button"
+                      onClick={() => publish("categories", category)}
+                      className="text-sm text-emerald-300"
+                    >
+                      Publicar
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => archive("categories", category)}
+                    className="text-sm text-red-300"
+                  >
+                    Archivar
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
@@ -221,11 +272,26 @@ export function CatalogEditor({
           </form>
           <ul className="mt-4 space-y-2">
             {items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between rounded border border-zinc-800 p-3">
+              <li key={item.id} className="flex items-center justify-between gap-3 rounded border border-zinc-800 p-3">
                 <span>{item.name} · ${item.price}</span>
-                <button onClick={() => archive("items", item)} className="text-sm text-red-300">
-                  Archivar
-                </button>
+                <span className="flex shrink-0 gap-3">
+                  {item.status === "draft" ? (
+                    <button
+                      type="button"
+                      onClick={() => publish("items", item)}
+                      className="text-sm text-emerald-300"
+                    >
+                      Publicar
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => archive("items", item)}
+                    className="text-sm text-red-300"
+                  >
+                    Archivar
+                  </button>
+                </span>
               </li>
             ))}
           </ul>

@@ -59,6 +59,7 @@ export type OfficialCart = {
   subtotal: number;
   discountTotal: number;
   total: number;
+  version?: number;
   updatedAt?: string;
   expiresAt?: string;
 };
@@ -70,7 +71,11 @@ export type CustomerInfo = {
   phone?: string;
 };
 
-export type OrderSource = "mercadopago-webhook" | "admin-direct";
+export type OrderSource =
+  | "mercadopago-webhook"
+  | "admin-direct"
+  | "mercadopago_webhook"
+  | "admin_direct";
 
 export type CheckoutFormValues = {
   customer: CustomerInfo;
@@ -94,12 +99,15 @@ export type AdminDashboardOrder = {
   id: string;
   purchaseNumber: string;
   status: OrderStatus;
+  paymentStatus?: "pending" | "paid" | "failed" | "refunded";
   customer: CustomerInfo;
   notes: string | null;
   source: OrderSource | null;
   approvedAt: string | null;
+  deliveredAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  version?: number;
 };
 
 export type AdminOrdersStreamPayload = {
@@ -117,7 +125,12 @@ export type OrderRequestMetadata = {
   purchaseNumber?: string;
 };
 
-export type OrderStatus = "approved" | "delivered";
+export type OrderStatus =
+  | "approved"
+  | "preparing"
+  | "ready"
+  | "delivered"
+  | "cancelled";
 
 export type CheckoutPaymentStatus =
   | "initiated"
@@ -165,6 +178,7 @@ export type CreatePaymentSessionPayload = {
   cartId: string;
   customer: CustomerInfo;
   notes?: string;
+  cartVersion?: number;
 };
 
 export type PaymentSession = {

@@ -1,7 +1,12 @@
 import "server-only";
 
 import { and, eq } from "drizzle-orm";
-import { tenantLocations, tenants } from "@/db/schema";
+import {
+  catalogItems,
+  integrationAccounts,
+  tenantLocations,
+  tenants,
+} from "@/db/schema";
 import { withTenantTransaction } from "@/db/tenant-transaction";
 import type {
   LiveMembership,
@@ -38,6 +43,27 @@ export class TenantReadinessService {
           ),
         )
         .limit(1);
+      const [publishedItem] = await transaction
+        .select({ id: catalogItems.id })
+        .from(catalogItems)
+        .where(
+          and(
+            eq(catalogItems.tenantId, membership.tenantId),
+            eq(catalogItems.status, "active"),
+          ),
+        )
+        .limit(1);
+      const [paymentIntegration] = await transaction
+        .select({ id: integrationAccounts.id })
+        .from(integrationAccounts)
+        .where(
+          and(
+            eq(integrationAccounts.tenantId, membership.tenantId),
+            eq(integrationAccounts.provider, "mercadopago"),
+            eq(integrationAccounts.status, "active"),
+          ),
+        )
+        .limit(1);
       if (!tenant) throw new Error("Tenant readiness is unavailable.");
       const checks = [
         {
@@ -60,10 +86,14 @@ export class TenantReadinessService {
           complete: tenant.defaultCurrency.length === 3,
           requiredForActivation: true,
         },
-        { code: "published_item", complete: false, requiredForActivation: true },
+        {
+          code: "published_item",
+          complete: Boolean(publishedItem),
+          requiredForActivation: true,
+        },
         {
           code: "payment_connected",
-          complete: false,
+          complete: Boolean(paymentIntegration),
           requiredForActivation: true,
         },
         {

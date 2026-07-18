@@ -7,13 +7,18 @@ import type {
 
 type PaymentSessionApiResponse = {
   paymentId?: string;
+  paymentAttemptId?: string;
   preferenceId?: string;
   initPoint?: string;
+  redirectUrl?: string;
   sandboxInitPoint?: string;
   cartId?: string;
   amount?: number | string;
   currency?: string;
   error?: string;
+  title?: string;
+  detail?: string;
+  code?: string;
 };
 
 function toNumber(value: unknown, fallback = 0) {
@@ -22,28 +27,41 @@ function toNumber(value: unknown, fallback = 0) {
 }
 
 export async function createPaymentSession(
+  tenantSlug: string,
   payload: CreatePaymentSessionPayload,
 ): Promise<PaymentSession> {
-  const response = await fetch("/api/payments/session", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetch(
+    `/api/v1/storefronts/${tenantSlug}/carts/${payload.cartId}/payment-sessions`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        customer: payload.customer,
+        notes: payload.notes,
+        cartVersion: payload.cartVersion,
+      }),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   const data = (await response.json()) as PaymentSessionApiResponse;
 
   if (!response.ok) {
     throw new Error(
-      data.error || `Payment session request failed with status ${response.status}`,
+      data.error ||
+        data.detail ||
+        data.title ||
+        data.code ||
+        `Payment session request failed with status ${response.status}`,
     );
   }
 
-  const paymentId = String(data.paymentId ?? "");
+  const paymentId = String(data.paymentAttemptId ?? data.paymentId ?? "");
   const preferenceId = String(data.preferenceId ?? "");
-  const initPoint = String(data.initPoint ?? "");
-  const cartId = String(data.cartId ?? "");
+  const initPoint = String(data.redirectUrl ?? data.initPoint ?? "");
+  const cartId = String(data.cartId ?? payload.cartId ?? "");
 
   if (!paymentId || !preferenceId || !initPoint || !cartId) {
     throw new Error("Payment session response is missing required fields.");

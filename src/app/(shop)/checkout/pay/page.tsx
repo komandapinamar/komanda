@@ -118,7 +118,15 @@ function OfficialCartSummary({
 
 export default function CheckoutPayPage() {
   const router = useRouter();
-  const { applyOfficialCart, cartId, isHydrated, items, snapshot, syncCart } = useCart();
+  const {
+    applyOfficialCart,
+    cartId,
+    isHydrated,
+    items,
+    snapshot,
+    syncCart,
+    tenantSlug,
+  } = useCart();
   const [formValues, setFormValues] = useState(initialFormValues);
   const [officialCart, setOfficialCart] = useState<OfficialCart | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
@@ -135,14 +143,14 @@ export default function CheckoutPayPage() {
       }
 
       try {
-        const backendCart = await getCart(effectiveCartId);
+        const backendCart = await getCart(tenantSlug, effectiveCartId);
         setOfficialCart(backendCart);
         return backendCart;
       } catch {
         return null;
       }
     },
-    [cartId],
+    [cartId, tenantSlug],
   );
 
   const resolveOfficialCart = useCallback(
@@ -219,12 +227,13 @@ export default function CheckoutPayPage() {
       cartId: officialCart.id,
       customer: formValues.customer,
       notes: formValues.notes || undefined,
+      cartVersion: officialCart.version,
     };
 
     setIsSubmitting(true);
 
     try {
-      const session = await createPaymentSession(payload);
+      const session = await createPaymentSession(tenantSlug, payload);
       window.location.assign(session.initPoint);
     } catch (error) {
       setSubmitError(

@@ -6,7 +6,10 @@ import {
   komandaBusinessServiceAuthFromEnvironment,
   ServiceAuthenticationError,
 } from "@/features/identity/application/service-auth.service";
-import { correlationIdFromRequest } from "@/lib/observability/request-context";
+import {
+  correlationIdFromRequest,
+  safeLogFields,
+} from "@/lib/observability/request-context";
 import { problemResponse } from "@/lib/http/problem";
 
 export const runtime = "nodejs";
@@ -60,6 +63,36 @@ export async function POST(request: Request) {
         })),
       });
     }
+    const databaseError = error as {
+      code?: unknown;
+      constraint?: unknown;
+      name?: unknown;
+    };
+    console.error(
+      JSON.stringify(
+        safeLogFields(
+          { correlationId, operation: "tenant.provision" },
+          {
+            errorType:
+              typeof databaseError.name === "string"
+                ? databaseError.name
+                : "UnknownError",
+            databaseCode:
+              typeof databaseError.code === "string"
+                ? databaseError.code
+                : undefined,
+            constraint:
+              typeof databaseError.constraint === "string"
+                ? databaseError.constraint
+                : undefined,
+            debugMessage:
+              process.env.NODE_ENV === "development" && error instanceof Error
+                ? error.message
+                : undefined,
+          },
+        ),
+      ),
+    );
     return problemResponse({
       status: 409,
       title: "Provisioning conflict",
