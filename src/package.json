@@ -37,7 +37,8 @@
     "env:verify": "tsx scripts/verify-runtime-environment.ts",
     "seed:tenant:mock": "tsx scripts/seed-mock-tenant.ts",
     "seed:storefront:mock": "tsx scripts/seed-storefront-mock.ts",
-    "seed:multitenant:acceptance": "tsx scripts/seed-multitenant-acceptance.ts"
+    "seed:multitenant:acceptance": "tsx scripts/seed-multitenant-acceptance.ts",
+    "seed:dev": "tsx scripts/seed-dev-tenant.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1079.0",
