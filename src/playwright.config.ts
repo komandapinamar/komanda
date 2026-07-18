@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+const webServerReadyURL = new URL("/admin", baseURL).toString();
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -20,6 +21,11 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "multitenant",
+      use: { ...devices["Desktop Chrome"] },
+      metadata: { tenantSlug: "multitenant" },
+    },
+    {
       name: "tenant-a",
       use: { ...devices["Desktop Chrome"] },
       metadata: { tenantSlug: "tenant-a" },
@@ -34,7 +40,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run dev -- --hostname 127.0.0.1",
-        url: baseURL,
+        url: webServerReadyURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         env: {

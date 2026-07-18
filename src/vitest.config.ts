@@ -97,6 +97,30 @@ export default defineConfig({
           testTimeout: 30_000,
         },
       }),
+      defineProject({
+        ...sharedProject,
+        test: {
+          ...shared,
+          name: "architecture",
+          include: ["tests/architecture/**/*.test.ts"],
+        },
+      }),
+      defineProject({
+        ...sharedProject,
+        test: {
+          ...shared,
+          name: "security",
+          include: ["tests/security/**/*.test.ts"],
+        },
+      }),
+      defineProject({
+        ...sharedProject,
+        test: {
+          ...shared,
+          name: "performance",
+          include: ["tests/performance/**/*.test.ts"],
+        },
+      }),
     ],
   },
 });

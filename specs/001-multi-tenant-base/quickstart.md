@@ -107,7 +107,7 @@ Expected:
 - retries of registration, payment confirmation, direct orders and print results are idempotent;
 - catalog edits preserve order snapshots;
 - suspended tenants cannot start new sales;
-- the initial tenant regressions remain green.
+- no legacy route, credential or initial-tenant fallback is required.
 
 ## 4. Seed two acceptance tenants
 
@@ -139,15 +139,13 @@ OWNER_A_EMAIL
 OWNER_B_EMAIL
 PLAN_A_ID
 PLAN_B_ID
-PRINT_AGENT_A_TOKEN_FILE
-PRINT_AGENT_B_TOKEN_FILE
 ```
 
 Expected:
 
 - each owner sees only their tenant;
 - switching tenant is only available to a user with both memberships;
-- tenant A and B have different catalogs, Mercado Pago seller accounts and print agents.
+- tenant A and B independently enroll different Mercado Pago seller accounts and print agents during onboarding; seed output never contains those credentials.
 
 ## 5. Cross-tenant denial matrix
 
@@ -235,45 +233,21 @@ Expected:
 
 Use a fake printer adapter in automated tests; physical printer validation is a separate smoke step.
 
-## 9. Legacy migration rehearsal
-
-Use an anonymized snapshot and a read-only Strapi source.
+## 9. Clean database release
 
 ```bash
 cd src
-npm run migrate:tenant:preflight -- --manifest ./migration/initial-tenant.test.json
-npm run migrate:tenant:import -- --manifest ./migration/initial-tenant.test.json
-npm run migrate:tenant:reconcile -- --manifest ./migration/initial-tenant.test.json
+npm run db:migrate:test
+npm run db:verify-roles:test
 ```
 
 Expected:
 
-- commands are idempotent and emit run ids;
-- owner, operational data, catalog, media and the initial entitlement snapshot map to one tenant using a plan definition already deployed by Core;
-- the legacy global Mercado Pago token is not imported into `integration_accounts`;
-- source/target counts and checksums match;
-- order lines reconstruct from carts;
-- no orphan or cross-tenant relation exists;
-- invalid fixtures block `cutover_ready` with actionable codes.
-
-Repeat import and reconciliation. Expected: no duplicate rows and the same checksums.
-
-## 10. Cutover rehearsal
-
-```bash
-cd src
-npm run migrate:tenant:cutover -- --run-id <reconciled-run-id> --dry-run
-npm run test:smoke:initial-tenant
-```
-
-In a disposable environment, repeat without `--dry-run` after freezing legacy writes.
-
-Expected:
-
-- final delta is imported and reconciled;
-- storefront and dashboard operate with Strapi stopped;
-- rollback before reopening writes restores the legacy read flag;
-- after Core writes reopen, rollback uses a Core-compatible release and never reactivates Strapi as source-of-truth.
+- the migration chain completes from an empty PostgreSQL database;
+- migration `0015_multitenant_contract_cleanup` removes only empty legacy tables;
+- no legacy operational tables, global admin table or migration journal tables remain;
+- all tenant-owned tables have non-null tenant ownership, RLS and default-deny policies;
+- the runtime role is distinct from the migration role and has no `BYPASSRLS`.
 
 ## 11. Performance and recovery
 
@@ -302,14 +276,14 @@ Attach to the release:
 - Azure staging restore drill with elapsed recovery time, counts and invariant checks;
 - evidence that Neon contains no production credentials, backups or identifiable data;
 
-- migration run and reconciliation reports;
+- clean database migration and contract-cleanup output;
 - RLS/runtime-role verification output;
 - producer contract report;
 - `komanda-business` consumer compatibility report for supported provisioning versions and plan failures;
 - two-tenant denial matrix;
-- end-to-end and initial-tenant regression reports;
+- end-to-end multi-tenant report;
 - load-test percentiles;
 - dependency-failure results;
 - backup/restore evidence;
 - approved freeze, cutover and rollback timestamps;
-- owner acceptance for the initial tenant.
+- owner acceptance for the first provisioned tenant.

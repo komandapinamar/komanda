@@ -14,11 +14,11 @@ Next.js pages or Server Actions.
 See [the project constitution](.specify/memory/constitution.md) for repository
 ownership, fault-containment, tenant-isolation, performance, and delivery rules.
 
-## Current Legacy State
+## Current Runtime
 
-- Menu changes made only from Strapi CRM
-- Api route on $url + /api/menu to get updated menu from strapi
-- Strapi running on port 1337 so it is allowed in "remotePatterns" in next.config.ts
+Core is the operational source of truth. Storefronts, catalog, authentication,
+payments, orders and printing use tenant-scoped PostgreSQL APIs. The former Strapi,
+global-admin, global-payment and global-print paths are not part of the runtime.
 
 link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-id=17-48&t=KNZSgvzYHZo4vrVB-1>
 
@@ -42,7 +42,7 @@ link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-
 16. SPEC-016 Observabilidad.
 17. SPEC-017 Analytics.
 18. SPEC-018 Integraciones.
-19. SPEC-019 Migración final desde Strapi.
+ 19. SPEC-019 Retiro del legado operativo.
 
 ## Database
 
@@ -55,6 +55,17 @@ production. The non-owner runtime role is created separately with
 Never apply database infrastructure with local state or `-auto-approve` in
 production. Follow the reviewed plan and remote-state workflow in the linked
 runbook.
+
+## Multi-Tenant Release
+
+The release is clean-start rather than an in-place legacy backfill. Apply the complete
+Drizzle chain to an empty environment, provision tenants through the versioned API,
+and verify the runtime role and RLS before opening traffic. Migration `0015` refuses
+to remove legacy tables if they contain rows.
+
+Health checks are available at `/api/health` and report database, object storage,
+Mercado Pago, outbox and printing independently. Rollback uses a Core-compatible
+release or a forward fix; the legacy system is not a rollback target.
 
 Using Neon + Drizzle inside chikenstop-nextjs
 
@@ -73,11 +84,12 @@ npm run db:push
 
 # MercadoPago API
 
-- it should be aware of my current URL, that's very important to get the confirmation of approved payments.
+Each tenant connects its seller account with OAuth. Payment sessions and signed
+webhooks use the tenant integration and `KOMANDA_PUBLIC_BASE_URL`.
 
 ## Print Service
 
-- `Next.js` only keeps `PRINT_SERVICE_TOKEN` in `chikenstop-nextjs/.env`.
+- The worker uses a tenant/location-scoped `PRINT_AGENT_TOKEN` issued by Core.
 - Setup (in Raspberry PI system or running nonstop in a PC):
 
 ```bash
@@ -121,29 +133,10 @@ sudo systemctl enable print-service.service
 sudo systemctl start print-service.service
 sudo systemctl status print-service.service
 
-# Data modelling
+# Data Modelling
 
-As per now, Sprapi v5 does not support polymorphic relations, so the way to model the entities was repetitve and dull at best, but it is what it is. The entities are:
-
-- MenuItem:
-  - name
-  - price
-  - description
-  - image
-  - category (relation to Category, many to one)
-  - combos (relation to Combo, many to many)
-  - active (optional), not used for now. The same for combos
-- Combo:
-  - name
-  - price (The total price of the combo, not the sum of the items)
-    - note: the discount will be given by discount = sumItemsPrice - combo.price
-  - description
-  - image
-  - items (relation to MenuItem, many to many)
-- Category:
-  - name
-  - menuItems (relation to MenuItem, one to many)
-  - combos (relation to Combos, one to many)
+The authoritative model is PostgreSQL. Every catalog, cart, payment, order and
+printing record carries an explicit tenant boundary and is protected by RLS.
 
 ---
 
@@ -163,85 +156,13 @@ UPDATE admin SET "serverIp" = 'new_server_ip' WHERE "serverIp" = 'old_server_ip'
 >[!IMPORTANT]
 >Environment variables should be saved in advance for each service running inside dokploy.
 
-## Dokploy Setup
-First create a service application for Nextjs and another for cms(Strapi). Then create a Posgres database service for Strapi content.
-<img width="1566" height="718" alt="image" src="https://github.com/user-attachments/assets/d1a2f27e-510c-42d7-b360-056f50de0227" />
-The cmsdb will provide an "Internal Connection URL" that will be used for connecting to Strapi application.
+## Deployment Configuration
 
-### Environment variables
-#### Nextjs service application .env.example:
-```txt
-STRAPI_FULL_ACCESS_TOKEN=your_strapi_full_access_token_here
-STRAPI_URL=https://your-strapi-instance.example.com
+Core uses the environment examples in `src/.env.staging.example` and
+`src/.env.production.example`. Apply migrations with `DATABASE_DIRECT_URL`, run
+`npm --prefix src run db:verify-roles:test` with the runtime URL, then deploy the
+application using `DATABASE_URL` as `komanda_runtime`. The runtime role must never
+be the migration owner and must not have `BYPASSRLS`.
 
-MP_PUBLIC_KEY=APP_USR-your_public_key_here
-
-# only this to change in production
-NEXT_PUBLIC_API_URL=https://your-production-domain.example.com
-
-MP_ACCESS_TOKEN=APP_USR-your_access_token_here
-
-MP_WEBHOOK_URL=https://your-production-domain.example.com/api/payments/webhook
-MP_WEBHOOK_SECRET=your_mercadopago_webhook_secret_here
-
-# keep database credentials secure: do not expose them to client-side code
-# runtime/app traffic uses the environment-specific runtime role
-DATABASE_URL="postgresql://komanda_runtime:db_password@environment-database-host/database_name?sslmode=require&connect_timeout=15"
-
-# schema changes and migrations should use the direct connection
-DATABASE_DIRECT_URL="postgresql://db_user:db_password@your-neon-direct-host/database_name?sslmode=require"
-
-CRON_CART_CLEANUP_SECRET=your_cron_cleanup_secret_here
-
-# this is the time to live for the cart in the database
-# in minutes
-CART_TTL_MINUTES=60
-
-# token used to authenticate with the print service
-PRINT_SERVICE_TOKEN=your_print_service_token_here
-
-# JWT
-ADMIN_JWT_SECRET=your_admin_jwt_secret_here
-
-ADMIN_PASSWORD=change_this_to_a_strong_password
-```
-DATABASE_URL: runtime database connection. Neon development or Azure staging/production.
-
-DATABASE_DIRECT_URL: migration-owner connection for the current environment.
-
-CRON_CART_CLEANUP_SECRET: generated using ```openssl rand -hex 32
-
-STRAPI_FULL_ACCESS_TOKEN: private token for full CMS access. Given in Strapi configuration.
-
-ADMIN_JWT_SECRET: signs admin auth tokens. Generated using ```openssl rand -hex 32
-
-ADMIN_PASSWORD: admin login password to access admin dashboard (with user admin), should be strong.
-
-NEXT_PUBLIC_API_URL: public API URL used by the Nextjs frontend.
-
-#### Cms (Strapi) service application .env.example:
-See: https://docs.strapi.io/cms/configurations/environment
-```txt
-HOST=0.0.0.0
-PORT=1337
-APP_KEYS="toBeModified1,toBeModified2"
-API_TOKEN_SALT=tobemodified
-ADMIN_JWT_SECRET=tobemodified
-TRANSFER_TOKEN_SALT=tobemodified
-JWT_SECRET=tobemodified
-ENCRYPTION_KEY=tobemodified
-
-DATABASE_CLIENT=postgres /* given that we will be using postgres on dokploy */
-DATABASE_URL=postgresql://strapi:123456789@hamburguesasdeautor-cmsdb-tbo2g7:5432/hamburguesasdeautor_cms /* Internal Connection URL in db service application */
-DATABASE_SCHEMA=public
-DATABASE_SSL=false
-```
-
-# todo
-
-- build categories for the admin panel
-- create aditionals free/paid
-- create promo codes
-- create dashbord (dbt connected to neon from checkout_payments table) with:
-  - hourly sales
-  - daily sales
+The database infrastructure and Azure staging gate are documented in
+`infra/database/README.md` and `infra/database/azure/RUNBOOK.md`.

@@ -37,7 +37,11 @@ Thumbs.db
 
 # Logs and local artifacts
 *.log
-artifacts/
+artifacts/*
+!artifacts/001-multi-tenant-base/
+artifacts/001-multi-tenant-base/*
+!artifacts/001-multi-tenant-base/*.md
+!artifacts/001-multi-tenant-base/*.json
 .test-artifacts/
 
 # OpenTofu

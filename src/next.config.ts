@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     dangerouslyAllowLocalIP: true,
     remotePatterns: [
@@ -27,16 +30,6 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "127.0.0.1",
         port: "1337",
-        pathname: "/uploads/**",
-      },
-      {
-        protocol: "http",
-        hostname: "hamburguesasdeautor-cms-dct6vu-b63b41-144-225-147-121.traefik.me",
-        pathname: "/uploads/**",
-      },
-      {
-        protocol: "https",
-        hostname: "hamburguesasdeautor-cms-dct6vu-b63b41-144-225-147-121.traefik.me",
         pathname: "/uploads/**",
       },
     ],

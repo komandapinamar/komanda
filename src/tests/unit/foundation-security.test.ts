@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   decryptSecret,
   encryptSecret,
@@ -53,6 +53,8 @@ describe("foundation security primitives", () => {
   });
 
   it("emits problem+json without leaking internal errors", async () => {
+    vi.stubEnv("KOMANDA_PUBLIC_BASE_URL", "https://problems.example.test");
+
     const response = problemResponse({
       status: 404,
       title: "Not Found",
@@ -62,7 +64,7 @@ describe("foundation security primitives", () => {
 
     expect(response.headers.get("content-type")).toContain("application/problem+json");
     await expect(response.json()).resolves.toEqual({
-      type: "https://komanda.app/problems/resource-not-found",
+      type: "https://problems.example.test/problems/resource-not-found",
       title: "Not Found",
       status: 404,
       code: "RESOURCE_NOT_FOUND",

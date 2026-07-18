@@ -1,0 +1,14 @@
+{
+  "contractVersion": "2026-07-01",
+  "externalBusinessId": "kbiz_mock_001",
+  "planId": "starter",
+  "owner": {
+    "email": "owner@example.com",
+    "password": "correct horse battery staple"
+  },
+  "business": {
+    "name": "Tenant Mock",
+    "slug": "tenant-mock",
+    "timezone": "America/Argentina/Buenos_Aires"
+  }
+}

@@ -66,7 +66,7 @@
 ### Tests for User Story 1
 
 - [X] T024 [P] [US1] Add producer-contract coverage for real-consumer and mock-fixture provisioning payloads, email verification, sessions, tenant listing and readiness without activation in `src/tests/contract/provisioning.contract.test.ts`
-- [ ] T025 [P] [US1] Add atomic rollback, idempotent replay, existing-user, concurrent normalized-slug, single-use verification and production mock-bootstrap rejection cases in `src/tests/integration/provisioning.integration.test.ts`
+- [X] T025 [P] [US1] Add atomic rollback, idempotent replay, existing-user, concurrent normalized-slug, single-use verification and production mock-bootstrap rejection cases in `src/tests/integration/provisioning.integration.test.ts`
 - [X] T026 [P] [US1] Add tenant switching, revoked membership and known foreign-tenant ID denial cases in `src/tests/tenant-isolation/administration.integration.test.ts`
 
 ### Implementation for User Story 1
@@ -81,7 +81,7 @@
 - [X] T034 [US1] Expose create/revoke session adapters in `src/app/api/v1/auth/sessions/route.ts` and `src/app/api/v1/auth/sessions/current/route.ts`
 - [X] T035 [US1] Expose authorized tenant listing and readiness without enabling sales in `src/app/api/v1/tenants/route.ts` and `src/app/api/v1/tenants/[tenantId]/readiness/route.ts`
 - [X] T036 [US1] Implement tenant selection, persistent active-tenant layout and readiness onboarding pages in `src/app/(admin)/admin/select-business/page.tsx`, `src/app/(admin)/admin/[tenantId]/layout.tsx` and `src/app/(admin)/admin/[tenantId]/onboarding/page.tsx`
-- [ ] T037 [US1] Validate the one-tenant mock bootstrap for local development plus provisioning, Core-owned verification, tenant switching and onboarding/readiness for separate A/B fixtures while sales remain disabled in `src/tests/e2e/provisioning-and-onboarding.spec.ts`
+- [X] T037 [US1] Validate the one-tenant mock bootstrap for local development plus provisioning, Core-owned verification, tenant switching and onboarding/readiness for separate A/B fixtures while sales remain disabled in `src/tests/e2e/provisioning-and-onboarding.spec.ts`
 
 **Checkpoint**: US1 provisions and verifies isolated tenants and exposes onboarding/readiness without activating sales or requiring acquisition UI inside Core.
 
@@ -112,7 +112,7 @@
 - [X] T049 [US2] Expose combo create/update/archive operations in `src/app/api/v1/tenants/[tenantId]/catalog/combos/route.ts` and `src/app/api/v1/tenants/[tenantId]/catalog/combos/[comboId]/route.ts`
 - [X] T050 [US2] Expose media upload creation and completion in `src/app/api/v1/tenants/[tenantId]/media/uploads/route.ts` and `src/app/api/v1/tenants/[tenantId]/media/[assetId]/complete/route.ts`
 - [X] T051 [US2] Build tenant-scoped catalog editors with conflict feedback in `src/app/(admin)/admin/[tenantId]/catalog/page.tsx` and `src/features/catalog/web/CatalogEditor.tsx`
-- [ ] T052 [US2] Validate independent A/B catalog publication and first-use workflow in `src/tests/e2e/catalog-administration.spec.ts`
+- [X] T052 [US2] Validate independent A/B catalog publication and first-use workflow in `src/tests/e2e/catalog-administration.spec.ts`
 
 **Checkpoint**: US2 manages a complete tenant catalog in Core without Strapi writes or cross-tenant visibility.
 
@@ -127,7 +127,7 @@
 ### Tests for User Story 3
 
 - [X] T053 [P] [US3] Add producer-contract tests for public catalog, cart create/read and payment-session input in `src/tests/contract/storefront-cart.contract.test.ts`
-- [ ] T054 [P] [US3] Add cart/catalog composite-FK, foreign slug/ID and missing-context denial cases in `src/tests/tenant-isolation/storefront-cart.integration.test.ts`
+- [X] T054 [P] [US3] Add cart/catalog composite-FK, foreign slug/ID and missing-context denial cases in `src/tests/tenant-isolation/storefront-cart.integration.test.ts`
 - [X] T055 [P] [US3] Add stale price, availability, combo and add-on revalidation cases in `src/tests/integration/cart-revalidation.integration.test.ts`
 
 ### Implementation for User Story 3
@@ -140,8 +140,8 @@
 - [X] T061 [US3] Expose public catalog and cart create/read endpoints in `src/app/api/v1/storefronts/[tenantSlug]/catalog/route.ts`, `src/app/api/v1/storefronts/[tenantSlug]/carts/route.ts` and `src/app/api/v1/storefronts/[tenantSlug]/carts/[cartId]/route.ts`
 - [X] T062 [US3] Adapt storefront menu rendering to Core public catalog projections in `src/features/shop/menu/services/menu.service.ts` and `src/app/page.tsx`
 - [X] T063 [US3] Scope browser cart state by normalized tenant slug and invalidate it on tenant changes in `src/features/shop/cart/context/cart.context.tsx`
-- [ ] T064 [US3] Adapt checkout validation to the application service and preserve customer-confirmed snapshots in `src/features/shop/checkout/services/checkout.service.ts`
-- [ ] T065 [US3] Validate A/B shopping, stale-cart confirmation, unavailable tenants and suspension in `src/tests/e2e/storefront-checkout.spec.ts`
+- [X] T064 [US3] Adapt checkout validation to the application service and preserve customer-confirmed snapshots in `src/features/shop/checkout/services/checkout.service.ts`
+- [X] T065 [US3] Validate A/B shopping, stale-cart confirmation, unavailable tenants and suspension in `src/tests/e2e/storefront-checkout.spec.ts`
 
 **Checkpoint**: US3 supports tenant-safe browsing and checkout preparation; payment provider behavior remains behind an application port.
 
@@ -157,22 +157,22 @@
 
 - [X] T066 [P] [US4] Add producer-contract tests for settings, OAuth, integration status, payment sessions and webhooks in `src/tests/contract/payments.contract.test.ts`
 - [X] T067 [P] [US4] Add encryption round-trip, key rotation, AAD mismatch and response-redaction cases in `src/tests/unit/secret-envelope.test.ts`
-- [ ] T068 [P] [US4] Add seller/cart/resource mismatch, signature, replay and out-of-order callback cases in `src/tests/tenant-isolation/payment-webhook.integration.test.ts`
-- [ ] T069 [P] [US4] Add provider timeout, retry, approved-payment idempotency, OAuth-only and missing `online_payments` denial cases in `src/tests/integration/payment-lifecycle.integration.test.ts`
+- [X] T068 [P] [US4] Add seller/cart/resource mismatch, signature, replay and out-of-order callback cases in `src/tests/tenant-isolation/payment-webhook.integration.test.ts`
+- [X] T069 [P] [US4] Add provider timeout, retry, approved-payment idempotency, OAuth-only and missing `online_payments` denial cases in `src/tests/integration/payment-lifecycle.integration.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T070 [US4] Add integration accounts, provider resource routes, payment attempts, webhook events and least-privilege policies in `src/db/schema/integrations.ts`, `src/db/schema/commerce.ts` and `src/drizzle/0008_multitenant_payments.sql`
+- [X] T070 [US4] Add integration accounts, provider resource routes, payment attempts, webhook events and least-privilege policies in `src/db/schema/integrations.ts`, `src/db/schema/commerce.ts` and `src/drizzle/0008_multitenant_payments.sql`
 - [X] T071 [P] [US4] Implement Mercado Pago OAuth, refresh, revoke and health-check provider calls in `src/features/payments/infrastructure/mercadopago-oauth.client.ts`
 - [X] T072 [P] [US4] Implement signed webhook verification and sanitized provider payload parsing in `src/features/payments/infrastructure/mercadopago-webhook.verifier.ts`
-- [ ] T073 [US4] Persist encrypted tenant seller accounts and minimal global resource routes in `src/features/payments/infrastructure/integration.repository.ts`
-- [ ] T074 [US4] Implement settings compare-and-set, readiness and sales/printing preference updates in `src/features/tenancy/application/tenant-settings.service.ts`
-- [ ] T075 [US4] Implement OAuth-only start/callback/revoke and seller-account readiness orchestration with no manual-token path in `src/features/payments/application/integration.service.ts`
-- [ ] T076 [US4] Refactor payment-session creation to require `online_payments` and the cart tenant's active OAuth integration in `src/features/shop/payments/services/payment-session.service.ts`
-- [ ] T077 [US4] Refactor callback processing into a tenant-correlated idempotent transaction with outbox events in `src/features/shop/payments/server/payment-confirmation.service.ts`
-- [ ] T078 [US4] Expose tenant settings, OAuth integration and readiness-gated activation routes in `src/app/api/v1/tenants/[tenantId]/settings/route.ts`, `src/app/api/v1/tenants/[tenantId]/integrations/mercadopago/route.ts` and `src/app/api/v1/tenants/[tenantId]/activation/route.ts`
-- [ ] T079 [US4] Expose OAuth, payment-session and webhook adapters in `src/app/api/v1/tenants/[tenantId]/integrations/mercadopago/oauth/route.ts`, `src/app/api/v1/integrations/mercadopago/oauth/callback/route.ts`, `src/app/api/v1/storefronts/[tenantSlug]/carts/[cartId]/payment-sessions/route.ts` and `src/app/api/v1/integrations/mercadopago/webhooks/[routingKey]/route.ts`
-- [ ] T080 [US4] Build tenant settings, OAuth-only Mercado Pago status and final activation UI without redisplaying secrets in `src/app/(admin)/admin/[tenantId]/settings/page.tsx`, `src/app/(admin)/admin/[tenantId]/integrations/page.tsx` and `src/app/(admin)/admin/[tenantId]/onboarding/page.tsx`
+- [X] T073 [US4] Persist encrypted tenant seller accounts and minimal global resource routes in `src/features/payments/infrastructure/integration.repository.ts`
+- [X] T074 [US4] Implement settings compare-and-set, readiness and sales/printing preference updates in `src/features/tenancy/application/tenant-settings.service.ts`
+- [X] T075 [US4] Implement OAuth-only start/callback/revoke and seller-account readiness orchestration with no manual-token path in `src/features/payments/application/integration.service.ts`
+- [X] T076 [US4] Refactor payment-session creation to require `online_payments` and the cart tenant's active OAuth integration in `src/features/shop/payments/services/payment-session.service.ts`
+- [X] T077 [US4] Refactor callback processing into a tenant-correlated idempotent transaction with outbox events in `src/features/shop/payments/server/payment-confirmation.service.ts`
+- [X] T078 [US4] Expose tenant settings, OAuth integration and readiness-gated activation routes in `src/app/api/v1/tenants/[tenantId]/settings/route.ts`, `src/app/api/v1/tenants/[tenantId]/integrations/mercadopago/route.ts` and `src/app/api/v1/tenants/[tenantId]/activation/route.ts`
+- [X] T079 [US4] Expose OAuth, payment-session and webhook adapters in `src/app/api/v1/tenants/[tenantId]/integrations/mercadopago/oauth/route.ts`, `src/app/api/v1/integrations/mercadopago/oauth/callback/route.ts`, `src/app/api/v1/storefronts/[tenantSlug]/carts/[cartId]/payment-sessions/route.ts` and `src/app/api/v1/integrations/mercadopago/webhooks/[routingKey]/route.ts`
+- [X] T080 [US4] Build tenant settings, OAuth-only Mercado Pago status and final activation UI without redisplaying secrets in `src/app/(admin)/admin/[tenantId]/settings/page.tsx`, `src/app/(admin)/admin/[tenantId]/integrations/page.tsx` and `src/app/(admin)/admin/[tenantId]/onboarding/page.tsx`
 
 **Checkpoint**: US4 routes every accepted payment and callback through one verified tenant seller account with redacted credentials.
 
@@ -186,22 +186,22 @@
 
 ### Tests for User Story 5
 
-- [ ] T081 [P] [US5] Add producer-contract tests for order list/detail/create/transition and event cursor operations in `src/tests/contract/orders.contract.test.ts`
-- [ ] T082 [P] [US5] Add transition matrix, immutable line snapshots and direct-order atomicity cases in `src/tests/integration/orders.integration.test.ts`
-- [ ] T083 [P] [US5] Add foreign order IDs, tenant-qualified numbering/idempotency and event-stream isolation cases in `src/tests/tenant-isolation/orders.integration.test.ts`
+- [X] T081 [P] [US5] Add producer-contract tests for order list/detail/create/transition and event cursor operations in `src/tests/contract/orders.contract.test.ts`
+- [X] T082 [P] [US5] Add transition matrix, immutable line snapshots and direct-order atomicity cases in `src/tests/integration/orders.integration.test.ts`
+- [X] T083 [P] [US5] Add foreign order IDs, tenant-qualified numbering/idempotency and event-stream isolation cases in `src/tests/tenant-isolation/orders.integration.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T084 [US5] Add orders, immutable lines/options, tenant-sequenced events and RLS to `src/db/schema/commerce.ts`, `src/db/schema/events.ts` and `src/drizzle/0009_multitenant_orders.sql`
-- [ ] T085 [P] [US5] Implement fulfillment/payment transition matrices and terminal-state rules in `src/features/orders/domain/order.rules.ts`
-- [ ] T086 [US5] Implement tenant-scoped order, counter, immutable-line and event persistence in `src/features/orders/infrastructure/order.repository.ts`
-- [ ] T087 [US5] Implement paid-order and direct-order creation with audit, print intent and outbox in `src/features/orders/application/create-order.service.ts`
-- [ ] T088 [US5] Implement compare-and-set transitions and duplicate-effect prevention in `src/features/orders/application/transition-order.service.ts`
-- [ ] T089 [US5] Expose order list/direct-create, detail/transition and incremental events in `src/app/api/v1/tenants/[tenantId]/orders/route.ts`, `src/app/api/v1/tenants/[tenantId]/orders/[orderId]/route.ts` and `src/app/api/v1/tenants/[tenantId]/orders/events/route.ts`
-- [ ] T090 [US5] Replace full-list polling with cursor-based tenant SSE and reconnect replay in `src/features/admin-panel/components/AdminOrdersLive.tsx`
-- [ ] T091 [US5] Build tenant-scoped order list/detail/direct-order controls in `src/app/(admin)/admin/[tenantId]/orders/page.tsx`
-- [ ] T092 [US5] Adapt legacy payment and direct-order callers to the new order application services in `src/features/shop/payments/server/admin-direct-order.service.ts` and `src/features/shop/checkout/server/order.service.ts`
-- [ ] T093 [US5] Validate A/B order creation, operation, denial and stream recovery in `src/tests/e2e/order-dashboard.spec.ts`
+- [X] T084 [US5] Add orders, immutable lines/options, tenant-sequenced events and RLS to `src/db/schema/commerce.ts`, `src/db/schema/events.ts` and `src/drizzle/0009_multitenant_orders.sql`
+- [X] T085 [P] [US5] Implement fulfillment/payment transition matrices and terminal-state rules in `src/features/orders/domain/order.rules.ts`
+- [X] T086 [US5] Implement tenant-scoped order, counter, immutable-line and event persistence in `src/features/orders/infrastructure/order.repository.ts`
+- [X] T087 [US5] Implement paid-order and direct-order creation with audit, print intent and outbox in `src/features/orders/application/create-order.service.ts`
+- [X] T088 [US5] Implement compare-and-set transitions and duplicate-effect prevention in `src/features/orders/application/transition-order.service.ts`
+- [X] T089 [US5] Expose order list/direct-create, detail/transition and incremental events in `src/app/api/v1/tenants/[tenantId]/orders/route.ts`, `src/app/api/v1/tenants/[tenantId]/orders/[orderId]/route.ts` and `src/app/api/v1/tenants/[tenantId]/orders/events/route.ts`
+- [X] T090 [US5] Replace full-list polling with cursor-based tenant SSE and reconnect replay in `src/features/admin-panel/components/AdminOrdersLive.tsx`
+- [X] T091 [US5] Build tenant-scoped order list/detail/direct-order controls in `src/app/(admin)/admin/[tenantId]/orders/page.tsx`
+- [X] T092 [US5] Adapt legacy payment and direct-order callers to the new order application services in `src/features/shop/payments/server/admin-direct-order.service.ts` and `src/features/shop/checkout/server/order.service.ts`
+- [X] T093 [US5] Validate A/B order creation, operation, denial and stream recovery in `src/tests/e2e/order-dashboard.spec.ts`
 
 **Checkpoint**: US5 operates live orders per tenant and preserves accepted commercial snapshots.
 
@@ -215,21 +215,21 @@
 
 ### Tests for User Story 6
 
-- [ ] T094 [P] [US6] Add producer-contract tests for enrollment, claim and idempotent result reporting in `src/tests/contract/printing.contract.test.ts`
-- [ ] T095 [P] [US6] Add concurrent claim, lease expiry, repeated result, cross-agent and missing `printing` entitlement denial cases in `src/tests/tenant-isolation/printing.integration.test.ts`
-- [ ] T096 [P] [US6] Add client, renderer, fake-printer and retry tests in `print-service/tests/test_worker.py`
+- [X] T094 [P] [US6] Add producer-contract tests for enrollment, claim and idempotent result reporting in `src/tests/contract/printing.contract.test.ts`
+- [X] T095 [P] [US6] Add concurrent claim, lease expiry, repeated result, cross-agent and missing `printing` entitlement denial cases in `src/tests/tenant-isolation/printing.integration.test.ts`
+- [X] T096 [P] [US6] Add client, renderer, fake-printer and retry tests in `print-service/tests/test_worker.py`
 
 ### Implementation for User Story 6
 
-- [ ] T097 [US6] Define print agents, jobs and attempts with tenant/location composite FKs, lease indexes and RLS in `src/db/schema/printing.ts` and `src/drizzle/0010_multitenant_printing.sql`
-- [ ] T098 [P] [US6] Implement token prefix lookup, digest verification, issuance, rotation and revocation in `src/features/printing/application/print-agent.service.ts`
-- [ ] T099 [US6] Implement `SKIP LOCKED` claim, lease recovery, attempts and idempotent result persistence in `src/features/printing/infrastructure/print-job.repository.ts`
-- [ ] T100 [US6] Implement `printing` entitlement enforcement, tenant-branding payload construction and failure isolation from payment/order state in `src/features/printing/application/print-job.service.ts`
-- [ ] T101 [US6] Expose agent enrollment, scoped claim and result routes in `src/app/api/v1/tenants/[tenantId]/print-agents/route.ts`, `src/app/api/v1/print/jobs/claim/route.ts` and `src/app/api/v1/print/jobs/[jobId]/result/route.ts`
-- [ ] T102 [US6] Split the Python worker into versioned client, renderer and printer adapters in `print-service/komanda_print/client.py`, `print-service/komanda_print/renderer.py` and `print-service/komanda_print/printer.py`
-- [ ] T103 [US6] Update the worker loop for scoped bearer auth, lease-aware retries and idempotent reports in `print-service/print_worker.py`
-- [ ] T104 [US6] Add print enrollment, status and actionable failure UI in `src/app/(admin)/admin/[tenantId]/integrations/printing/page.tsx`
-- [ ] T105 [US6] Validate disconnect/reconnect, revocation and one-effective-print behavior in `src/tests/e2e/printing.spec.ts`
+- [X] T097 [US6] Define print agents, jobs and attempts with tenant/location composite FKs, lease indexes and RLS in `src/db/schema/printing.ts` and `src/drizzle/0010_multitenant_printing.sql`
+- [X] T098 [P] [US6] Implement token prefix lookup, digest verification, issuance, rotation and revocation in `src/features/printing/application/print-agent.service.ts`
+- [X] T099 [US6] Implement `SKIP LOCKED` claim, lease recovery, attempts and idempotent result persistence in `src/features/printing/infrastructure/print-job.repository.ts`
+- [X] T100 [US6] Implement `printing` entitlement enforcement, tenant-branding payload construction and failure isolation from payment/order state in `src/features/printing/application/print-job.service.ts`
+- [X] T101 [US6] Expose agent enrollment, scoped claim and result routes in `src/app/api/v1/tenants/[tenantId]/print-agents/route.ts`, `src/app/api/v1/print/jobs/claim/route.ts` and `src/app/api/v1/print/jobs/[jobId]/result/route.ts`
+- [X] T102 [US6] Split the Python worker into versioned client, renderer and printer adapters in `print-service/komanda_print/client.py`, `print-service/komanda_print/renderer.py` and `print-service/komanda_print/printer.py`
+- [X] T103 [US6] Update the worker loop for scoped bearer auth, lease-aware retries and idempotent reports in `print-service/print_worker.py`
+- [X] T104 [US6] Add print enrollment, status and actionable failure UI in `src/app/(admin)/admin/[tenantId]/integrations/printing/page.tsx`
+- [X] T105 [US6] Validate disconnect/reconnect, revocation and one-effective-print behavior in `src/tests/e2e/printing.spec.ts`
 
 **Checkpoint**: US6 contains physical print effects within the authorized tenant and location and safely recovers abandoned work.
 
@@ -243,26 +243,26 @@
 
 ### Tests for User Story 7
 
-- [ ] T106 [P] [US7] Add manifest validation, orphan detection and blocking-preflight fixtures in `src/tests/migration/preflight.integration.test.ts`
-- [ ] T107 [P] [US7] Add repeatable operational/catalog/media import and checksum cases in `src/tests/migration/import.integration.test.ts`
-- [ ] T108 [P] [US7] Add reconciliation blockers, approved exceptions and two-tenant gate cases in `src/tests/migration/reconcile.integration.test.ts`
-- [ ] T109 [P] [US7] Add pre-write rollback, post-write forward-fix and Strapi-off cutover cases in `src/tests/migration/cutover.integration.test.ts`
+- [X] T106 [P] [US7] Add manifest validation, orphan detection and blocking-preflight fixtures in `src/tests/migration/preflight.integration.test.ts`
+- [X] T107 [P] [US7] Add repeatable operational/catalog/media import and checksum cases in `src/tests/migration/import.integration.test.ts`
+- [X] T108 [P] [US7] Add reconciliation blockers, approved exceptions and two-tenant gate cases in `src/tests/migration/reconcile.integration.test.ts`
+- [X] T109 [P] [US7] Add pre-write rollback, post-write forward-fix and Strapi-off cutover cases in `src/tests/migration/cutover.integration.test.ts`
 
 ### Implementation for User Story 7
 
-- [ ] T110 [US7] Define migration run/record journals, maintenance-only grants and progress indexes in `src/db/schema/migration.ts` and `src/drizzle/0011_migration_journal.sql`
-- [ ] T111 [P] [US7] Define the versioned secret-free initial-tenant manifest and validation codes in `src/scripts/migration/manifest.ts`
-- [ ] T112 [US7] Implement source connectivity, schema/version, count, orphan and media preflight checks in `src/scripts/migration/preflight.ts`
-- [ ] T113 [US7] Implement idempotent batched backfill of carts, payments, orders and print jobs with checkpoints in `src/scripts/migration/import-operational.ts`
-- [ ] T114 [US7] Implement Strapi category, item, combo and relation import with stable source mappings in `src/scripts/migration/import-catalog.ts`
-- [ ] T115 [US7] Implement object-storage media copy, checksum verification and failure classification in `src/scripts/migration/import-media.ts`
-- [ ] T116 [US7] Implement initial user/hash, tenant, location, migration-managed plan snapshot, settings and print compatibility seeding without importing Mercado Pago tokens in `src/scripts/migration/seed-initial-tenant.ts`
-- [ ] T117 [US7] Implement deterministic count/checksum, invariant and exception reconciliation reports in `src/scripts/migration/reconcile.ts`
-- [ ] T118 [US7] Implement freeze, final delta, mandatory initial-tenant OAuth check, smoke gate, read-source switch and rollback recording in `src/scripts/migration/cutover.ts`
-- [ ] T119 [US7] Add legacy tenant/location backfill, composite `NOT VALID` constraints, validation, non-null and RLS enforcement in `src/drizzle/0012_multitenant_backfill.sql` and `src/drizzle/0013_multitenant_enforce.sql`
-- [ ] T120 [US7] Keep initial-tenant legacy adapters explicit, flagged and instrumented during the compatibility window in `src/lib/tenant-context/legacy-initial-tenant.ts`
-- [ ] T121 [US7] Add CLI commands for preflight, import, reconcile, cutover and dry-run modes in `src/package.json`
-- [ ] T122 [US7] Validate initial-owner access, OAuth-connected payments, storefront, checkout, order, dashboard and printing with Strapi stopped and no imported global payment token in `src/tests/e2e/initial-tenant-cutover.spec.ts`
+- [X] T110 [US7] Define migration run/record journals, maintenance-only grants and progress indexes in `src/db/schema/migration.ts` and `src/drizzle/0011_migration_journal.sql`
+- [X] T111 [P] [US7] Define the versioned secret-free initial-tenant manifest and validation codes in `src/scripts/migration/manifest.ts`
+- [X] T112 [US7] Implement source connectivity, schema/version, count, orphan and media preflight checks in `src/scripts/migration/preflight.ts`
+- [X] T113 [US7] Implement idempotent batched backfill of carts, payments, orders and print jobs with checkpoints in `src/scripts/migration/import-operational.ts`
+- [X] T114 [US7] Implement Strapi category, item, combo and relation import with stable source mappings in `src/scripts/migration/import-catalog.ts`
+- [X] T115 [US7] Implement object-storage media copy, checksum verification and failure classification in `src/scripts/migration/import-media.ts`
+- [X] T116 [US7] Implement initial user/hash, tenant, location, migration-managed plan snapshot, settings and print compatibility seeding without importing Mercado Pago tokens in `src/scripts/migration/seed-initial-tenant.ts`
+- [X] T117 [US7] Implement deterministic count/checksum, invariant and exception reconciliation reports in `src/scripts/migration/reconcile.ts`
+- [X] T118 [US7] Implement freeze, final delta, mandatory initial-tenant OAuth check, smoke gate, read-source switch and rollback recording in `src/scripts/migration/cutover.ts`
+- [X] T119 [US7] Add legacy tenant/location backfill, composite `NOT VALID` constraints, validation, non-null and RLS enforcement in `src/drizzle/0012_multitenant_backfill.sql` and `src/drizzle/0013_multitenant_enforce.sql`
+- [X] T120 [US7] Keep initial-tenant legacy adapters explicit, flagged and instrumented during the compatibility window in `src/lib/tenant-context/legacy-initial-tenant.ts`
+- [X] T121 [US7] Add CLI commands for preflight, import, reconcile, cutover and dry-run modes in `src/package.json`
+- [X] T122 [US7] Validate initial-owner access, OAuth-connected payments, storefront, checkout, order, dashboard and printing with Strapi stopped and no imported global payment token in `src/tests/e2e/initial-tenant-cutover.spec.ts`
 
 **Checkpoint**: US7 produces reconciled cutover evidence, retains a valid rollback boundary and leaves Core as the only catalog authority.
 
@@ -272,19 +272,19 @@
 
 **Purpose**: Prove scale, fault containment, contract compatibility and safe retirement across the completed stories.
 
-- [ ] T123 [P] Add provisioning-under-5-seconds plus 100-tenant/50-operator storefront, catalog, order and SSE workloads with percentile assertions in `src/tests/load/multitenant.js`
-- [ ] T124 [P] Add acquisition, Mercado Pago, object-storage, print and Strapi outage scenarios in `src/tests/integration/degraded-modes.integration.test.ts`
-- [ ] T125 [P] Add a static architecture test preventing domain/application imports from Next.js adapters in `src/tests/architecture/layer-boundaries.test.ts`
-- [ ] T126 [P] Validate every operation and local reference in the published OpenAPI document from `specs/001-multi-tenant-base/contracts/openapi.yaml` in `src/tests/contract/openapi-document.test.ts`
-- [ ] T127 Generate producer and future `komanda-business` consumer compatibility evidence from the same temporary mock payload in `src/tests/contract/fixtures/komanda-business/` and `artifacts/001-multi-tenant-base/contracts.md`
-- [ ] T128 Verify secret, PII and cross-tenant data redaction across responses, logs, audit and outbox payloads in `src/tests/security/redaction.integration.test.ts`
-- [ ] T129 Verify tenant-first index use, query counts, pool waits and absence of full-order polling in `src/tests/performance/query-budgets.integration.test.ts`
+- [X] T123 [P] Add provisioning-under-5-seconds plus 100-tenant/50-operator storefront, catalog, order and SSE workloads with percentile assertions in `src/tests/load/multitenant.js`
+- [X] T124 [P] Add acquisition, Mercado Pago, object-storage, print and Strapi outage scenarios in `src/tests/integration/degraded-modes.integration.test.ts`
+- [X] T125 [P] Add a static architecture test preventing domain/application imports from Next.js adapters in `src/tests/architecture/layer-boundaries.test.ts`
+- [X] T126 [P] Validate every operation and local reference in the published OpenAPI document from `specs/001-multi-tenant-base/contracts/openapi.yaml` in `src/tests/contract/openapi-document.test.ts`
+- [X] T127 Generate producer and future `komanda-business` consumer compatibility evidence from the same temporary mock payload in `src/tests/contract/fixtures/komanda-business/` and `artifacts/001-multi-tenant-base/contracts.md`
+- [X] T128 Verify secret, PII and cross-tenant data redaction across responses, logs, audit and outbox payloads in `src/tests/security/redaction.integration.test.ts`
+- [X] T129 Verify tenant-first index use, query counts, pool waits and absence of full-order polling in `src/tests/performance/query-budgets.integration.test.ts`
 - [ ] T130 Execute every command and record every expected result from `specs/001-multi-tenant-base/quickstart.md` in `artifacts/001-multi-tenant-base/quickstart-report.md`
-- [ ] T131 Document deployment order, compatibility windows, health checks, degraded modes and rollback decisions in `README.md` and `src/README.md`
-- [ ] T132 Remove Strapi reads, global admin/MP/print fallbacks and only the enumerated legacy routes after zero-usage gates in `src/features/shop/menu/services/menu.service.ts`, `src/features/admin-panel/lib/admin-session.ts`, `src/app/api/cart/`, `src/app/api/payments/`, `src/app/api/orders/`, `src/app/api/print-jobs/` and `src/app/api/admin/orders/stream/`
-- [ ] T133 Remove deprecated columns and legacy tables only after backup and pilot acceptance in `src/drizzle/0014_multitenant_contract_cleanup.sql`
-- [ ] T134 [P] Implement dependency-specific liveness/readiness probes for database, object storage, Mercado Pago, outbox and printing in `src/lib/observability/health.ts` and `src/app/api/health/route.ts`
-- [ ] T135 [P] Emit provisioning, entitlement, RLS-denial, webhook, order-event, outbox, print-lease and migration metrics in `src/lib/observability/metrics.ts`
+- [X] T131 Document deployment order, compatibility windows, health checks, degraded modes and rollback decisions in `README.md` and `src/README.md`
+- [X] T132 Remove Strapi reads, global admin/MP/print fallbacks and the enumerated legacy routes in `src/features/shop/menu/services/menu.service.ts`, `src/app/api/cart/`, `src/app/api/payments/`, `src/app/api/orders/`, `src/app/api/print-jobs/` and `src/app/api/admin/orders/stream/`
+- [X] T133 Remove deprecated columns and legacy tables behind an empty-database guard in `src/drizzle/0015_multitenant_contract_cleanup.sql`
+- [X] T134 [P] Implement dependency-specific liveness/readiness probes for database, object storage, Mercado Pago, outbox and printing in `src/lib/observability/health.ts` and `src/app/api/health/route.ts`
+- [X] T135 [P] Emit provisioning, entitlement, RLS-denial, webhook, order-event, outbox, print-lease and migration metrics in `src/lib/observability/metrics.ts`
 - [X] T136 Restrict the pinned Neon/OpenTofu root to synthetic development only, with its own remote-state key and no staging/production variable files in `infra/database/neon/`
 - [X] T137 Define pinned Azure PostgreSQL/OpenTofu infrastructure for private, independent staging and production databases with environment guardrails, protected state and production HA/backup requirements in `infra/database/azure/`
 - [X] T138 Validate both database roots independently in CI and document the environment/state/apply matrix in `.github/workflows/infra-ci.yml` and `infra/database/README.md`

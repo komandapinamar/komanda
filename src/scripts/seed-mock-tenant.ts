@@ -25,7 +25,19 @@ async function main() {
   if (!response.ok) {
     throw new Error(`Mock tenant bootstrap failed with status ${response.status}.`);
   }
-  process.stdout.write(`${JSON.stringify(await response.json(), null, 2)}\n`);
+  const provisioned = (await response.json()) as {
+    tenant: { id: string; slug: string };
+    primaryLocation: { id: string };
+  };
+  process.stdout.write(
+    [
+      `TENANT_ID=${provisioned.tenant.id}`,
+      `TENANT_SLUG=${provisioned.tenant.slug}`,
+      `OWNER_EMAIL=${mockProvisioningRequest.owner.email}`,
+      `PLAN_ID=${mockProvisioningRequest.planId}`,
+      `PRIMARY_LOCATION_ID=${provisioned.primaryLocation.id}`,
+    ].join("\n") + "\n",
+  );
 }
 
 main().catch((error: unknown) => {

@@ -2,35 +2,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { Pool } from "pg";
 import { describe, expect, it } from "vitest";
+import { EXPECTED_PROTECTED_TABLES } from "@/scripts/verify-database-roles";
 
 const databaseTest = process.env.DATABASE_TEST_INTEGRATION === "1" ? it : it.skip;
 
-const tenantTables = [
-  "tenants",
-  "tenant_locations",
-  "tenant_memberships",
-  "tenant_settings",
-  "tenant_counters",
-  "tenant_entitlement_snapshots",
-  "outbox_events",
-  "idempotency_records",
-  "audit_events",
-  "media_assets",
-  "catalog_categories",
-  "catalog_items",
-  "addon_groups",
-  "addon_options",
-  "item_addon_groups",
-  "catalog_combos",
-  "combo_items",
-  "carts",
-  "cart_lines",
-  "cart_line_options",
-  "integration_accounts",
-  "payment_attempts",
-  "provider_resource_routes",
-  "webhook_events",
-] as const;
+const tenantTables = EXPECTED_PROTECTED_TABLES;
 
 describe("PostgreSQL 17 provider compatibility", () => {
   it("uses the provider-neutral node-postgres runtime adapter", async () => {
@@ -51,7 +27,9 @@ describe("PostgreSQL 17 provider compatibility", () => {
     const owner = new Pool({ connectionString: directUrl, max: 1 });
     const runtime = new Pool({ connectionString: runtimeUrl, max: 1 });
     const tenantId = randomUUID();
+    const secondTenantId = randomUUID();
     const idempotencyKey = `compatibility-${randomUUID()}`;
+    const sharedIdempotencyKey = `shared-${randomUUID()}`;
 
     try {
       const version = await owner.query<{ server_version_num: string }>(
@@ -88,6 +66,9 @@ describe("PostgreSQL 17 provider compatibility", () => {
         order by c.relname
       `, [runtimeRole.rows[0]!.current_user, tenantTables]);
       expect(policies.rows).toHaveLength(tenantTables.length);
+      expect(policies.rows.map(({ relname }) => relname)).toEqual(
+        [...tenantTables].sort(),
+      );
       expect(
         policies.rows.every(
           (table) =>
@@ -102,8 +83,22 @@ describe("PostgreSQL 17 provider compatibility", () => {
 
       await owner.query(
         `insert into tenants (id, name, slug, normalized_slug)
-         values ($1, 'Compatibility Tenant', $2, $2)`,
-        [tenantId, `compatibility-${tenantId}`],
+         values ($1, 'Compatibility Tenant', $2, $2),
+                ($3, 'Second Compatibility Tenant', $4, $4)`,
+        [
+          tenantId,
+          `compatibility-${tenantId}`,
+          secondTenantId,
+          `compatibility-${secondTenantId}`,
+        ],
+      );
+
+      await owner.query(
+        `insert into idempotency_records
+           (tenant_id, scope, idempotency_key, request_hash, state, locked_until, expires_at)
+         values ($1, 'cross-tenant', $3, 'first', 'processing', now() + interval '30 seconds', now() + interval '1 minute'),
+                ($2, 'cross-tenant', $3, 'second', 'processing', now() + interval '30 seconds', now() + interval '1 minute')`,
+        [tenantId, secondTenantId, sharedIdempotencyKey],
       );
 
       const client = await runtime.connect();
@@ -140,12 +135,16 @@ describe("PostgreSQL 17 provider compatibility", () => {
         client.release();
       }
     } finally {
-      await owner.query("delete from idempotency_records where tenant_id = $1", [
-        tenantId,
-      ]).catch(() => undefined);
-      await owner.query("delete from tenants where id = $1", [tenantId]).catch(
-        () => undefined,
-      );
+      await owner
+        .query("delete from idempotency_records where tenant_id = any($1::uuid[])", [
+          [tenantId, secondTenantId],
+        ])
+        .catch(() => undefined);
+      await owner
+        .query("delete from tenants where id = any($1::uuid[])", [
+          [tenantId, secondTenantId],
+        ])
+        .catch(() => undefined);
       await Promise.all([owner.end(), runtime.end()]);
     }
   });
