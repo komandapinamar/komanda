@@ -122,6 +122,8 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
     );
   }
 
+  if (!order) return null;
+
   return (
     <div className="mx-auto max-w-3xl rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
       <ClearCartOnSuccess />
