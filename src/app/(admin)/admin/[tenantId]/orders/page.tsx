@@ -18,6 +18,23 @@ function toDashboardOrder(order: OrderView): AdminDashboardOrder {
     customer: order.customer as CustomerInfo,
     notes: order.notes,
     source: order.source,
+    lines: order.lines.map((line) => ({
+      id: line.id,
+      name: line.name,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      lineTotal: line.lineTotal,
+      note: line.note,
+      options: line.options.map((opt) => ({
+        name: opt.name,
+        priceDelta: opt.priceDelta,
+        quantity: opt.quantity,
+      })),
+    })),
+    subtotal: order.subtotal,
+    discountTotal: order.discountTotal,
+    total: order.total,
+    currency: order.currency,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
     createdAt: order.createdAt,
@@ -67,7 +84,7 @@ export default async function TenantOrdersPage({
           </p>
         </div>
         <Link
-          href="/order"
+          href={`/admin/${tenantId}/orders/new`}
           className="rounded-sm bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950"
         >
           Crear pedido directo

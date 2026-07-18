@@ -123,6 +123,20 @@ type AdminOrdersLiveProps = {
   tenantId: string;
 };
 
+type TenantOrderLineResponse = {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+  note: string | null;
+  options: Array<{
+    name: string;
+    priceDelta: string;
+    quantity: number;
+  }>;
+};
+
 type TenantOrderResponse = {
   id: string;
   purchaseNumber: string | number;
@@ -131,6 +145,11 @@ type TenantOrderResponse = {
   customer?: Record<string, unknown>;
   notes: string | null;
   source: AdminDashboardOrder["source"];
+  lines: TenantOrderLineResponse[];
+  subtotal: string;
+  discountTotal: string;
+  total: string;
+  currency: string;
   approvedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
@@ -152,6 +171,23 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
     customer: (order.customer ?? { name: "Cliente" }) as CustomerInfo,
     notes: order.notes,
     source: order.source,
+    lines: order.lines.map((line) => ({
+      id: line.id,
+      name: line.name,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      lineTotal: line.lineTotal,
+      note: line.note,
+      options: line.options.map((opt) => ({
+        name: opt.name,
+        priceDelta: opt.priceDelta,
+        quantity: opt.quantity,
+      })),
+    })),
+    subtotal: order.subtotal,
+    discountTotal: order.discountTotal,
+    total: order.total,
+    currency: order.currency,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
     createdAt: order.createdAt,
@@ -335,6 +371,61 @@ export default function AdminOrdersLive({
                     <div className="rounded-sm border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)] p-3 text-sm">
                       <p className="font-semibold">Notas</p>
                       <p className="mt-1 opacity-80">{order.notes}</p>
+                    </div>
+                  ) : null}
+
+                  {order.lines && order.lines.length > 0 ? (
+                    <div className="rounded-sm border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)] p-3 text-sm">
+                      <p className="mb-2 font-semibold">Productos</p>
+                      <div className="space-y-2">
+                        {order.lines.map((line) => (
+                          <div key={line.id} className="border-b border-[var(--color-accent-secondary)]/10 pb-2 last:border-0 last:pb-0">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <span className="font-medium">
+                                  {line.quantity}x {line.name}
+                                </span>
+                                {line.note ? (
+                                  <p className="mt-0.5 text-xs opacity-70">{line.note}</p>
+                                ) : null}
+                                {line.options.length > 0 ? (
+                                  <div className="mt-1 space-y-0.5 pl-3">
+                                    {line.options.map((opt, optIdx) => (
+                                      <p key={optIdx} className="text-xs opacity-70">
+                                        + {opt.name}
+                                        {Number(opt.priceDelta) > 0
+                                          ? ` (+$${opt.priceDelta})`
+                                          : ""}
+                                      </p>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                              <span className="shrink-0 pl-2 font-mono text-xs">
+                                ${line.lineTotal}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 space-y-1 border-t border-[var(--color-accent-secondary)]/20 pt-2 text-xs">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span className="font-mono">${order.subtotal}</span>
+                        </div>
+                        {Number(order.discountTotal) > 0 ? (
+                          <div className="flex justify-between text-red-400">
+                            <span>Descuento</span>
+                            <span className="font-mono">-${order.discountTotal}</span>
+                          </div>
+                        ) : null}
+                        <div className="flex justify-between font-semibold">
+                          <span>Total</span>
+                          <span className="font-mono">
+                            ${order.total} {order.currency}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   ) : null}
                 </div>

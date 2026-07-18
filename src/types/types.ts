@@ -95,6 +95,22 @@ export type CreatedOrder = {
   status: OrderStatus;
 };
 
+export type AdminDashboardLineOption = {
+  name: string;
+  priceDelta: string;
+  quantity: number;
+};
+
+export type AdminDashboardLine = {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+  note: string | null;
+  options: AdminDashboardLineOption[];
+};
+
 export type AdminDashboardOrder = {
   id: string;
   purchaseNumber: string;
@@ -103,6 +119,11 @@ export type AdminDashboardOrder = {
   customer: CustomerInfo;
   notes: string | null;
   source: OrderSource | null;
+  lines: AdminDashboardLine[];
+  subtotal: string;
+  discountTotal: string;
+  total: string;
+  currency: string;
   approvedAt: string | null;
   deliveredAt?: string | null;
   createdAt: string;
