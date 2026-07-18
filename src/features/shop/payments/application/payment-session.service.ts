@@ -426,6 +426,13 @@ export class PaymentSessionService {
           );
         }
 
+        const existingAttempt = await integrations.findActiveByCartId(cart.id);
+        if (existingAttempt) {
+          throw new PaymentSessionConflictError(
+            "A payment session already exists for this cart.",
+          );
+        }
+
         const account = await integrations.currentMercadoPago();
         if (!account || account.status !== "active") {
           throw new PaymentSessionProviderUnavailableError(

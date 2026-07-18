@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ClearCartOnSuccess from "@/features/shop/checkout/components/ClearCartOnSuccess";
+import { OrderStatusPoller } from "@/features/shop/checkout/components/OrderStatusPoller";
 
 type SuccessPageProps = {
   searchParams: Promise<{
@@ -21,6 +22,7 @@ function getSingleValue(value: string | string[] | undefined) {
 export default async function CheckoutPaySuccessPage({ searchParams }: SuccessPageProps) {
   const resolvedSearchParams = await searchParams;
   const source = getSingleValue(resolvedSearchParams.source)?.trim().toLowerCase() ?? "";
+  const paymentId = getSingleValue(resolvedSearchParams.payment_id)?.trim() ?? "";
   const adminOrderId = getSingleValue(resolvedSearchParams.order_id)?.trim() ?? "";
   const adminPurchaseNumber =
     getSingleValue(resolvedSearchParams.purchase_number)?.trim() ?? "";
@@ -28,71 +30,56 @@ export default async function CheckoutPaySuccessPage({ searchParams }: SuccessPa
   const adminPrintStatus =
     getSingleValue(resolvedSearchParams.print_status)?.trim().toLowerCase() ?? "";
   const isAdminDirectOrder = source === "admin-direct" && Boolean(adminOrderId);
-  const isErrorState = false;
 
-  const name = isAdminDirectOrder ? adminCustomerName : "";
-  const purchaseNumber = isAdminDirectOrder ? adminPurchaseNumber : "";
-  const title = isAdminDirectOrder ? "Pedido creado" : "Pago recibido";
-
-  const purchaseNumberLabel = purchaseNumber ? `Compra #${purchaseNumber}` : "";
-
-  const message = isAdminDirectOrder
-    ? `Creamos pedido de ${name} como administrador. Cobrar en caja al cliente.`
-    : "Pago recibido. Estamos confirmando tu pedido.";
-
-  const detail = isAdminDirectOrder
-    ? adminPrintStatus === "failed"
-      ? `${purchaseNumberLabel || `Pedido ${adminOrderId}`}. Se creó correctamente, pero no pudimos enviarlo a la cola de impresión.`
-      : `${purchaseNumberLabel || `Pedido ${adminOrderId}`}. Ya lo enviamos a la cola de impresión.`
-    : "Estamos confirmando tu pedido. En breve vas a ver el resultado.";
-
-  const shouldShowPickupNotice = !isAdminDirectOrder && !isErrorState;
-  const shouldClearLocalCart = isAdminDirectOrder;
-
-  const containerClassName = isErrorState
-    ? "mx-auto max-w-3xl rounded-sm border border-red-700 bg-[var(--color-accent-primary)] p-6"
-    : "mx-auto max-w-3xl rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6";
+  const purchaseNumberLabel = adminPurchaseNumber ? `Compra #${adminPurchaseNumber}` : "";
 
   return (
     <main className="min-h-[100dvh] bg-[var(--color-accent-primary)] p-6 text-[var(--color-accent-secondary)]">
-      {shouldClearLocalCart ? <ClearCartOnSuccess /> : null}
-      <div className={containerClassName}>
-        <h1 className={isErrorState ? "text-3xl font-bold text-red-700" : "text-3xl font-bold"}>
-          {title}
-        </h1>
-        <p className="mt-3">{message}</p>
-        {purchaseNumber ? (
-          <p className="mt-4 inline-flex rounded-full border border-[var(--color-accent-secondary)] px-4 py-2 text-sm font-semibold">
-            Numero de compra #{purchaseNumber}
+      {isAdminDirectOrder ? (
+        <div className="mx-auto max-w-3xl rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
+          <ClearCartOnSuccess />
+          <h1 className="text-3xl font-bold">Pedido creado</h1>
+          <p className="mt-3">
+            Creamos pedido de {adminCustomerName} como administrador. Cobrar en caja al cliente.
           </p>
-        ) : null}
-        <p className={isErrorState ? "mt-3 text-sm text-red-700" : "mt-3 text-sm opacity-80"}>
-          {detail}
-        </p>
-        {shouldShowPickupNotice ? (
-          <div className="mt-5 rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)]/10 p-4">
-            <p className="font-bold uppercase tracking-wide">
-              Importante para retirar
+          {adminPurchaseNumber ? (
+            <p className="mt-4 inline-flex rounded-full border border-[var(--color-accent-secondary)] px-4 py-2 text-sm font-semibold">
+              Numero de compra #{adminPurchaseNumber}
             </p>
-            <p className="mt-2 text-sm">
-              Para retirar tu pedido, vas a tener que mostrar esta pantalla en caja.
-            </p>
-            <p className="mt-2 text-sm opacity-90">
-              Recomendacion: sacale screenshot ahora para tenerla a mano.
-            </p>
+          ) : null}
+          <p className="mt-3 text-sm opacity-80">
+            {adminPrintStatus === "failed"
+              ? `${purchaseNumberLabel || `Pedido ${adminOrderId}`}. Se creó correctamente, pero no pudimos enviarlo a la cola de impresión.`
+              : `${purchaseNumberLabel || `Pedido ${adminOrderId}`}. Ya lo enviamos a la cola de impresión.`}
+          </p>
+          <div className="mt-6 flex gap-3">
+            <Link
+              href="/order"
+              className="rounded-sm bg-[var(--color-accent-secondary)] px-4 py-3 font-semibold text-[var(--color-accent-primary)]"
+            >
+              Volver al menu
+            </Link>
           </div>
-        ) : null}
-        <div className="mt-6 flex gap-3">
-          <Link
-            href="/order"
-            className="rounded-sm bg-[var(--color-accent-secondary)] px-4 py-3 font-semibold text-[var(--color-accent-primary)]"
-          >
-            Volver al menu
-          </Link>
-          {/* add order status in real time */}
-
         </div>
-      </div>
+      ) : paymentId ? (
+        <OrderStatusPoller paymentId={paymentId} />
+      ) : (
+        <div className="mx-auto max-w-3xl rounded-sm border border-amber-700 bg-[var(--color-accent-primary)] p-6">
+          <h1 className="text-3xl font-bold text-amber-500">Pago recibido</h1>
+          <p className="mt-3">Gracias por tu compra.</p>
+          <p className="mt-2 text-sm opacity-80">
+            No recibimos el identificador del pago. Si ves el cobro en tu cuenta, no te preocupes, tu pedido esta siendo procesado.
+          </p>
+          <div className="mt-6 flex gap-3">
+            <Link
+              href="/order"
+              className="rounded-sm bg-[var(--color-accent-secondary)] px-4 py-3 font-semibold text-[var(--color-accent-primary)]"
+            >
+              Volver al menu
+            </Link>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

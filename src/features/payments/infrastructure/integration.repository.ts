@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   integrationAccounts,
   paymentAttempts,
@@ -153,6 +153,21 @@ export class IntegrationRepository {
       )
       .returning();
     return account ?? null;
+  }
+
+  async findActiveByCartId(cartId: string) {
+    const [attempt] = await this.transaction
+      .select()
+      .from(paymentAttempts)
+      .where(
+        and(
+          eq(paymentAttempts.tenantId, this.tenantId),
+          eq(paymentAttempts.cartId, cartId),
+          inArray(paymentAttempts.status, ["initiated", "processing", "pending"]),
+        ),
+      )
+      .limit(1);
+    return attempt ?? null;
   }
 
   async createPaymentAttempt(input: {

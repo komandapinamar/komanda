@@ -179,7 +179,7 @@ export async function receiveMercadoPagoWebhook(input: {
       if (status === "approved" && updated) {
         const orders = new OrderRepository(transaction, context);
         const cart = await orders.loadCart(updated.cartId);
-        if (cart) {
+        if (cart && cart.status !== "converted") {
           const result = await orders.createFromCartSnapshot({
             cart,
             source: "mercadopago_webhook",

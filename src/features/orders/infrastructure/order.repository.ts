@@ -9,6 +9,7 @@ import {
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
+import { OrderConflictError } from "@/features/orders/application/order-errors";
 import type {
   FulfillmentStatus,
   PaymentStatus,
@@ -266,6 +267,17 @@ export class OrderRepository {
     const existing = await this.findByIdempotencyKey(input.idempotencyKey);
     if (existing) {
       return { order: existing, created: false };
+    }
+
+    const [cartCheck] = await this.transaction
+      .select({ status: carts.status })
+      .from(carts)
+      .where(
+        and(eq(carts.tenantId, this.tenantId), eq(carts.id, input.cart.id)),
+      )
+      .limit(1);
+    if (!cartCheck || cartCheck.status === "converted") {
+      throw new OrderConflictError("Cart is already converted to an order.");
     }
 
     const now = new Date();
