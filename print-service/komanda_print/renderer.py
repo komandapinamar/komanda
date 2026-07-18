@@ -96,9 +96,10 @@ def render_ticket(printer: Any, payload: dict, timezone: ZoneInfo) -> None:
         copies = 1
 
     try:
+        tenant_name = str(payload.get("tenant") or "Komanda")
         for copy_index in range(copies):
             printer.set(align="center", bold=True, width=2, height=2)
-            printer.text("HAMBURGUESAS DE AUTOR\n")
+            printer.text(f"{tenant_name.upper()}\n")
             printer.set(align="center", bold=True, width=1, height=1)
             printer.text(f"{get_copy_label(source, copy_index, copies)}\n")
             printer.set(align="center", bold=False, width=1, height=1)

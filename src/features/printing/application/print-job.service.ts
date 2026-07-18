@@ -1,6 +1,8 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import { withTenantTransaction } from "@/db/tenant-transaction";
+import { tenants } from "@/db/schema";
 import { PrintAgentService } from "@/features/printing/application/print-agent.service";
 import { PrintJobRepository } from "@/features/printing/infrastructure/print-job.repository";
 import type { OrderView } from "@/features/orders/infrastructure/order.repository";
@@ -97,21 +99,27 @@ export class PrintJobService {
     if (!(await repository.tenantPrintingEnabled())) {
       return null;
     }
+    const [tenant] = await transaction
+      .select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, context.tenantId))
+      .limit(1);
     return repository.create({
       locationId: order.locationId,
       orderId: order.id,
       idempotencyKey: `order:${order.id}:kitchen-ticket`,
-      payload: buildTicketPayload(order),
+      payload: buildTicketPayload(order, tenant?.name),
     });
   }
 }
 
-function buildTicketPayload(order: OrderView) {
+function buildTicketPayload(order: OrderView, tenantName?: string) {
   return {
     orderId: order.id,
     purchaseNumber: order.purchaseNumber,
     source: order.source,
     copies: order.source === "admin_direct" ? 2 : 1,
+    tenant: tenantName ?? "Komanda",
     customer: order.customer,
     notes: order.notes ?? undefined,
     currency: order.currency,
