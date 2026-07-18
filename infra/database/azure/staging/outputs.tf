@@ -29,3 +29,7 @@ output "runtime_connection_template" {
 output "postgresql_subnet_id" {
   value = module.database.postgresql_subnet_id
 }
+
+output "migration_subnet_id" {
+  value = module.database.migration_subnet_id
+}

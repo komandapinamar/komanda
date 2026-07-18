@@ -237,7 +237,7 @@ export const tenantCounters = pgTable(
     tenantId: uuid("tenant_id").notNull(),
     counterType: text("counter_type").notNull(),
     currentValue: bigint("current_value", { mode: "bigint" })
-      .default(BigInt(0))
+      .default(sql`0`)
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .defaultNow()

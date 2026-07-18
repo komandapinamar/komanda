@@ -33,3 +33,7 @@ output "runtime_connection_template" {
 output "postgresql_subnet_id" {
   value = azurerm_subnet.postgresql.id
 }
+
+output "migration_subnet_id" {
+  value = azurerm_subnet.migration_jobs.id
+}

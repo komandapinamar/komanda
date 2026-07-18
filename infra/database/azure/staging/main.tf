@@ -16,9 +16,11 @@ module "database" {
   backup_retention_days        = 7
   geo_redundant_backup_enabled = false
   high_availability_mode       = null
+  primary_availability_zone    = var.primary_availability_zone
 
-  vnet_address_space       = ["10.20.0.0/16"]
-  database_subnet_prefixes = ["10.20.1.0/24"]
+  vnet_address_space        = ["10.20.0.0/16"]
+  database_subnet_prefixes  = ["10.20.1.0/24"]
+  migration_subnet_prefixes = ["10.20.3.0/24"]
 
   tags = {
     criticality = "preproduction"

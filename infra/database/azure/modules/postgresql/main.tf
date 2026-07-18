@@ -46,6 +46,25 @@ resource "azurerm_subnet" "postgresql" {
   }
 }
 
+resource "azurerm_subnet" "migration_jobs" {
+  name                 = "migration-jobs"
+  resource_group_name  = azurerm_resource_group.database.name
+  virtual_network_name = azurerm_virtual_network.database.name
+  address_prefixes     = var.migration_subnet_prefixes
+  service_endpoints    = ["Microsoft.Storage"]
+
+  delegation {
+    name = "container-instance-migration-jobs"
+
+    service_delegation {
+      name = "Microsoft.ContainerInstance/containerGroups"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/action",
+      ]
+    }
+  }
+}
+
 resource "azurerm_private_dns_zone" "postgresql" {
   name                = local.private_dns_zone_name
   resource_group_name = azurerm_resource_group.database.name

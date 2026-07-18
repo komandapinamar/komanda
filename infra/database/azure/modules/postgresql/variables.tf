@@ -106,6 +106,11 @@ variable "database_subnet_prefixes" {
   type = list(string)
 }
 
+variable "migration_subnet_prefixes" {
+  description = "Dedicated subnet for ephemeral private migration and restore jobs."
+  type        = list(string)
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

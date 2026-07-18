@@ -28,3 +28,15 @@ variable "administrator_password_version" {
   type    = number
   default = 1
 }
+
+variable "primary_availability_zone" {
+  description = "Availability zone Azure assigned to the staging server. Set this after importing an interrupted creation."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.primary_availability_zone == null || contains(["1", "2", "3"], var.primary_availability_zone)
+    error_message = "primary_availability_zone must be null, 1, 2, or 3."
+  }
+}

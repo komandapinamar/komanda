@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -12,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./platform";
+import { tenantOrders } from "./commerce";
 
 export const outboxEvents = pgTable(
   "outbox_events",
@@ -69,5 +71,39 @@ export const idempotencyRecords = pgTable(
       table.idempotencyKey,
     ).nullsNotDistinct(),
     index("idempotency_records_expiry_idx").on(table.expiresAt),
+  ],
+);
+
+export const orderEvents = pgTable(
+  "order_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    orderId: uuid("order_id").notNull(),
+    sequence: bigint("sequence", { mode: "bigint" }).notNull(),
+    eventType: text("event_type").notNull(),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status"),
+    actorUserId: uuid("actor_user_id"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "order_events_tenant_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.orderId],
+      foreignColumns: [tenantOrders.tenantId, tenantOrders.id],
+      name: "order_events_order_fk",
+    }).onDelete("restrict"),
+    unique("order_events_tenant_id_id_key").on(table.tenantId, table.id),
+    unique("order_events_tenant_sequence_key").on(table.tenantId, table.sequence),
+    index("order_events_tenant_order_idx").on(table.tenantId, table.orderId),
+    index("order_events_tenant_sequence_idx").on(table.tenantId, table.sequence),
   ],
 );

@@ -88,16 +88,25 @@ write-only field. Supply the same environment variable again when applying a
 saved plan. Store the actual value in the deployment secret manager, never in
 HCL, tfvars, outputs or logs.
 
-After provisioning, run from the private migration path:
+After provisioning, run from the private migration path using the checked-in
+staging environment template and database preparation script:
 
 ```bash
-DATABASE_DIRECT_URL='...' DATABASE_RUNTIME_PASSWORD='...' \
-  npm --prefix ../../../../src run db:bootstrap-roles
-DATABASE_DIRECT_URL='...' npm --prefix ../../../../src run db:migrate
+cd ../../../../src
+cp .env.staging.example .env.staging
+# Fill .env.staging from tofu output and the staging secret manager.
+set -a
+. ./.env.staging
+set +a
+npm run env:verify
+npm run db:prepare:azure
 ```
 
 Staging must pass migration, runtime-role/RLS, E2E, load and restore checks
 before a production plan is approved.
+
+See [azure/RUNBOOK.md](azure/RUNBOOK.md) for the full staging smoke flow:
+owner verification, catalog writes, Mercado Pago OAuth and tenant activation.
 
 ## Azure production
 
@@ -123,6 +132,15 @@ Production checks require a non-burstable SKU, at least 14 days of backups and
 HA. The example uses `SameZone` because zone-redundant capacity in Brazil South
 must be confirmed when provisioning. Promote to `ZoneRedundant` only after an
 explicit capacity check and reviewed plan.
+
+After production provisioning, repeat the same private migration-path command
+with `src/.env.production.example` filled from production outputs and set:
+
+```bash
+export CONFIRM_PRODUCTION_DATABASE_PREPARE=I_UNDERSTAND_THIS_TOUCHES_PRODUCTION
+npm run env:verify
+npm run db:prepare:azure
+```
 
 ## Security boundaries
 

@@ -20,8 +20,9 @@ module "database" {
   high_availability_mode    = "SameZone"
   primary_availability_zone = "1"
 
-  vnet_address_space       = ["10.30.0.0/16"]
-  database_subnet_prefixes = ["10.30.1.0/24"]
+  vnet_address_space        = ["10.30.0.0/16"]
+  database_subnet_prefixes  = ["10.30.1.0/24"]
+  migration_subnet_prefixes = ["10.30.2.0/24"]
 
   tags = {
     criticality = "business-critical"
