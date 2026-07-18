@@ -95,11 +95,15 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        await new PrintJobService().enqueueOrderTicketInTransaction(
-          transaction,
-          context,
-          order,
-        );
+        try {
+          await new PrintJobService().enqueueOrderTicketInTransaction(
+            transaction,
+            context,
+            order,
+          );
+        } catch (printError) {
+          console.warn("[create-order] Failed to enqueue print job:", printError);
+        }
       }
 
       return order;
@@ -171,11 +175,15 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        await new PrintJobService().enqueueOrderTicketInTransaction(
-          transaction,
-          context,
-          order,
-        );
+        try {
+          await new PrintJobService().enqueueOrderTicketInTransaction(
+            transaction,
+            context,
+            order,
+          );
+        } catch (printError) {
+          console.warn("[create-order] Failed to enqueue print job:", printError);
+        }
       }
 
       return order;

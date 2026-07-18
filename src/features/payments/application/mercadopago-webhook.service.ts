@@ -204,7 +204,11 @@ export async function receiveMercadoPagoWebhook(input: {
               eventType: "order.created",
               payload: { orderId: result.order.id, paymentAttemptId: updated.id },
             });
-            await new PrintJobService().enqueueOrderTicketInTransaction(transaction, context, result.order);
+            try {
+              await new PrintJobService().enqueueOrderTicketInTransaction(transaction, context, result.order);
+            } catch (printError) {
+              console.warn("[webhook] Failed to enqueue print job:", printError);
+            }
           }
         }
       }
