@@ -24,6 +24,11 @@ variable "administrator_password" {
   }
 }
 
+variable "tenant_id" {
+  description = "Microsoft Entra tenant ID for Key Vault RBAC."
+  type        = string
+}
+
 variable "administrator_password_version" {
   type    = number
   default = 1

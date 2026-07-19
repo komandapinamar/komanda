@@ -33,3 +33,11 @@ output "postgresql_subnet_id" {
 output "migration_subnet_id" {
   value = module.database.migration_subnet_id
 }
+
+output "keyvault_id" {
+  value = module.keyvault.keyvault_id
+}
+
+output "keyvault_uri" {
+  value = module.keyvault.keyvault_uri
+}

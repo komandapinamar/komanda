@@ -16,13 +16,28 @@ module "database" {
   backup_retention_days        = 14
   geo_redundant_backup_enabled = false
 
-  # Brazil South zone-redundant capacity must be confirmed before promotion.
-  high_availability_mode    = "SameZone"
+  high_availability_mode    = "ZoneRedundant"
   primary_availability_zone = "1"
+  standby_availability_zone = "2"
 
   vnet_address_space        = ["10.30.0.0/16"]
   database_subnet_prefixes  = ["10.30.1.0/24"]
   migration_subnet_prefixes = ["10.30.2.0/24"]
+
+  tags = {
+    criticality = "business-critical"
+  }
+}
+
+module "keyvault" {
+  source = "../modules/keyvault"
+
+  environment         = "production"
+  project_name        = "komanda-core"
+  location            = "brazilsouth"
+  keyvault_name       = "komanda-prod-kv-9c4e27"
+  resource_group_name = module.database.resource_group_name
+  tenant_id           = var.tenant_id
 
   tags = {
     criticality = "business-critical"
