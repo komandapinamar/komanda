@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+: "${KOMANDA_ENVIRONMENT:?KOMANDA_ENVIRONMENT (staging or production) is required}"
 : "${NODE_MODULES_ARCHIVE_BASE_URL:?NODE_MODULES_ARCHIVE_BASE_URL is required}"
 : "${NODE_MODULES_ARCHIVE_SAS:?NODE_MODULES_ARCHIVE_SAS is required}"
 : "${NODE_MODULES_ARCHIVE_PARTS:?NODE_MODULES_ARCHIVE_PARTS is required}"
@@ -20,4 +21,5 @@ printf '%s  %s\n' "$NODE_MODULES_ARCHIVE_SHA256" "$archive" | sha256sum -c -
 tar -xzf "$archive" -C /app
 rm "$archive"
 
+export KOMANDA_ENVIRONMENT
 exec sh scripts/run-azure-database-gate.sh
