@@ -26,8 +26,7 @@ export default async function TenantAdminLayout({
       <header className="border-b border-zinc-800 bg-zinc-900">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
           <div>
-            <p className="font-semibold">{authority.membership.tenantName}</p>
-            <p className="text-xs text-zinc-400">Contexto: {tenantId}</p>
+            <p className="font-semibold">{authority.membership.tenantName.toUpperCase()}</p>
           </div>
           <nav className="flex items-center gap-4 text-sm">
             <Link href={`/admin/${tenantId}/onboarding`}>Estado</Link>

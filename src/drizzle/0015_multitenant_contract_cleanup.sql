@@ -2,15 +2,19 @@
 -- Refuse to destroy anything if that invariant is not true.
 DO $$
 DECLARE
-  legacy_rows bigint;
+  row_count bigint;
+  total_rows bigint := 0;
+  tbl text;
 BEGIN
-  SELECT
-    (SELECT count(*) FROM "temporary_carts") +
-    (SELECT count(*) FROM "checkout_payments") +
-    (SELECT count(*) FROM "admin_users")
-  INTO legacy_rows;
-  IF legacy_rows > 0 THEN
-    RAISE EXCEPTION 'Legacy operational tables are not empty; contract cleanup is blocked (% rows)', legacy_rows;
+  FOREACH tbl IN ARRAY ARRAY['temporary_carts', 'checkout_payments', 'admin_users']
+  LOOP
+    IF to_regclass(format('public.%I', tbl)) IS NOT NULL THEN
+      EXECUTE format('SELECT count(*) FROM %I', tbl) INTO row_count;
+      total_rows := total_rows + row_count;
+    END IF;
+  END LOOP;
+  IF total_rows > 0 THEN
+    RAISE EXCEPTION 'Legacy operational tables are not empty; contract cleanup is blocked (%)', total_rows;
   END IF;
 END $$;
 --> statement-breakpoint

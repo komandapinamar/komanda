@@ -18,7 +18,7 @@ export default async function SelectBusinessPage() {
     <main className="min-h-dvh bg-zinc-950 px-6 py-12 text-zinc-100">
       <section className="mx-auto max-w-3xl space-y-6">
         <header>
-          <p className="text-sm uppercase tracking-[0.2em] text-amber-400">Komanda</p>
+          <p className="text-sm uppercase text-amber-400">Komanda</p>
           <h1 className="mt-2 text-3xl font-semibold">Seleccioná un negocio</h1>
           <p className="mt-2 text-zinc-400">El contexto elegido limita todos los datos y operaciones del panel.</p>
         </header>

@@ -37,7 +37,7 @@ export default async function TenantOnboardingPage({
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header>
-        <p className="text-sm uppercase tracking-[0.2em] text-amber-400">Preparación operativa</p>
+        <p className="text-sm uppercase text-amber-400">Preparación operativa</p>
         <h1 className="mt-2 text-3xl font-semibold">Antes de comenzar a vender</h1>
         <p className="mt-2 text-zinc-400">Las ventas permanecen deshabilitadas hasta completar todos los requisitos obligatorios.</p>
       </header>

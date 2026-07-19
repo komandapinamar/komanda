@@ -51,7 +51,7 @@ export default async function Order() {
         <header className="space-y-2 text-[var(--color-accent-secondary)]">
           {/*
            /////////////
-          <p className="text-sm font-medium uppercase tracking-[0.2em]">
+          <p className="text-sm font-medium uppercase">
             Chiken Stop
           </p>
 
