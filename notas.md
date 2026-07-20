@@ -12,7 +12,7 @@ Infra No hay Docker, CI ni OpenTofu todavía
 Flujo actual:
 
 - Strapi carga MenuItem, Category, Combo.
-- Next consulta Strapi con STRAPI_URL y STRAPI_FULL_ACCESS_TOKEN: src/features/shop/menu/services/menu.service.ts:3-7.
+- ~~Next consulta Strapi con STRAPI_URL y STRAPI_FULL_ACCESS_TOKEN~~ (Eliminado - el catálogo ahora se sirve desde Core PostgreSQL)
 - El carrito se valida y se guarda temporalmente en Postgres: src/app/api/cart/route.ts:40-74.
 - MercadoPago crea la preferencia: src/features/shop/payments/server/mercadopago.service.ts:91-131.
 - Al confirmar pago se crea orden y print job: src/features/shop/payments/server/payment-confirmation.service.ts:286-345.
@@ -28,19 +28,13 @@ Riesgos principales:
 - El cron de cleanup queda abierto si falta CRON_CART_CLEANUP_SECRET: src/app/api/cron/cart-cleanup/route.ts:8-20.
 - MP_WEBHOOK_SECRET parece opcional en el webhook, lo cual no conviene en producción.
 - dangerouslyAllowLocalIP está activo para imágenes: src/next.config.ts:4-6.
-Strapi
-Strapi sirve para el MVP si el catálogo lo administra alguien técnico o semi-técnico. Para un SaaS donde cada gastronómico cargue productos, no lo usaría como experiencia principal de cliente a largo plazo.
-Problemas actuales:
-- MenuItem, Category y Combo tienen name único global, incompatible con multi-tenant: cms/src/api/menu-item/content-types/menu-item/schema.json:14-18.
-- Falta active, available, sortOrder, slug, modificadores, adicionales, stock, horarios, variantes y precios por local.
-- image es requerida, pero la imagen está comentada en el componente de producto: cms/src/api/menu-item/content-types/menu-item/schema.json:26-36, src/features/shop/menu/components/ProductCard.tsx:31-41.
-- Strapi pagina por defecto a 25 items si no se especifica paginación: cms/config/api.ts:3-8.
-- Combo existe en CMS, pero no está completamente integrado al flujo de compra.
-Recomendación:
-- Corto plazo: mantener Strapi para avanzar rápido.
-- Mediano plazo: mover catálogo a Postgres + panel propio en Next.
-- Strapi puede quedar para contenido editorial interno, no como admin multi-tenant principal.
-- Si se mantiene Strapi, agregar relación Tenant y filtrar todo por tenant, pero el admin multi-tenant seguro y amigable va a ser más difícil.
+Strapi (ELIMINADO - Julio 2026)
+El catálogo fue migrado a Core PostgreSQL y el directorio `cms/` fue eliminado. Strapi ya no es una dependencia operativa.
+Problemas que motivaron la migración:
+- MenuItem, Category y Combo tenían name único global, incompatible con multi-tenant.
+- Faltaban active, available, sortOrder, slug, modificadores, adicionales, stock, horarios, variantes y precios por local.
+- image era requerida pero estaba comentada en el componente de producto.
+- Combo existía en CMS pero no estaba completamente integrado al flujo de compra.
 WordPress
 Sí podrías usar WordPress para que el cliente personalice la página de inicio, pero no lo recomiendo como primera decisión.
 Mejor opción para SaaS:
@@ -103,18 +97,18 @@ Antes de OpenTofu conviene cerrar la arquitectura objetivo. Luego definir módul
 - Hosting Next.js.
 - Postgres gestionado con backups.
 - Storage S3-compatible para imágenes.
-- Strapi si se mantiene, con Postgres y storage externo.
+- ~~Strapi si se mantiene, con Postgres y storage externo~~ (Eliminado - catálogo en Core)
 - Secrets manager.
 - Jobs/cron.
 - Observabilidad: logs, métricas, Sentry.
 - CI/CD con lint, build, typecheck y tests.
-También conviene unificar versiones Node. Hoy hay Node 24 en mise.toml, Node 22 en Nixpacks y Strapi permite hasta Node 24: mise.toml:1-2, src/nixpacks.toml:1-2, cms/package.json:37-39.
+También conviene unificar versiones Node. Hoy hay Node 24 en mise.toml, Node 22 en Nixpacks: mise.toml:1-2, src/nixpacks.toml:1-2.
 Roadmap Recomendado
 
  1. Convertir el modelo a multi-tenant con un tenant inicial.
  2. Persistir order_items y snapshots completos de pedido.
  3. Hacer credenciales por tenant: pagos, impresión, branding.
- 4. Definir si Strapi queda o se reemplaza por admin propio.
+ 4. ~~Definir si Strapi queda o se reemplaza por admin propio~~ (Completado - Strapi fue reemplazado por catálogo en Core)
  5. Crear CRUD de catálogo pensado para gastronómicos.
  6. Robustecer print queue con leases, workers, impresoras y reintentos idempotentes.
  7. Preparar subdominios wildcard y resolución por host.

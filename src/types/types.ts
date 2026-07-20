@@ -16,7 +16,6 @@ export type Combo = {
 };
 
 export type MenuItem = {
-  // this is the document id from strapi
   documentId: string;
   name: string;
   price: number;

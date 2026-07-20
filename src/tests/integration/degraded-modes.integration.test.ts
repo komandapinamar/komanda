@@ -22,7 +22,7 @@ describe("degraded modes", () => {
     expect(source).not.toContain("MP_ACCESS_TOKEN");
   });
 
-  it("keeps object storage, print and Strapi failures isolated", async () => {
+  it("keeps object storage and print failures isolated (Strapi dependency removed)", async () => {
     const [media, print, menu] = await Promise.all([
       readFile("features/catalog/infrastructure/media.repository.ts", "utf8"),
       readFile("features/printing/infrastructure/print-job.repository.ts", "utf8"),
