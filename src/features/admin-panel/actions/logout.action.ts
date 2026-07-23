@@ -10,5 +10,5 @@ export async function logoutAdmin() {
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (token) await coreSessionService().revoke(token).catch(() => undefined);
   cookieStore.set(SESSION_COOKIE_NAME, "", { ...sessionCookieOptions(), maxAge: 0 });
-  redirect("/admin");
+  redirect("/login");
 }

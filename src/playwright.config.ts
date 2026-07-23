@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const webServerReadyURL = new URL("/admin", baseURL).toString();
+const webServerReadyURL = new URL("/login", baseURL).toString();
 
 export default defineConfig({
   testDir: "./tests/e2e",

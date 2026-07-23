@@ -46,7 +46,7 @@ export default async function RootLayout({
       >
         {children}
         <footer className="bg-[var(--color-accent-primary)] text-[var(--color-accent-secondary)] underline p-2 text-center">
-          <Link href="/admin">
+          <Link href="/login">
             Admin panel
           </Link>
           {isAdminLoggedIn ? (
