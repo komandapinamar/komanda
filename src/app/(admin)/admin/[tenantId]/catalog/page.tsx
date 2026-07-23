@@ -13,7 +13,7 @@ export default async function CatalogPage({
 }) {
   const { tenantId } = await params;
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) redirect("/admin");
+  if (!token) redirect("/login");
   let authority;
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);
@@ -37,6 +37,8 @@ export default async function CatalogPage({
     service.listItems(context),
   ]);
 
+  const isReadOnly = authority.membership.role === "employee";
+
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
       <header>
@@ -53,6 +55,7 @@ export default async function CatalogPage({
         tenantId={tenantId}
         initialCategories={categories}
         initialItems={items}
+        isReadOnly={isReadOnly}
       />
     </main>
   );

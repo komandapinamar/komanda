@@ -13,7 +13,7 @@ export default async function NewDirectOrderPage({
 }) {
   const { tenantId } = await params;
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) redirect("/admin");
+  if (!token) redirect("/login");
   let authority;
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);

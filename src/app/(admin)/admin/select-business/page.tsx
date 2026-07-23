@@ -6,12 +6,12 @@ import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 
 export default async function SelectBusinessPage() {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) redirect("/admin");
+  if (!token) redirect("/login");
   let memberships;
   try {
     memberships = await coreSessionService().listTenants(token);
   } catch {
-    redirect("/admin");
+    redirect("/login");
   }
 
   return (
