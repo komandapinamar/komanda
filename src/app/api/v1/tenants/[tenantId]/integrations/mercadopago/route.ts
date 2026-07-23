@@ -4,6 +4,7 @@ import {
   integrationErrorResponse,
   integrationVersionFromRequest,
 } from "@/features/payments/web/integration-http";
+import { requireOwner } from "@/lib/authorization/role-guard";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
 type RouteContext = { params: Promise<{ tenantId: string }> };
@@ -17,6 +18,7 @@ export async function GET(request: Request, route: RouteContext) {
       tenantId,
       correlationId,
     );
+    requireOwner(context);
     const status = await new MercadoPagoIntegrationService().getStatus(context);
     return Response.json(status, {
       headers: { "X-Correlation-Id": correlationId },
@@ -35,6 +37,7 @@ export async function DELETE(request: Request, route: RouteContext) {
       tenantId,
       correlationId,
     );
+    requireOwner(context);
     await new MercadoPagoIntegrationService().revoke(
       context,
       integrationVersionFromRequest(request),

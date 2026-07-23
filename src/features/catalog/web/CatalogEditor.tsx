@@ -33,10 +33,12 @@ export function CatalogEditor({
   tenantId,
   initialCategories,
   initialItems,
+  isReadOnly = false,
 }: {
   tenantId: string;
   initialCategories: Category[];
   initialItems: Item[];
+  isReadOnly?: boolean;
 }) {
   const [categories, setCategories] = useState(initialCategories);
   const [items, setItems] = useState(initialItems);
@@ -223,103 +225,113 @@ export function CatalogEditor({
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
           <h2 className="text-lg font-semibold">Categorías</h2>
-          <form onSubmit={createCategory} className="mt-4 flex gap-2">
-            <input required name="name" placeholder="Nueva categoría" className={inputClass} />
-            <button className="rounded-md bg-amber-400 px-4 text-sm font-semibold text-zinc-950">
-              Agregar
-            </button>
-          </form>
+          {!isReadOnly && (
+            <form onSubmit={createCategory} className="mt-4 flex gap-2">
+              <input required name="name" placeholder="Nueva categoría" className={inputClass} />
+              <button className="rounded-md bg-amber-400 px-4 text-sm font-semibold text-zinc-950">
+                Agregar
+              </button>
+            </form>
+          )}
           <ul className="mt-4 space-y-2">
             {categories.map((category) => (
               <li key={category.id} className="flex items-center justify-between gap-3 rounded border border-zinc-800 p-3">
                 <span>{category.name}</span>
-                <span className="flex shrink-0 gap-3">
-                  {category.status === "draft" ? (
+                {!isReadOnly && (
+                  <span className="flex shrink-0 gap-3">
+                    {category.status === "draft" ? (
+                      <button
+                        type="button"
+                        onClick={() => publish("categories", category)}
+                        className="text-sm text-emerald-300"
+                      >
+                        Publicar
+                      </button>
+                    ) : null}
                     <button
                       type="button"
-                      onClick={() => publish("categories", category)}
-                      className="text-sm text-emerald-300"
+                      onClick={() => archive("categories", category)}
+                      className="text-sm text-red-300"
                     >
-                      Publicar
+                      Archivar
                     </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => archive("categories", category)}
-                    className="text-sm text-red-300"
-                  >
-                    Archivar
-                  </button>
-                </span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>
         </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
           <h2 className="text-lg font-semibold">Productos</h2>
-          <form onSubmit={createItem} className="mt-4 grid gap-2 sm:grid-cols-2">
-            <input required name="name" placeholder="Producto" className={inputClass} />
-            <input required name="price" pattern="[0-9]+\.[0-9]{2}" placeholder="3500.00" className={inputClass} />
-            <select required name="categoryId" className={inputClass}>
-              <option value="">Categoría</option>
-              {categories.filter(({ status }) => status !== "archived").map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-            <button className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950">
-              Agregar producto
-            </button>
-          </form>
+          {!isReadOnly && (
+            <form onSubmit={createItem} className="mt-4 grid gap-2 sm:grid-cols-2">
+              <input required name="name" placeholder="Producto" className={inputClass} />
+              <input required name="price" pattern="[0-9]+\.[0-9]{2}" placeholder="3500.00" className={inputClass} />
+              <select required name="categoryId" className={inputClass}>
+                <option value="">Categoría</option>
+                {categories.filter(({ status }) => status !== "archived").map((category) => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
+              <button className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950">
+                Agregar producto
+              </button>
+            </form>
+          )}
           <ul className="mt-4 space-y-2">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between gap-3 rounded border border-zinc-800 p-3">
                 <span>{item.name} · ${item.price}</span>
-                <span className="flex shrink-0 gap-3">
-                  {item.status === "draft" ? (
+                {!isReadOnly && (
+                  <span className="flex shrink-0 gap-3">
+                    {item.status === "draft" ? (
+                      <button
+                        type="button"
+                        onClick={() => publish("items", item)}
+                        className="text-sm text-emerald-300"
+                      >
+                        Publicar
+                      </button>
+                    ) : null}
                     <button
                       type="button"
-                      onClick={() => publish("items", item)}
-                      className="text-sm text-emerald-300"
+                      onClick={() => archive("items", item)}
+                      className="text-sm text-red-300"
                     >
-                      Publicar
+                      Archivar
                     </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => archive("items", item)}
-                    className="text-sm text-red-300"
-                  >
-                    Archivar
-                  </button>
-                </span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>
         </div>
       </section>
-      <section className="grid gap-6 lg:grid-cols-2">
-        <form onSubmit={createAddonGroup} className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="text-lg font-semibold">Nuevo grupo de adicionales</h2>
-          <input required name="name" placeholder="Salsas" className={inputClass} />
-          <input required name="optionName" placeholder="Cheddar" className={inputClass} />
-          <input required name="priceDelta" pattern="[0-9]+\.[0-9]{2}" placeholder="500.00" className={inputClass} />
-          <button className="rounded-md bg-amber-400 px-4 py-2 font-semibold text-zinc-950">Crear grupo</button>
-        </form>
-        <form onSubmit={createCombo} className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="text-lg font-semibold">Nuevo combo</h2>
-          <input required name="name" placeholder="Combo clásico" className={inputClass} />
-          <input required name="price" pattern="[0-9]+\.[0-9]{2}" placeholder="7000.00" className={inputClass} />
-          <select required name="categoryId" className={inputClass}>
-            <option value="">Categoría</option>
-            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select>
-          <select required name="itemId" className={inputClass}>
-            <option value="">Producto incluido</option>
-            {items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-          <button className="rounded-md bg-amber-400 px-4 py-2 font-semibold text-zinc-950">Crear combo</button>
-        </form>
-      </section>
+      {!isReadOnly && (
+        <section className="grid gap-6 lg:grid-cols-2">
+          <form onSubmit={createAddonGroup} className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+            <h2 className="text-lg font-semibold">Nuevo grupo de adicionales</h2>
+            <input required name="name" placeholder="Salsas" className={inputClass} />
+            <input required name="optionName" placeholder="Cheddar" className={inputClass} />
+            <input required name="priceDelta" pattern="[0-9]+\.[0-9]{2}" placeholder="500.00" className={inputClass} />
+            <button className="rounded-md bg-amber-400 px-4 py-2 font-semibold text-zinc-950">Crear grupo</button>
+          </form>
+          <form onSubmit={createCombo} className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+            <h2 className="text-lg font-semibold">Nuevo combo</h2>
+            <input required name="name" placeholder="Combo clásico" className={inputClass} />
+            <input required name="price" pattern="[0-9]+\.[0-9]{2}" placeholder="7000.00" className={inputClass} />
+            <select required name="categoryId" className={inputClass}>
+              <option value="">Categoría</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+            <select required name="itemId" className={inputClass}>
+              <option value="">Producto incluido</option>
+              {items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <button className="rounded-md bg-amber-400 px-4 py-2 font-semibold text-zinc-950">Crear combo</button>
+          </form>
+        </section>
+      )}
     </div>
   );
 }

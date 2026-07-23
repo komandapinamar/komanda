@@ -9,6 +9,7 @@ import {
   MediaAssetNotFoundError,
   MediaVerificationError,
 } from "@/features/catalog/infrastructure/media.repository";
+import { TenantAccessDeniedError } from "@/features/identity/application/session.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
 
 export class InvalidVersionHeaderError extends Error {}
@@ -26,6 +27,7 @@ export function catalogErrorResponse(error: unknown, correlationId: string) {
     error instanceof CatalogNotFoundError ||
     error instanceof MediaAssetNotFoundError ||
     error instanceof CatalogEntitlementDeniedError ||
+    error instanceof TenantAccessDeniedError ||
     (error instanceof Error && error.message === "INVALID_SESSION")
   ) {
     return nonDisclosingNotFound(correlationId);

@@ -4,6 +4,7 @@ import {
   MercadoPagoIntegrationNotFoundError,
   MercadoPagoOAuthStateError,
 } from "@/features/payments/application/integration.service";
+import { TenantAccessDeniedError } from "@/features/identity/application/session.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
 
 export class InvalidIntegrationVersionHeaderError extends Error {}
@@ -21,6 +22,7 @@ export function integrationVersionFromRequest(request: Request) {
 export function integrationErrorResponse(error: unknown, correlationId: string) {
   if (
     error instanceof MercadoPagoIntegrationNotFoundError ||
+    error instanceof TenantAccessDeniedError ||
     (error instanceof Error && error.message === "INVALID_SESSION")
   ) {
     return nonDisclosingNotFound(correlationId);

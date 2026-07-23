@@ -4,6 +4,7 @@ import {
   settingsVersionFromRequest,
   tenantSettingsErrorResponse,
 } from "@/features/tenancy/web/tenant-settings-http";
+import { requireOwner } from "@/lib/authorization/role-guard";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
 type RouteContext = { params: Promise<{ tenantId: string }> };
@@ -17,6 +18,7 @@ export async function GET(request: Request, route: RouteContext) {
       tenantId,
       correlationId,
     );
+    requireOwner(context);
     return Response.json(await new TenantSettingsService().get(context), {
       headers: { "X-Correlation-Id": correlationId },
     });
@@ -34,6 +36,7 @@ export async function PATCH(request: Request, route: RouteContext) {
       tenantId,
       correlationId,
     );
+    requireOwner(context);
     const settings = await new TenantSettingsService().update(
       context,
       settingsVersionFromRequest(request),

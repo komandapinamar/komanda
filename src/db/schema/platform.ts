@@ -25,6 +25,7 @@ const timestamps = {
     .notNull(),
 };
 
+export type Role = "owner" | "admin" | "employee";
 export type TenantStatus = "onboarding" | "active" | "suspended";
 export type UserStatus = "pending_verification" | "active" | "disabled";
 export type MembershipStatus = "active" | "revoked";
@@ -185,7 +186,7 @@ export const tenantMemberships = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
-    role: text("role").$type<"owner">().default("owner").notNull(),
+    role: text("role").$type<Role>().default("owner").notNull(),
     status: text("status").$type<MembershipStatus>().default("active").notNull(),
     ...timestamps,
   },

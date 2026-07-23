@@ -1,3 +1,5 @@
+import type { Role } from "@/db/schema/platform";
+
 export type TenantContextSource =
   | "public"
   | "administrative"
@@ -11,7 +13,7 @@ export type TenantActor =
       kind: "user";
       userId: string;
       membershipId: string;
-      role: "owner";
+      role: Role;
     }
   | { kind: "service"; serviceId: string }
   | { kind: "agent"; agentId: string; locationId: string }

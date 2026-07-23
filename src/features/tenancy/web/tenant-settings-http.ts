@@ -5,6 +5,7 @@ import {
   TenantSettingsEntitlementDeniedError,
   TenantSettingsNotFoundError,
 } from "@/features/tenancy/application/tenant-settings.service";
+import { TenantAccessDeniedError } from "@/features/identity/application/session.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
 
 export class InvalidTenantSettingsVersionHeaderError extends Error {}
@@ -26,6 +27,7 @@ export function tenantSettingsErrorResponse(
   if (
     error instanceof TenantSettingsNotFoundError ||
     error instanceof TenantSettingsEntitlementDeniedError ||
+    error instanceof TenantAccessDeniedError ||
     (error instanceof Error && error.message === "INVALID_SESSION")
   ) {
     return nonDisclosingNotFound(correlationId);

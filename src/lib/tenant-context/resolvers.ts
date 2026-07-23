@@ -1,3 +1,4 @@
+import type { Role } from "@/db/schema/platform";
 import {
   createVerifiedTenantContext,
   type TenantContext,
@@ -18,10 +19,10 @@ export interface TenantResolverStore {
     sessionToken: string;
     tenantId: string;
   }): Promise<
-    | (ResolvedTenant & {
+      | (ResolvedTenant & {
         userId: string;
         membershipId: string;
-        role: "owner";
+        role: Role;
       })
     | null
   >;

@@ -1,6 +1,7 @@
 import { CatalogService } from "@/features/catalog/application/catalog.service";
 import { catalogErrorResponse, versionFromRequest } from "@/features/catalog/web/catalog-http";
 import { administrativeTenantContext } from "@/features/identity/web/tenant-authority";
+import { requireOwnerOrAdmin } from "@/lib/authorization/role-guard";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
 type RouteContext = {
@@ -12,6 +13,7 @@ export async function PATCH(request: Request, route: RouteContext) {
   try {
     const { tenantId, addonGroupId } = await route.params;
     const context = await administrativeTenantContext(request, tenantId, correlationId);
+    requireOwnerOrAdmin(context);
     const group = await new CatalogService().updateAddonGroup(context, addonGroupId, {
       ...(await request.json()),
       version: versionFromRequest(request),
@@ -27,6 +29,7 @@ export async function DELETE(request: Request, route: RouteContext) {
   try {
     const { tenantId, addonGroupId } = await route.params;
     const context = await administrativeTenantContext(request, tenantId, correlationId);
+    requireOwnerOrAdmin(context);
     await new CatalogService().archiveAddonGroup(context, addonGroupId, {
       version: versionFromRequest(request),
     });
