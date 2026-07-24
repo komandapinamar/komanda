@@ -1,5 +1,8 @@
-import { withTenantTransaction } from "@/db/tenant-transaction";
+import { withPlatformServiceTransaction, withTenantTransaction } from "@/db/tenant-transaction";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
+import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { users } from "@/db/schema";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import {
   AddMemberSchema,
@@ -12,8 +15,8 @@ import {
 } from "@/features/members/domain/member.schemas";
 import { MemberRepository } from "@/features/members/infrastructure/member.repository";
 
-export class UserNotFoundError extends Error {
-  readonly code = "USER_NOT_FOUND";
+export class UserAlreadyMemberError extends Error {
+  readonly code = "USER_ALREADY_MEMBER";
 }
 
 export class LastOwnerError extends Error {
@@ -46,20 +49,51 @@ export class MemberService {
     input: AddMemberInput,
   ): Promise<MemberOutput> {
     const data = AddMemberSchema.parse(input);
+
+    let resolvedUserId = "";
+    let resolvedEmail = "";
+    await withPlatformServiceTransaction(
+      { serviceId: "member-service", correlationId: context.correlationId },
+      async (tx) => {
+        const normalizedEmail = data.email.trim().toLowerCase();
+        const [existingUser] = await tx
+          .select({ id: users.id, email: users.email })
+          .from(users)
+          .where(eq(users.normalizedEmail, normalizedEmail))
+          .limit(1);
+
+        if (existingUser) {
+          resolvedUserId = existingUser.id;
+          resolvedEmail = existingUser.email;
+          return;
+        }
+
+        resolvedUserId = randomUUID();
+        resolvedEmail = data.email.trim();
+        await tx.insert(users).values({
+          id: resolvedUserId,
+          email: resolvedEmail,
+          normalizedEmail,
+          passwordHash: "!INVITED_USER!",
+          status: "pending_verification",
+        });
+      },
+    );
+
     return withTenantTransaction(context, async (transaction) => {
       const repository = new MemberRepository(transaction, context.tenantId);
-      const user = await repository.findByUserEmail(data.email);
-      if (!user) {
-        throw new UserNotFoundError("User not found");
-      }
-      const existing = await repository.findByUserId(user.id);
+
+      const existing = await repository.findByUserId(resolvedUserId);
       if (existing) {
-        throw new Error("User is already a member of this tenant");
+        throw new UserAlreadyMemberError("User is already a member of this tenant");
       }
+
       const member = await repository.create({
-        userId: user.id,
+        userId: resolvedUserId,
         role: data.role,
+        email: resolvedEmail,
       });
+
       await appendAuditEvent(transaction, context, {
         action: MEMBERSHIP_AUDIT_EVENTS.CREATED,
         resourceType: "tenant_membership",
@@ -67,6 +101,7 @@ export class MemberService {
         outcome: "allowed",
         metadata: { userEmail: data.email, role: data.role },
       });
+
       return member;
     });
   }

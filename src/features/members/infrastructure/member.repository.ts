@@ -66,6 +66,7 @@ export class MemberRepository {
 
   async create(input: {
     userId: string;
+    email: string;
     role: "owner" | "admin" | "employee";
   }): Promise<MemberOutput> {
     const [membership] = await this.transaction
@@ -77,14 +78,9 @@ export class MemberRepository {
         status: "active",
       })
       .returning();
-    const [user] = await this.transaction
-      .select({ email: users.email })
-      .from(users)
-      .where(eq(users.id, input.userId))
-      .limit(1);
     return {
       id: membership.id,
-      email: user!.email,
+      email: input.email,
       role: membership.role,
       status: membership.status,
       createdAt: membership.createdAt,
