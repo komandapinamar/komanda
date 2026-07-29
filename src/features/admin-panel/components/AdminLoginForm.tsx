@@ -1,33 +1,40 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  login,
-  type LoginActionState,
-} from "@/features/admin-panel/actions/login.action";
-
-const initialLoginActionState: LoginActionState = {
-  success: false,
-  message: null,
-};
 
 export default function AdminLoginForm() {
   const router = useRouter();
-  const [state, action, pending] = useActionState(
-    login,
-    initialLoginActionState,
-  );
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  useEffect(() => {
-    if (state.success) {
-      router.push("/admin/dashboard");
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage(null);
+    setPending(true);
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/v1/auth/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { title?: string };
+        throw new Error(payload.title ?? "No se pudo iniciar sesión.");
+      }
+      router.push("/admin/select-business");
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+    } finally {
+      setPending(false);
     }
-  }, [state.success, router]);
+  }
 
   return (
     <form
-      action={action}
+      onSubmit={submit}
       className="flex w-full flex-col gap-4 rounded-2xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-6 shadow-sm"
     >
       <div className="space-y-1">
@@ -38,13 +45,13 @@ export default function AdminLoginForm() {
       </div>
 
       <label className="flex flex-col gap-2 text-sm text-[var(--color-accent-tertiary)]/80">
-        <span>Username</span>
+          <span>Email</span>
         <input
           required
-          type="text"
-          name="username"
-          autoComplete="username"
-          placeholder="Username"
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="Email"
           className="rounded-xl border border-[var(--color-accent-tertiary)]/15 px-4 py-3 text-[var(--color-accent-tertiary)] outline-none transition focus:border-[var(--color-accent-tertiary)]/40"
         />
       </label>
@@ -61,12 +68,12 @@ export default function AdminLoginForm() {
         />
       </label>
 
-      {state.message ? (
+      {message ? (
         <p
           aria-live="polite"
-          className={state.success ? "text-sm text-green-700" : "text-sm text-red-600"}
+          className="text-sm text-red-600"
         >
-          {state.message}
+          {message}
         </p>
       ) : null}
 

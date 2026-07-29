@@ -1,0 +1,49 @@
+{
+  "environment": "staging",
+  "sourceDatabase": "komanda",
+  "restoreDatabase": "komanda_restore_gate_20260710",
+  "startedAt": "2026-07-10T23:40:34.041Z",
+  "finishedAt": "2026-07-10T23:40:36.358Z",
+  "elapsedSeconds": 2.317,
+  "status": "passed",
+  "source": {
+    "serverVersion": "170010",
+    "tableCount": 41,
+    "totalRows": "17",
+    "rowSecurityTableCount": 37,
+    "forceRowSecurityTableCount": 37,
+    "fingerprintSha256": "51a7c1d8a0f1851ef4293b7924bfec8ca3c8361d0b8e6b11a3c8977bea9b8221",
+    "nonEmptyTables": [
+      {
+        "relation": "drizzle.__drizzle_migrations",
+        "rowCount": "15",
+        "checksum": "fcb81b655bc64b93daaec0ff969c64f3"
+      },
+      {
+        "relation": "public.plan_definitions",
+        "rowCount": "2",
+        "checksum": "29d7d97cb1db02db1e782e59796def5e"
+      }
+    ]
+  },
+  "restored": {
+    "serverVersion": "170010",
+    "tableCount": 41,
+    "totalRows": "17",
+    "rowSecurityTableCount": 37,
+    "forceRowSecurityTableCount": 37,
+    "fingerprintSha256": "51a7c1d8a0f1851ef4293b7924bfec8ca3c8361d0b8e6b11a3c8977bea9b8221",
+    "nonEmptyTables": [
+      {
+        "relation": "drizzle.__drizzle_migrations",
+        "rowCount": "15",
+        "checksum": "fcb81b655bc64b93daaec0ff969c64f3"
+      },
+      {
+        "relation": "public.plan_definitions",
+        "rowCount": "2",
+        "checksum": "29d7d97cb1db02db1e782e59796def5e"
+      }
+    ]
+  }
+}

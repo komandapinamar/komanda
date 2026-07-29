@@ -1,57 +1,42 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import { getPublicCatalog } from "@/features/shop/menu/services/menu.service";
 
-export default function Home() {
-  const router = useRouter();
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const tenantSlug =
+    (await headers()).get("x-komanda-tenant-slug");
+  if (!tenantSlug) notFound();
+  let catalog;
+  try {
+    catalog = await getPublicCatalog(tenantSlug);
+  } catch {
+    notFound();
+  }
 
   return (
-    <main className="min-h-screen bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)] font-sans overflow-x-hidden flex flex-col items-center">
-      
-      {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center pt-24 pb-16 px-6 w-full max-w-6xl text-center flex-grow">
-        <h1 className="text-6xl md:text-[8rem] lg:text-[10rem] font-black uppercase tracking-tighter leading-[0.85] mb-8 text-black">
-          BURGERS<br />
-          <span className="text-[var(--color-accent-primary)]">DE VERDAD.</span>
-        </h1>
-        
-        <p className="text-xl md:text-3xl font-bold mb-12 max-w-4xl uppercase tracking-wide">
-          Jugosas, con ingredientes frescos y el pan más suave. El auténtico sabor food truck, directo a tus manos.
+    <main className="flex min-h-screen flex-col items-center bg-[var(--color-accent-tertiary)] text-center text-[var(--color-accent-primary)]">
+      <section className="flex w-full max-w-6xl flex-grow flex-col items-center justify-center px-6 py-24">
+        <p className="mb-5 text-lg font-black uppercase tracking-[0.3em]">
+          {catalog.tenant.slug}
         </p>
-
-        <Link 
-          href="/order" 
-          className="inline-block bg-[var(--color-accent-primary)] text-[var(--color-accent-secondary)] text-3xl md:text-5xl font-black uppercase tracking-widest py-6 px-16 rounded-full hover:bg-black hover:-translate-y-2 transition-transform duration-200 border-4 border-black shadow-[0_12px_0_0_black] hover:shadow-[0_18px_0_0_black] active:shadow-none active:translate-y-[12px]"
+        <h1 className="mb-8 text-6xl font-black uppercase leading-[0.85] tracking-tighter md:text-8xl">
+          {catalog.tenant.name}
+        </h1>
+        <p className="mb-12 max-w-2xl text-xl font-bold">
+          {catalog.categories.length > 0
+            ? `${catalog.categories.length} categorías disponibles para pedir.`
+            : "El menú todavía se está preparando."}
+        </p>
+        <Link
+          href="/order"
+          className="rounded-full border-4 border-black bg-[var(--color-accent-primary)] px-12 py-5 text-3xl font-black uppercase tracking-wider text-[var(--color-accent-secondary)] shadow-[0_10px_0_0_black]"
         >
-          PEDÍ AHORA
+          Ver menú
         </Link>
       </section>
-
-      {/* Event Section */}
-      <section className="w-full bg-[var(--color-accent-secondary)] border-y-8 border-black py-16 px-6 flex flex-col items-center text-center mt-8">
-        <div className="max-w-4xl flex flex-col items-center">
-          <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter mb-4 text-black leading-none">
-            🍻 FIESTA DE LA CERVEZA 🍻
-          </h2>
-          <div className="bg-black text-[var(--color-accent-secondary)] px-8 py-3 transform -rotate-2 my-4 shadow-[8px_8px_0_0_white] border-4 border-white">
-            <span className="text-3xl md:text-5xl font-black uppercase tracking-widest block">
-              PINAMAR
-            </span>
-          </div>
-          <p className="text-3xl md:text-5xl font-black mt-6 text-black uppercase tracking-wide border-b-8 border-black pb-2 inline-block">
-            JUEVES 2 AL SÁBADO 4
-          </p>
-          <p className="text-xl md:text-2xl font-bold mt-8 max-w-2xl text-black">
-            ¡Venite a buscar tu hamburguesa al food truck y acompañala con la mejor cerveza tirada!
-          </p>
-        </div>
-      </section>
-
-      {/* Footer minimal */}
-      <footer className="w-full text-center py-12 text-sm md:text-base font-black text-black uppercase tracking-widest bg-white border-t-8 border-black">
-        © 2026 CHIKENSTOP // FOOD TRUCK 
-      </footer>
     </main>
   );
 }

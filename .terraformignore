@@ -1,0 +1,13 @@
+.git/
+.github/
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+!**/*.tfvars.example
+**/backend*.hcl
+!**/backend*.hcl.example
+**/*.tfplan
+**/node_modules/
+**/.next/
+**/.env*

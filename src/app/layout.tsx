@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { logoutAdmin } from "@/features/admin-panel/actions/logout.action";
-import { getAuthenticatedAdminSession } from "@/features/admin-panel/server/auth.service";
+import { cookies } from "next/headers";
+import { coreSessionService } from "@/features/identity/web/authenticated-session";
+import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hamburguesas de Autor",
-  description: "Hamburguesas de Autor",
+  title: "KOMANDA",
+  description: "Your ticketing home",
 };
 
 export const viewport: Viewport = {
@@ -31,22 +33,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const adminSession = await getAuthenticatedAdminSession();
-  const isAdminLoggedIn = Boolean(adminSession);
+
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  const isAdminLoggedIn = token
+    ? await coreSessionService().resolve(token).then(() => true).catch(() => false)
+    : false;
 
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-[var(--color-accent-primary)] antialiased overflow-x-hidden`}
       >
-        <header className="bg-[var(--color-accent-secondary)] flex justify-between items-center px-6 py-4 shadow-md sticky top-0 z-50 border-black border-b-6">
-          <Link href="/" className="text-[var(--color-accent-primary)] font-black text-xl tracking-tight uppercase hover:text-white/90 transition-colors duration-200">
-            Hamburguesas <span className="text-[var(--color-accent-tertiary)]">De Autor</span>
-          </Link>
-          <Link href="/order" className="shrink-0 whitespace-nowrap bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] text-[var(--color-accent-secondary)] font-bold py-2 px-5 rounded-full hover:-translate-y-0.5 hover:text-[var(--color-accent-primary)] transition-all duration-200 text-sm uppercase tracking-wide">
-            PEDI AHORA
-          </Link>
-        </header>
         {children}
         <footer className="bg-[var(--color-accent-primary)] text-[var(--color-accent-secondary)] underline p-2 text-center">
           <Link href="/admin">

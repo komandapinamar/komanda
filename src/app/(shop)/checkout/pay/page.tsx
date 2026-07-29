@@ -118,7 +118,15 @@ function OfficialCartSummary({
 
 export default function CheckoutPayPage() {
   const router = useRouter();
-  const { applyOfficialCart, cartId, isHydrated, items, snapshot, syncCart } = useCart();
+  const {
+    applyOfficialCart,
+    cartId,
+    isHydrated,
+    items,
+    snapshot,
+    syncCart,
+    tenantSlug,
+  } = useCart();
   const [formValues, setFormValues] = useState(initialFormValues);
   const [officialCart, setOfficialCart] = useState<OfficialCart | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
@@ -135,14 +143,14 @@ export default function CheckoutPayPage() {
       }
 
       try {
-        const backendCart = await getCart(effectiveCartId);
+        const backendCart = await getCart(tenantSlug, effectiveCartId);
         setOfficialCart(backendCart);
         return backendCart;
       } catch {
         return null;
       }
     },
-    [cartId],
+    [cartId, tenantSlug],
   );
 
   const resolveOfficialCart = useCallback(
@@ -219,12 +227,13 @@ export default function CheckoutPayPage() {
       cartId: officialCart.id,
       customer: formValues.customer,
       notes: formValues.notes || undefined,
+      cartVersion: officialCart.version,
     };
 
     setIsSubmitting(true);
 
     try {
-      const session = await createPaymentSession(payload);
+      const session = await createPaymentSession(tenantSlug, payload);
       window.location.assign(session.initPoint);
     } catch (error) {
       setSubmitError(
@@ -270,7 +279,7 @@ export default function CheckoutPayPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex flex-col gap-3 rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.2em]">Checkout seguro</p>
+            <p className="text-sm uppercase">Checkout seguro</p>
             <h1 className="text-3xl font-bold">Revision final del pedido</h1>
             <p className="mt-2 text-sm text-white">
               Revisa los productos y el monto final antes de continuar.

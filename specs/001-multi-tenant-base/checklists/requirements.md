@@ -1,7 +1,7 @@
-# Specification Quality Checklist: Base multi-tenant
+# Specification Quality Checklist: Plataforma multi-tenant autoservicio
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-07-01
+**Created**: 2026-07-05 · **Revalidated**: 2026-07-06
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,6 +31,8 @@
 
 ## Notes
 
-- Validation iteration 1 found and corrected an inconsistency between onboarding access and the `active` business state.
-- Validation iteration 1 also made activation prerequisites and suspension behavior explicit, including payment reconciliation already in progress.
-- Validation iteration 2 passed all 16 quality checks. Strapi appears only as an explicit scope exclusion requested by the feature description, not as an implementation dependency.
+- Consolidation validation iteration 1 completed on 2026-07-05: all 16 checks pass; no placeholders or clarification markers remain.
+- The merge resolved the previous scope conflict: catalog administration and Strapi retirement are now included in the same feature as external provisioning, isolation, orders, payments and printing.
+- Duplicated requirements were combined and clarified into 61 independently testable requirements while preserving the acceptance coverage of both original specifications.
+- References to Next.js, Strapi and Mercado Pago identify constitution-mandated boundaries, the legacy migration source and an external business dependency; they do not prescribe an implementation design.
+- Environment validation iteration 1 completed on 2026-07-06: Neon is bounded to synthetic development, Azure staging is the production-equivalence gate, Azure production owns live data, and all 16 checklist items remain satisfied.

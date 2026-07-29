@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import AdminLoginForm from "@/features/admin-panel/components/AdminLoginForm";
-import { getAuthenticatedAdminSession } from "@/features/admin-panel/server/auth.service";
+import { coreSessionService } from "@/features/identity/web/authenticated-session";
+import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 
 export default async function AdminPage() {
-  const adminSession = await getAuthenticatedAdminSession();
-
-  if (adminSession) {
-    redirect("/admin/dashboard");
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (token) {
+    try {
+      await coreSessionService().listTenants(token);
+      redirect("/admin/select-business");
+    } catch {
+      // Expired sessions are treated as anonymous.
+    }
   }
 
   return (

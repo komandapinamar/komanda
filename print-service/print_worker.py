@@ -11,6 +11,9 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 from escpos.printer import Usb
+from komanda_print.client import PrintClient
+from komanda_print.printer import build_usb_printer
+from komanda_print.renderer import render_ticket
 
 
 PRINTER_LINE_WIDTH = 32
@@ -126,7 +129,7 @@ def get_status_label(source: str) -> str:
 class PrintWorker:
     def __init__(self) -> None:
         self.base_url = require_env("PRINT_SERVICE_BASE_URL").rstrip("/")
-        self.token = require_env("PRINT_SERVICE_TOKEN")
+        self.token = require_env("PRINT_AGENT_TOKEN")
         self.vendor_id = parse_int(require_env("PRINTER_USB_VENDOR_ID"))
         self.product_id = parse_int(require_env("PRINTER_USB_PRODUCT_ID"))
         self.interface = parse_int(os.getenv("PRINTER_USB_INTERFACE", "0"))
@@ -135,143 +138,32 @@ class PrintWorker:
         self.timeout = int(os.getenv("PRINT_SERVICE_TIMEOUT_SECONDS", "15"))
         self.poll_interval = int(os.getenv("PRINT_SERVICE_POLL_INTERVAL_SECONDS", "5"))
         self.print_timezone = get_print_timezone()
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-            }
-        )
+        self.client = PrintClient(self.base_url, self.token, self.timeout)
 
     def claim_job(self) -> dict | None:
-        response = self.session.post(
-            f"{self.base_url}/api/print-jobs/claim",
-            timeout=self.timeout,
-        )
+        return self.client.claim_job()
 
-        if response.status_code == 204:
-            return None
-
-        response.raise_for_status()
-        data = response.json()
-        return data.get("job")
-
-    def report_status(self, job_id: str, status: str, error: str | None = None) -> None:
-        payload = {"status": status}
-        if error:
-            payload["error"] = error
-
-        response = self.session.post(
-            f"{self.base_url}/api/print-jobs/{job_id}",
-            data=json.dumps(payload),
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
+    def report_status(
+        self,
+        job_id: str,
+        attempt_number: int,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        self.client.report_status(job_id, attempt_number, status, error)
 
     def build_printer(self) -> Usb:
-        return Usb(
-            self.vendor_id,
-            self.product_id,
-            timeout=self.timeout * 1000,
+        return build_usb_printer(
+            vendor_id=self.vendor_id,
+            product_id=self.product_id,
+            timeout_seconds=self.timeout,
             in_ep=self.in_ep,
             out_ep=self.out_ep,
             interface=self.interface,
         )
 
     def print_job(self, job: dict) -> None:
-        payload = job["payload"]
-        printer = self.build_printer()
-        raw_copies = payload.get("copies", 1)
-        source = str(payload.get("source") or "")
-        currency = str(payload.get("currency") or "ARS")
-        approved_at = format_timestamp(payload.get("approvedAt"), self.print_timezone)
-        customer = payload.get("customer") or {}
-        customer_name = str(customer.get("name") or "Sin nombre")
-        phone = customer.get("phone")
-        notes = str(payload.get("notes") or "").strip()
-        items = payload.get("items", [])
-        summary = payload.get("summary") or {}
-        subtotal = safe_float(summary.get("subtotal", 0))
-        discount_total = safe_float(summary.get("discountTotal", 0))
-        total = safe_float(summary.get("total", 0))
-        total_units = sum(max(safe_int(item.get("quantity", 0)), 0) for item in items)
-
-        try:
-            copies = max(int(raw_copies), 1)
-        except (TypeError, ValueError):
-            copies = 1
-
-        try:
-            for copy_index in range(copies):
-                copy_label = get_copy_label(source, copy_index, copies)
-                status_label = get_status_label(source)
-
-                printer.set(align="center", bold=True, width=2, height=2)
-                printer.text("HAMBURGUESAS DE AUTOR\n")
-                printer.set(align="center", bold=True, width=1, height=1)
-                printer.text(f"{copy_label}\n")
-                printer.set(align="center", bold=False, width=1, height=1)
-                printer.text(f"{status_label}\n")
-                purchase_number = payload.get("purchaseNumber")
-                if purchase_number:
-                    printer.text(f"Compra #{purchase_number}\n")
-                else:
-                    printer.text(f"Orden #{payload['orderId']}\n")
-                printer.text(f"{approved_at}\n")
-                print_rule(printer)
-
-                printer.set(align="left", bold=False)
-                printer.set(align="left", bold=True)
-                printer.text("CLIENTE\n")
-                printer.set(align="left", bold=False)
-                print_wrapped(printer, customer_name)
-                if phone:
-                    print_wrapped(printer, f"Telefono: {phone}")
-
-                if notes:
-                    print_rule(printer)
-                    printer.set(align="left", bold=True)
-                    printer.text("OBSERVACIONES\n")
-                    printer.set(align="left", bold=False)
-                    print_wrapped(printer, notes)
-
-                print_rule(printer)
-                printer.set(align="left", bold=True)
-                printer.text("PEDIDO\n")
-                printer.set(align="left", bold=False)
-                for item in items:
-                    quantity = item.get("quantity", 0)
-                    name = item.get("name", "Item")
-                    line_total = safe_float(item.get("lineTotal", 0))
-                    printer.set(align="left", bold=True)
-                    print_wrapped(printer, f"{quantity} x {name}")
-                    printer.set(align="left", bold=False)
-                    printer.text(f"    {format_money(line_total, currency)}\n")
-
-                print_rule(printer)
-                printer.text(f"Lineas: {len(items)}\n")
-                printer.text(f"Unidades: {total_units}\n")
-
-                if discount_total > 0:
-                    printer.text(f"Subtotal: {format_money(subtotal, currency)}\n")
-                    printer.text(f"Descuento: {format_money(discount_total, currency)}\n")
-
-                printer.set(align="left", bold=True)
-                printer.text(f"Total: {format_money(total, currency)}\n")
-                printer.set(align="left", bold=False)
-
-                print_rule(printer)
-                if source == "admin-direct":
-                    printer.text("Cobro: pendiente en caja\n")
-                else:
-                    printer.text(f"Pago: {payload.get('paymentId', '-')}\n")
-
-                printer.text(f"Orden interna: {payload.get('orderId', '-')}\n")
-                printer.text("\n\n")
-                printer.cut()
-        finally:
-            with suppress(Exception):
-                printer.close()
+        render_ticket(self.build_printer(), job["payload"], self.print_timezone)
 
     def run_forever(self) -> None:
         while True:
@@ -284,9 +176,14 @@ class PrintWorker:
 
                 try:
                     self.print_job(job)
-                    self.report_status(job["id"], "printed")
+                    self.report_status(job["id"], job["attemptNumber"], "printed")
                 except Exception as error:  # noqa: BLE001
-                    self.report_status(job["id"], "failed", str(error))
+                    self.report_status(
+                        job["id"],
+                        job["attemptNumber"],
+                        "failed",
+                        str(error),
+                    )
             except requests.HTTPError as error:
                 print(f"[print-worker] HTTP error: {error}", file=sys.stderr, flush=True)
                 time.sleep(self.poll_interval)

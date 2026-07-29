@@ -1,0 +1,57 @@
+# Dependencies and build output
+node_modules/
+.next/
+dist/
+build/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Local environments and secrets
+.env
+.env.*
+!.env.example
+!.env.test.example
+*.pem
+*.key
+
+# Tooling and editors
+.pytest_cache/
+.mypy_cache/
+.eslintcache
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Logs and local artifacts
+*.log
+artifacts/*
+!artifacts/001-multi-tenant-base/
+artifacts/001-multi-tenant-base/*
+!artifacts/001-multi-tenant-base/*.md
+!artifacts/001-multi-tenant-base/*.json
+.test-artifacts/
+
+# OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+**/backend*.hcl
+!**/backend*.hcl.example
+crash.log
+crash.*.log

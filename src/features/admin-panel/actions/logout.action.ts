@@ -2,10 +2,13 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_SESSION_COOKIE_NAME } from "@/features/admin-panel/lib/admin-session";
+import { coreSessionService } from "@/features/identity/web/authenticated-session";
+import { SESSION_COOKIE_NAME, sessionCookieOptions } from "@/features/identity/web/session-cookie";
 
 export async function logoutAdmin() {
   const cookieStore = await cookies();
-  cookieStore.delete(ADMIN_SESSION_COOKIE_NAME);
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (token) await coreSessionService().revoke(token).catch(() => undefined);
+  cookieStore.set(SESSION_COOKIE_NAME, "", { ...sessionCookieOptions(), maxAge: 0 });
   redirect("/admin");
 }

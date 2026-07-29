@@ -1,0 +1,9 @@
+subscription_id      = "00000000-0000-0000-0000-000000000000"
+postgres_server_name = "komanda-pg-staging-unique"
+
+# Supply administrator_password through TF_VAR_administrator_password.
+administrator_password_version = 1
+
+# If recovering from an interrupted apply/import, set this to the zone reported
+# by Azure for the existing Flexible Server. Leave null for a fresh plan.
+primary_availability_zone = null
