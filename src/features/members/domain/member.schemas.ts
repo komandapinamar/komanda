@@ -25,5 +25,6 @@ export type MemberOutput = {
   email: string;
   role: "owner" | "admin" | "employee";
   status: "active" | "revoked";
+  userStatus?: "active" | "pending_verification" | "suspended" | string;
   createdAt: Date;
 };

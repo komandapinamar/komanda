@@ -1,7 +1,7 @@
 import { withPlatformServiceTransaction, withTenantTransaction } from "@/db/tenant-transaction";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { users } from "@/db/schema";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import {
@@ -14,6 +14,7 @@ import {
   type RevokeMemberInput,
 } from "@/features/members/domain/member.schemas";
 import { MemberRepository } from "@/features/members/infrastructure/member.repository";
+import { IdentityVerificationService } from "@/features/identity/application/identity-verification.service";
 
 export class UserAlreadyMemberError extends Error {
   readonly code = "USER_ALREADY_MEMBER";
@@ -31,17 +32,37 @@ export const MEMBERSHIP_AUDIT_EVENTS = {
 
 export class MemberService {
   async listMembers(context: TenantContext): Promise<MemberOutput[]> {
-    return withTenantTransaction(context, async (transaction) => {
+    const rawMembers = await withTenantTransaction(context, async (transaction) => {
       const repository = new MemberRepository(transaction, context.tenantId);
-      const members = await repository.list();
-      return members.map((m) => ({
-        id: m.id,
-        email: m.email,
-        role: m.role,
-        status: m.status,
-        createdAt: m.createdAt,
-      }));
+      return repository.listRawMemberships();
     });
+
+    if (rawMembers.length === 0) {
+      return [];
+    }
+
+    return withPlatformServiceTransaction(
+      { serviceId: "member-service-list", correlationId: context.correlationId },
+      async (tx) => {
+        const userIds = rawMembers.map((m) => m.userId);
+        const fetchedUsers = await tx
+          .select({ id: users.id, email: users.email, status: users.status })
+          .from(users)
+          .where(inArray(users.id, userIds));
+
+        return rawMembers.map((m) => {
+          const user = fetchedUsers.find((u) => u.id === m.userId);
+          return {
+            id: m.id,
+            email: user?.email ?? "unknown@example.com",
+            role: m.role,
+            status: m.status,
+            userStatus: user?.status ?? "active",
+            createdAt: m.createdAt,
+          };
+        });
+      },
+    );
   }
 
   async addMember(
@@ -52,12 +73,15 @@ export class MemberService {
 
     let resolvedUserId = "";
     let resolvedEmail = "";
+    let resolvedUserStatus = "active";
+    let isNewShadowUser = false;
+
     await withPlatformServiceTransaction(
       { serviceId: "member-service", correlationId: context.correlationId },
       async (tx) => {
         const normalizedEmail = data.email.trim().toLowerCase();
         const [existingUser] = await tx
-          .select({ id: users.id, email: users.email })
+          .select({ id: users.id, email: users.email, status: users.status })
           .from(users)
           .where(eq(users.normalizedEmail, normalizedEmail))
           .limit(1);
@@ -65,11 +89,14 @@ export class MemberService {
         if (existingUser) {
           resolvedUserId = existingUser.id;
           resolvedEmail = existingUser.email;
+          resolvedUserStatus = existingUser.status;
           return;
         }
 
         resolvedUserId = randomUUID();
         resolvedEmail = data.email.trim();
+        resolvedUserStatus = "pending_verification";
+        isNewShadowUser = true;
         await tx.insert(users).values({
           id: resolvedUserId,
           email: resolvedEmail,
@@ -94,6 +121,20 @@ export class MemberService {
         email: resolvedEmail,
       });
 
+      const finalMember = {
+        ...member,
+        userStatus: resolvedUserStatus,
+      };
+
+      if (isNewShadowUser) {
+        const identityService = new IdentityVerificationService();
+        await identityService.generateInvitationChallenge({
+          userId: resolvedUserId,
+          email: resolvedEmail,
+          tenantName: context.tenantId,
+        });
+      }
+
       await appendAuditEvent(transaction, context, {
         action: MEMBERSHIP_AUDIT_EVENTS.CREATED,
         resourceType: "tenant_membership",
@@ -102,7 +143,7 @@ export class MemberService {
         metadata: { userEmail: data.email, role: data.role },
       });
 
-      return member;
+      return finalMember;
     });
   }
 

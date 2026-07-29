@@ -253,7 +253,7 @@ export function CatalogEditor({
                       onClick={() => archive("categories", category)}
                       className="text-sm text-red-300"
                     >
-                      Archivar
+                      Eliminar
                     </button>
                   </span>
                 )}
@@ -298,7 +298,7 @@ export function CatalogEditor({
                       onClick={() => archive("items", item)}
                       className="text-sm text-red-300"
                     >
-                      Archivar
+                      Eliminar
                     </button>
                   </span>
                 )}

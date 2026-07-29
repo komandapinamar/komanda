@@ -20,18 +20,16 @@ export class MemberRepository {
     private readonly tenantId: string,
   ) {}
 
-  async list(): Promise<MembershipWithUser[]> {
+  async listRawMemberships() {
     const rows = await this.transaction
       .select({
         id: tenantMemberships.id,
         userId: tenantMemberships.userId,
-        email: users.email,
         role: tenantMemberships.role,
         status: tenantMemberships.status,
         createdAt: tenantMemberships.createdAt,
       })
       .from(tenantMemberships)
-      .innerJoin(users, eq(users.id, tenantMemberships.userId))
       .where(
         and(
           eq(tenantMemberships.tenantId, this.tenantId),

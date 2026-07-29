@@ -7,6 +7,7 @@ type Member = {
   email: string;
   role: "owner" | "admin" | "employee";
   status: "active" | "revoked";
+  userStatus?: "active" | "pending_verification" | "suspended" | string;
 };
 
 export function MemberManager({
@@ -146,15 +147,13 @@ export function MemberManager({
                 </select>
               </td>
               <td className="py-2">
-                <span
-                  className={
-                    member.status === "active"
-                      ? "text-emerald-400"
-                      : "text-red-400"
-                  }
-                >
-                  {member.status === "active" ? "Activo" : "Revocado"}
-                </span>
+                {member.status === "revoked" ? (
+                  <span className="text-red-400">Revocado</span>
+                ) : member.userStatus === "pending_verification" ? (
+                  <span className="text-amber-400">Pendiente</span>
+                ) : (
+                  <span className="text-emerald-400">Activo</span>
+                )}
               </td>
               <td className="py-2">
                 {member.status === "active" && member.role !== "owner" ? (
