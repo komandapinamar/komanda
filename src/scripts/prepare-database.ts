@@ -9,7 +9,8 @@ import { bootstrapRuntimeRole } from "./database-role-bootstrap";
 import { verifyDatabaseRoles } from "./verify-database-roles";
 import { verifyMigrationJournal } from "./verify-migration-journal";
 
-type AzureEnvironment = "staging" | "production";
+type DatabaseEnvironment = "staging" | "production";
+type DatabaseProvider = "azure" | "gcp" | "external";
 
 const PRODUCTION_CONFIRMATION = "I_UNDERSTAND_THIS_TOUCHES_PRODUCTION";
 
@@ -19,12 +20,33 @@ function required(name: string) {
   return value;
 }
 
-function azureEnvironment(): AzureEnvironment {
+function databaseEnvironment(): DatabaseEnvironment {
   const value = required("KOMANDA_ENVIRONMENT");
   if (value !== "staging" && value !== "production") {
     throw new Error("KOMANDA_ENVIRONMENT must be staging or production.");
   }
   return value;
+}
+
+function databaseProvider(): DatabaseProvider {
+  const value = (process.env.DATABASE_PROVIDER ?? "").trim().toLowerCase();
+  if (value === "azure" || value === "gcp" || value === "external") {
+    return value;
+  }
+  throw new Error(
+    "DATABASE_PROVIDER must be azure, gcp, or external to validate the connection host.",
+  );
+}
+
+function providerLabel(provider: DatabaseProvider) {
+  switch (provider) {
+    case "azure":
+      return "azure-postgresql-flexible-server";
+    case "gcp":
+      return "google-cloud-sql-postgres";
+    case "external":
+      return "external-postgres";
+  }
 }
 
 function parsedDatabaseUrl(name: string, expectedUser: string) {
@@ -41,10 +63,8 @@ function parsedDatabaseUrl(name: string, expectedUser: string) {
   if (decodeURIComponent(url.username) !== expectedUser) {
     throw new Error(`${name} must connect as ${expectedUser}.`);
   }
-  if (!url.hostname.endsWith(".postgres.database.azure.com")) {
-    throw new Error(
-      `${name} must point at Azure PostgreSQL Flexible Server. Parsed host: ${url.hostname || "(empty)"}.`,
-    );
+  if (!url.hostname) {
+    throw new Error(`${name} must include a database host.`);
   }
   const sslMode = url.searchParams.get("sslmode");
   if (sslMode !== "require" && sslMode !== "verify-full") {
@@ -91,7 +111,8 @@ async function runtimeConnectionWorks(connectionString: string) {
 }
 
 async function writeReport(input: {
-  environment: AzureEnvironment;
+  environment: DatabaseEnvironment;
+  provider: DatabaseProvider;
   migration: ReturnType<typeof parsedDatabaseUrl>;
   runtime: ReturnType<typeof parsedDatabaseUrl>;
 }) {
@@ -106,7 +127,7 @@ async function writeReport(input: {
       {
         environment: input.environment,
         checkedAt: new Date().toISOString(),
-        provider: "azure-postgresql-flexible-server",
+        provider: providerLabel(input.provider),
         database: {
           host: input.migration.host,
           name: input.migration.database,
@@ -134,7 +155,7 @@ async function writeReport(input: {
 }
 
 async function main() {
-  const environment = azureEnvironment();
+  const environment = databaseEnvironment();
   if (
     environment === "production" &&
     process.env.CONFIRM_PRODUCTION_DATABASE_PREPARE !== PRODUCTION_CONFIRMATION
@@ -144,6 +165,7 @@ async function main() {
     );
   }
 
+  const provider = databaseProvider();
   const migration = parsedDatabaseUrl("DATABASE_DIRECT_URL", "komanda_migration");
   const runtime = parsedDatabaseUrl("DATABASE_URL", "komanda_runtime");
   const expectedHost = required("DATABASE_EXPECTED_HOST").toLowerCase();
@@ -151,7 +173,7 @@ async function main() {
     throw new Error("DATABASE_DIRECT_URL and DATABASE_URL must be distinct.");
   }
   if (migration.host !== runtime.host || migration.database !== runtime.database) {
-    throw new Error("Migration and runtime URLs must point to the same Azure database.");
+    throw new Error("Migration and runtime URLs must point to the same database.");
   }
   if (migration.host.toLowerCase() !== expectedHost) {
     throw new Error(
@@ -178,9 +200,9 @@ async function main() {
     migrationUrl: migration.raw,
     runtimeUrl: runtime.raw,
   });
-  const reportPath = await writeReport({ environment, migration, runtime });
+  const reportPath = await writeReport({ environment, provider, migration, runtime });
   process.stdout.write(
-    `Azure ${environment} database prepared and verified. Report: ${reportPath}\n`,
+    `${environment} database prepared and verified. Report: ${reportPath}\n`,
   );
 }
 
@@ -193,8 +215,8 @@ main().catch((error: unknown) => {
   ) {
     process.stderr.write(
       [
-        "Azure PostgreSQL DNS could not be resolved.",
-        "The staging database is private; run this command from a VM/job/VPN path with access to the Azure VNet and private DNS zone.",
+        "PostgreSQL DNS could not be resolved.",
+        "A private database must be reached from the environment's private network path (VM/job/VPN/proxy).",
         `Original error: ${error instanceof Error ? error.message : "ENOTFOUND"}`,
       ].join("\n") + "\n",
     );
@@ -202,7 +224,7 @@ main().catch((error: unknown) => {
     return;
   }
   process.stderr.write(
-    `${error instanceof Error ? error.message : "Azure database preparation failed."}\n`,
+    `${error instanceof Error ? error.message : "Database preparation failed."}\n`,
   );
   process.exitCode = 1;
 });

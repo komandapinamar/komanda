@@ -1,0 +1,16 @@
+project          = "replace-with-gcp-project-id"
+region           = "southamerica-east1"
+instance_name    = "komanda-pg-staging"
+database_name    = "komanda"
+tier             = "db-f1-micro"
+storage_gb       = 32
+backup_retention_days = 7
+ipv4_enabled     = true
+deletion_protection = true
+
+# Supply migration_password through TF_VAR_migration_password.
+# Authorized networks are provisioned out-of-band through the GCS backend state
+# in normal operation; empty keeps the instance closed until the app VPS egress
+# IP is known.
+authorized_networks = []
+private_network = ""

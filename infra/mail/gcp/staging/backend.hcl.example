@@ -1,0 +1,5 @@
+bucket = "replace-with-gcs-state-bucket"
+prefix = "komanda/mail/gcp/staging"
+
+# Optional: point at a service account key. When using ADC this can be omitted.
+# credentials = "/path/to/service-account.json"
