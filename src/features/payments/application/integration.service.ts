@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
+import type { Role } from "@/db/schema/platform";
 import {
   withTenantTransaction,
   type TenantTransaction,
@@ -35,7 +36,7 @@ type OAuthStatePayload = {
   tenantId: string;
   userId: string;
   membershipId: string;
-  role: "owner";
+  role: Role;
   codeVerifier: string;
   expiresAt: string;
 };

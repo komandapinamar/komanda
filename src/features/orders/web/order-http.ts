@@ -5,6 +5,7 @@ import {
   OrderNotFoundError,
   OrderValidationError,
 } from "@/features/orders/application/order-errors";
+import { TenantAccessDeniedError } from "@/features/identity/application/session.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
 
 export class InvalidOrderVersionHeaderError extends Error {}
@@ -22,6 +23,7 @@ export function orderVersionFromRequest(request: Request) {
 export function orderErrorResponse(error: unknown, correlationId: string) {
   if (
     error instanceof OrderNotFoundError ||
+    error instanceof TenantAccessDeniedError ||
     (error instanceof Error && error.message === "INVALID_SESSION")
   ) {
     return nonDisclosingNotFound(correlationId);

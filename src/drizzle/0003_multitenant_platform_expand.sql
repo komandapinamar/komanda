@@ -125,7 +125,7 @@ CREATE TABLE "tenant_memberships" (
   "updated_at" timestamptz DEFAULT now() NOT NULL,
   CONSTRAINT "tenant_memberships_tenant_id_id_key" UNIQUE ("tenant_id", "id"),
   CONSTRAINT "tenant_memberships_tenant_user_key" UNIQUE ("tenant_id", "user_id"),
-  CONSTRAINT "tenant_memberships_role_check" CHECK ("role" = 'owner'),
+  CONSTRAINT "tenant_memberships_role_check" CHECK ("role" IN ('owner', 'admin', 'employee')),
   CONSTRAINT "tenant_memberships_status_check" CHECK ("status" IN ('active', 'revoked'))
 );
 CREATE INDEX "tenant_memberships_user_status_idx" ON "tenant_memberships" ("user_id", "status");

@@ -14,11 +14,14 @@ export default async function TenantIntegrationsPage({
 }) {
   const { tenantId } = await params;
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) redirect("/admin");
+  if (!token) redirect("/login");
   let authority;
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);
   } catch {
+    notFound();
+  }
+  if (authority.membership.role !== "owner") {
     notFound();
   }
   const context = createVerifiedTenantContext({

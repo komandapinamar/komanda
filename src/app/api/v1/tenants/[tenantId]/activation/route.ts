@@ -1,6 +1,7 @@
 import { administrativeTenantContext } from "@/features/identity/web/tenant-authority";
 import { TenantSettingsService } from "@/features/tenancy/application/tenant-settings.service";
 import { tenantSettingsErrorResponse } from "@/features/tenancy/web/tenant-settings-http";
+import { requireOwner } from "@/lib/authorization/role-guard";
 import { problemResponse } from "@/lib/http/problem";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
@@ -24,6 +25,7 @@ export async function POST(request: Request, route: RouteContext) {
       tenantId,
       correlationId,
     );
+    requireOwner(context);
     const tenant = await new TenantSettingsService().activate(
       context,
       idempotencyKey,

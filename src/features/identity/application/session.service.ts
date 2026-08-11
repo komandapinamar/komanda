@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
+import type { Role } from "@/db/schema/platform";
+
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
 export type SessionIdentity = {
@@ -14,7 +16,7 @@ export type SessionIdentity = {
 export type LiveMembership = {
   id: string;
   tenantId: string;
-  role: "owner";
+  role: Role;
   status: "active" | "revoked";
   tenantStatus: "onboarding" | "active" | "suspended";
   tenantName: string;
