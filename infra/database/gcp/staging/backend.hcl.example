@@ -1,0 +1,6 @@
+bucket = "replace-with-gcs-state-bucket"
+prefix = "komanda/database/gcp/staging"
+
+# Optional: point at a service account key. When using ADC (gcloud auth
+# application-default login) this file can omit the credentials line.
+# credentials = "/path/to/service-account.json"

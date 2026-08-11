@@ -53,6 +53,12 @@ function deploymentEnvironment(errors: string[]): DeploymentEnvironment {
   return "staging";
 }
 
+function expectedDatabaseHost(errors: string[]): string | null {
+  const expected = value("DATABASE_EXPECTED_HOST");
+  if (!expected) errors.push("DATABASE_EXPECTED_HOST is required.");
+  return expected ? expected.toLowerCase() : null;
+}
+
 function verifyDatabase(errors: string[]) {
   const migration = assertUrl("DATABASE_DIRECT_URL", errors);
   const runtime = assertUrl("DATABASE_URL", errors);
@@ -63,15 +69,18 @@ function verifyDatabase(errors: string[]) {
   if (runtime.username !== "komanda_runtime") {
     errors.push("DATABASE_URL must use komanda_runtime.");
   }
-  if (!migration.hostname.endsWith(".postgres.database.azure.com")) {
-    errors.push(
-      `DATABASE_DIRECT_URL must point at Azure PostgreSQL Flexible Server; parsed host is ${migration.hostname || "(empty)"}.`,
-    );
-  }
-  if (!runtime.hostname.endsWith(".postgres.database.azure.com")) {
-    errors.push(
-      `DATABASE_URL must point at Azure PostgreSQL Flexible Server; parsed host is ${runtime.hostname || "(empty)"}.`,
-    );
+  const expectedHost = expectedDatabaseHost(errors);
+  if (expectedHost) {
+    for (const [label, url] of [
+      ["DATABASE_DIRECT_URL", migration],
+      ["DATABASE_URL", runtime],
+    ] as const) {
+      if (url.hostname.toLowerCase() !== expectedHost) {
+        errors.push(
+          `${label} must point at DATABASE_EXPECTED_HOST, which is ${expectedHost}; parsed host is ${url.hostname || "(empty)"}.`,
+        );
+      }
+    }
   }
   if (migration.href === runtime.href) {
     errors.push("DATABASE_DIRECT_URL and DATABASE_URL must be distinct.");

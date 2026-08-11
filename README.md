@@ -42,7 +42,7 @@ link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-
 16. SPEC-016 Observabilidad.
 17. SPEC-017 Analytics.
 18. SPEC-018 Integraciones.
- 19. SPEC-019 Retiro del legado operativo.
+19. SPEC-019 Retiro del legado operativo.
 
 ## Database
 
@@ -101,7 +101,9 @@ webhooks use the tenant integration and `KOMANDA_PUBLIC_BASE_URL`.
 ```bash
 ./print-service/run_worker.sh
 ```
+
 ### Raspberry Pi
+
 The recommended way is to set the printer worker in a Raspberry Pi (Raspberry Pi OS lite) is using a systemd service running when the system powers on.
 
 First run ./print-service/setup_raspberry_print_service.sh to install dependencies and set up Conda environment.
@@ -109,6 +111,7 @@ First run ./print-service/setup_raspberry_print_service.sh to install dependenci
 Wifi should be set up in advance using raspi-config or nmtui, this is really important to have the raspi working autonomously.
 
 Example Unit file in /etc/systemd/system/print-service.servic:
+
 ```
 [Unit]
 Description=Print Service
@@ -141,18 +144,24 @@ printing record carries an explicit tenant boundary and is protected by RLS.
 ---
 
 # VPS Configuration
+>
 >[!NOTE]
 >This system was tested used with dokploy. For now, migrations and configurations will be centered around this tool.
 
 ### Migrating Dokploy to a different VPS
+
 Transfer the entire filesystem using rsync:
+
 ```bash
 rsync -aAXv --delete \ --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found","/swapfile"} \ -e "ssh -i /path/to/private_key" user@source_vps_ip:/ /
 ```
+
 After the migration, update the server IP in the Dokploy database:
+
 ```sql
 UPDATE admin SET "serverIp" = 'new_server_ip' WHERE "serverIp" = 'old_server_ip';
 ```
+
 >[!IMPORTANT]
 >Environment variables should be saved in advance for each service running inside dokploy.
 
@@ -166,3 +175,9 @@ be the migration owner and must not have `BYPASSRLS`.
 
 The database infrastructure and Azure staging gate are documented in
 `infra/database/README.md` and `infra/database/azure/RUNBOOK.md`.
+
+# Infrasture and use cases
+
+This project is intended to be used in any part of the ticketing process: kitchen, app/client menu, in the storefronts.
+For dashboard access we have a segregation of roles, so the user can only access the information that is needed for their role.
+For the menu anyone can access it, but for the kitchen and dashboard, the user needs to be authenticated and have the correct role to access it.

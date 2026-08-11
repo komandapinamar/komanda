@@ -34,6 +34,9 @@ jobs:
           - infra/database/neon
           - infra/database/azure/staging
           - infra/database/azure/production
+          - infra/database/gcp/staging
+          - infra/database/gcp/production
+          - infra/state/gcp
     defaults:
       run:
         working-directory: ${{ matrix.root }}

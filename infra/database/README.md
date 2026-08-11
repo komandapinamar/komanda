@@ -7,16 +7,17 @@ but each environment has an explicit provider and isolated OpenTofu state.
 |---|---|---|---|
 | local / CI | ephemeral PostgreSQL 17 | synthetic fixtures | no |
 | development | Neon in `aws-sa-east-1` | synthetic or approved irreversible anonymization only | no |
-| staging | Azure PostgreSQL Flexible Server | synthetic/anonymized acceptance data | yes |
-| production | Azure PostgreSQL Flexible Server | live business data | destination |
+| staging | Cloud SQL for PostgreSQL (GCP) | synthetic/anonymized acceptance data | yes |
+| production | Cloud SQL for PostgreSQL (GCP) | live business data | destination |
 
 The roots are intentionally separate:
 
 ```text
 infra/database/
 ├── neon/       # hard-coded development; cannot accept staging/production
-└── azure/
-    ├── modules/postgresql/  # shared implementation
+├── azure/      # legacy Azure PostgreSQL roots, frozen during the GCP cutover
+└── gcp/
+    ├── modules/postgresql/  # shared Cloud SQL implementation
     ├── staging/             # environment and state key fixed
     └── production/          # environment and state key fixed
 ```
@@ -27,17 +28,18 @@ is no database per tenant.
 
 ## Remote state
 
-All roots use the private Azure Blob backend in `komanda-infra-rg`, but each has
-a different key:
+All roots use the provider's remote state backend, but each has a different
+key. The GCP roots use the GCS backend in `infra/state/gcp`:
 
-- `komanda/database/neon/development.tfstate`
-- `komanda/database/azure/staging.tfstate`
-- `komanda/database/azure/production.tfstate`
+- `komanda/database/neon/development.tfstate` (Azure Blob, legacy)
+- `komanda/database/azure/staging.tfstate` (Azure Blob, legacy)
+- `komanda/database/azure/production.tfstate` (Azure Blob, legacy)
+- `komanda/database/gcp/staging.tfstate` (GCS)
+- `komanda/database/gcp/production.tfstate` (GCS)
 
-The storage account/container must exist before `tofu init`. Enable blob
-versioning, soft delete and Microsoft Entra access; do not use local state for
-an applied environment. The examples use `komandatfstate9c4e27`; verify that
-name exists in the intended subscription or replace it consistently.
+Provision the state bucket with `infra/state/gcp` before initializing a GCP
+root. The examples use `komanda-tfstate`; verify that name is globally unique
+in the intended project or replace it consistently.
 
 ## Neon development
 
@@ -142,11 +144,86 @@ npm run env:verify
 npm run db:prepare:azure
 ```
 
+## GCP state bootstrap
+
+Provision the GCS state bucket once per project before applying any GCP root:
+
+```bash
+cd infra/state/gcp
+cp bootstrap.tfvars.example bootstrap.tfvars
+# Fill project and a globally unique bucket_name.
+export GOOGLE_APPLICATION_CREDENTIALS='/path/to/service-account.json'
+
+tofu init -backend=false
+tofu plan -var-file=bootstrap.tfvars -out=bootstrap.tfplan
+tofu apply bootstrap.tfplan
+```
+
+Then copy the matching `backend.hcl.example` and `*.tfvars.example` into the
+GCP database root before planning.
+
+## GCP staging and production
+
+Cloud SQL for PostgreSQL uses the same migration, role and RLS verification
+path with `DATABASE_PROVIDER=gcp`:
+
+```bash
+cd infra/database/gcp/staging   # or production
+cp backend.hcl.example backend.hcl
+cp staging.tfvars.example staging.tfvars
+export GOOGLE_APPLICATION_CREDENTIALS='/path/to/service-account.json'
+export TF_VAR_migration_password='generated-secret-from-secret-manager'
+
+tofu init -reconfigure -backend-config=backend.hcl
+tofu fmt -check -recursive
+tofu validate
+tofu plan -var-file=staging.tfvars -out=staging.tfplan
+tofu show staging.tfplan
+tofu apply staging.tfplan
+tofu output -json
+```
+
+After provisioning, run the private migration path (or the add-on for the app
+VPS egress) from `src`:
+
+```bash
+cd ../../../../src
+cp .env.staging.example .env.staging
+# Fill .env.staging from tofu output and the deployment secret manager.
+set -a
+. ./.env.staging
+set +a
+npm run env:verify
+npm run db:prepare:gcp
+```
+
+Production repeats the same sequence with `infra/database/gcp/production`,
+`src/.env.production.example`, and:
+
+```bash
+export CONFIRM_PRODUCTION_DATABASE_PREPARE=I_UNDERSTAND_THIS_TOUCHES_PRODUCTION
+npm run env:verify
+npm run db:prepare:gcp
+```
+
+GCP specifics:
+
+- `db-f1-micro` / `db-g1-small` are shared-core tiers without a Cloud SQL SLA.
+  They are acceptable for the low-traffic migration window but must be promoted
+  to a dedicated `db-custom-*` tier before production traffic is opened.
+- Production requires at least 14 days of backups, PITR, and deletion
+  protection. The module enforces this with a `check` block.
+- Public IPv4 is enabled in the examples for the app VPS. Prefer private IP +
+  Cloud SQL Auth Proxy before production is opened, mirroring the old Azure
+  private posture.
+
 ## Security boundaries
 
 - `komanda_migration` owns the database and is used only by reviewed migration jobs.
 - `komanda_runtime` is created by SQL with `NOSUPERUSER NOBYPASSRLS` and never owns tables.
 - Azure PostgreSQL has public network access disabled.
+- GCP Cloud SQL requires SSL (`ENCRYPTED_ONLY`) and targets private connectivity before production is opened.
 - Azure staging and production use different resource groups, VNets, credentials and state keys.
+- GCP staging and production use different instances, VPCs when private, credentials and state keys.
 - Applied database resources use `prevent_destroy`; destructive replacement requires a reviewed code change.
 - Never use `-auto-approve` for staging or production.
