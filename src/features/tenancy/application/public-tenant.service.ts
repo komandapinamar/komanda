@@ -18,6 +18,7 @@ import {
 } from "@/db/tenant-transaction";
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
+import { parseLocationAddress } from "@/features/directory/utils/directory-maps";
 
 export class PublicTenantNotFoundError extends Error {}
 
@@ -29,7 +30,88 @@ export type PublicTenant = {
   locationId: string;
 };
 
+export type PublicDirectoryTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  currency: string;
+  locationName: string | null;
+  locationAddress: string | null;
+  mapQuery: string;
+  categoriesCount: number;
+};
+
 export class PublicTenantService {
+  async listActiveDirectory(): Promise<PublicDirectoryTenant[]> {
+    return withPlatformServiceTransaction(
+      { serviceId: "public-directory-resolver", correlationId: randomUUID() },
+      async (transaction) => {
+        const activeTenants = await transaction
+          .select({
+            id: tenants.id,
+            name: tenants.name,
+            slug: tenants.slug,
+            currency: tenants.defaultCurrency,
+          })
+          .from(tenants)
+          .where(eq(tenants.status, "active"))
+          .orderBy(asc(tenants.name));
+
+        const results: PublicDirectoryTenant[] = [];
+
+        for (const tenant of activeTenants) {
+          await transaction.execute(
+            sql`select set_config('app.tenant_id', ${tenant.id}, true)`,
+          );
+
+          const [primaryLocation] = await transaction
+            .select({
+              name: tenantLocations.name,
+              address: tenantLocations.address,
+            })
+            .from(tenantLocations)
+            .where(
+              and(
+                eq(tenantLocations.tenantId, tenant.id),
+                eq(tenantLocations.isPrimary, true),
+                eq(tenantLocations.status, "active"),
+              ),
+            )
+            .limit(1);
+
+          const { displayAddress, mapQuery } = parseLocationAddress(
+            primaryLocation?.address,
+            primaryLocation?.name ?? null,
+            tenant.name,
+          );
+
+          const categories = await transaction
+            .select({ id: catalogCategories.id })
+            .from(catalogCategories)
+            .where(
+              and(
+                eq(catalogCategories.tenantId, tenant.id),
+                eq(catalogCategories.status, "active"),
+              ),
+            );
+
+          results.push({
+            id: tenant.id,
+            name: tenant.name,
+            slug: tenant.slug,
+            currency: tenant.currency,
+            locationName: primaryLocation?.name ?? null,
+            locationAddress: displayAddress,
+            mapQuery,
+            categoriesCount: categories.length,
+          });
+        }
+
+        return results;
+      },
+    );
+  }
+
   async resolve(slug: string): Promise<PublicTenant> {
     const normalizedSlug = normalizeTenantSlug(slug);
     const tenant = await withPlatformServiceTransaction(

@@ -14,7 +14,6 @@ import {
   type RevokeMemberInput,
 } from "@/features/members/domain/member.schemas";
 import { MemberRepository } from "@/features/members/infrastructure/member.repository";
-import { IdentityVerificationService } from "@/features/identity/application/identity-verification.service";
 
 export class UserAlreadyMemberError extends Error {
   readonly code = "USER_ALREADY_MEMBER";
@@ -74,7 +73,6 @@ export class MemberService {
     let resolvedUserId = "";
     let resolvedEmail = "";
     let resolvedUserStatus = "active";
-    let isNewShadowUser = false;
 
     await withPlatformServiceTransaction(
       { serviceId: "member-service", correlationId: context.correlationId },
@@ -95,14 +93,13 @@ export class MemberService {
 
         resolvedUserId = randomUUID();
         resolvedEmail = data.email.trim();
-        resolvedUserStatus = "pending_verification";
-        isNewShadowUser = true;
+        resolvedUserStatus = "active";
         await tx.insert(users).values({
           id: resolvedUserId,
           email: resolvedEmail,
           normalizedEmail,
-          passwordHash: "!INVITED_USER!",
-          status: "pending_verification",
+          passwordHash: "!DIRECT_MEMBER!",
+          status: "active",
         });
       },
     );
@@ -125,15 +122,6 @@ export class MemberService {
         ...member,
         userStatus: resolvedUserStatus,
       };
-
-      if (isNewShadowUser) {
-        const identityService = new IdentityVerificationService();
-        await identityService.generateInvitationChallenge({
-          userId: resolvedUserId,
-          email: resolvedEmail,
-          tenantName: context.tenantId,
-        });
-      }
 
       await appendAuditEvent(transaction, context, {
         action: MEMBERSHIP_AUDIT_EVENTS.CREATED,

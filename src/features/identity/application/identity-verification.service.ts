@@ -1,5 +1,4 @@
 import "server-only";
-import * as bcrypt from "bcrypt";
 
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
@@ -27,97 +26,6 @@ export function digestVerificationToken(token: string) {
 
 export class IdentityVerificationService {
   constructor(private readonly now: () => Date = () => new Date()) {}
-
-  async generateInvitationChallenge(input: {
-    userId: string;
-    email: string;
-    tenantName: string;
-  }) {
-    const token = randomBytes(32).toString("base64url");
-    const tokenDigest = digestVerificationToken(token);
-    const now = this.now();
-    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    await withPlatformServiceTransaction(
-      { serviceId: "identity-verification", correlationId: randomUUID() },
-      async (transaction) => {
-        await transaction.insert(identityVerificationChallenges).values({
-          id: randomUUID(),
-          userId: input.userId,
-          tokenDigest,
-          expiresAt,
-        });
-      },
-    );
-
-    const delivery = verificationDeliveryFromEnvironment();
-    await delivery.deliver({
-      email: input.email,
-      token,
-      expiresAt,
-      tenantName: input.tenantName,
-      publicBaseUrlPath: "/accept-invitation",
-    });
-  }
-
-  async acceptInvitation(token: string, passwordRaw: string, correlationId: string) {
-    const tokenDigest = digestVerificationToken(token);
-    const now = this.now();
-    const newPasswordHash = await bcrypt.hash(passwordRaw, 12);
-
-    return withPlatformServiceTransaction(
-      { serviceId: "identity-verification", correlationId },
-      async (transaction) => {
-        const [challenge] = await transaction
-          .select()
-          .from(identityVerificationChallenges)
-          .where(
-            and(
-              eq(identityVerificationChallenges.tokenDigest, tokenDigest),
-              isNull(identityVerificationChallenges.consumedAt),
-              gt(identityVerificationChallenges.expiresAt, now),
-              lt(identityVerificationChallenges.attemptCount, 10),
-            ),
-          )
-          .limit(1);
-
-        if (!challenge) {
-          throw new InvalidVerificationChallengeError(
-            "Verification challenge is invalid or expired.",
-          );
-        }
-
-        const consumed = await transaction
-          .update(identityVerificationChallenges)
-          .set({ consumedAt: now })
-          .where(
-            and(
-              eq(identityVerificationChallenges.id, challenge.id),
-              isNull(identityVerificationChallenges.consumedAt),
-            ),
-          )
-          .returning({ userId: identityVerificationChallenges.userId });
-
-        if (!consumed[0]) {
-          throw new InvalidVerificationChallengeError(
-            "Verification challenge is invalid or expired.",
-          );
-        }
-
-        await transaction
-          .update(users)
-          .set({
-            status: "active",
-            passwordHash: newPasswordHash,
-            emailVerifiedAt: now,
-            updatedAt: now,
-          })
-          .where(eq(users.id, challenge.userId));
-
-        return { userId: challenge.userId };
-      },
-    );
-  }
 
   async confirm(token: string, correlationId: string) {
     const tokenDigest = digestVerificationToken(token);
