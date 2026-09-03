@@ -19,6 +19,7 @@ export function MemberManager({
 }) {
   const [members, setMembers] = useState(initialMembers);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "employee">("employee");
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +30,7 @@ export function MemberManager({
       const res = await fetch(`/api/v1/tenants/${tenantId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role }),
+        body: JSON.stringify({ email, password, role }),
       });
       if (!res.ok) {
         const body = await res.json();
@@ -38,6 +39,7 @@ export function MemberManager({
       const member: Member = await res.json();
       setMembers((prev) => [...prev, member]);
       setEmail("");
+      setPassword("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error");
     }
@@ -92,7 +94,7 @@ export function MemberManager({
         </p>
       ) : null}
 
-      <form onSubmit={addMember} className="flex items-end gap-3">
+      <form onSubmit={addMember} className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-zinc-400">Email</label>
           <input
@@ -100,7 +102,20 @@ export function MemberManager({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="user@example.com"
+            placeholder="usuario@ejemplo.com"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-400">Contraseña</label>
+          <input
+            required
+            type="password"
+            minLength={8}
+            maxLength={128}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mínimo 8 caracteres"
             className={inputClass}
           />
         </div>
@@ -149,8 +164,6 @@ export function MemberManager({
               <td className="py-2">
                 {member.status === "revoked" ? (
                   <span className="text-red-400">Revocado</span>
-                ) : member.userStatus === "pending_verification" ? (
-                  <span className="text-amber-400">Pendiente</span>
                 ) : (
                   <span className="text-emerald-400">Activo</span>
                 )}

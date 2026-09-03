@@ -15,8 +15,6 @@ import {
 } from "@/db/tenant-transaction";
 import { digestSessionToken } from "@/features/identity/application/session.service";
 
-import { verificationDeliveryFromEnvironment } from "@/features/identity/infrastructure/verification-delivery.port";
-
 export class InvalidVerificationChallengeError extends Error {}
 export class InvalidOnboardingHandoffError extends Error {}
 

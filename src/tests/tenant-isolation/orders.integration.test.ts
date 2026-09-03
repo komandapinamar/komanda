@@ -41,7 +41,7 @@ describe("orders tenant isolation", () => {
 
   it("uses cursor-based tenant SSE instead of full-order polling", async () => {
     const [component, route] = await Promise.all([
-      readFile("features/admin-panel/components/AdminOrdersLive.tsx", "utf8"),
+      readFile("features/orders/web/AdminOrdersLive.tsx", "utf8"),
       readFile("app/api/v1/tenants/[tenantId]/orders/events/route.ts", "utf8"),
     ]);
 

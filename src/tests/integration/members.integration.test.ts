@@ -22,17 +22,23 @@ describe("Member schemas", () => {
   it("validates AddMemberSchema", () => {
     const valid = AddMemberSchema.parse({
       email: "user@test.com",
+      password: "password123",
       role: "admin",
     });
     expect(valid.email).toBe("user@test.com");
+    expect(valid.password).toBe("password123");
     expect(valid.role).toBe("admin");
 
     expect(() =>
-      AddMemberSchema.parse({ email: "not-an-email", role: "admin" }),
+      AddMemberSchema.parse({ email: "not-an-email", password: "password123", role: "admin" }),
     ).toThrow();
 
     expect(() =>
-      AddMemberSchema.parse({ email: "user@test.com", role: "superadmin" }),
+      AddMemberSchema.parse({ email: "user@test.com", password: "short", role: "admin" }),
+    ).toThrow();
+
+    expect(() =>
+      AddMemberSchema.parse({ email: "user@test.com", password: "password123", role: "superadmin" }),
     ).toThrow();
   });
 

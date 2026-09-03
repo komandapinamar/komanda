@@ -9,7 +9,7 @@ import {
 import {
   EntitlementDeniedError,
   EntitlementService,
-} from "@/features/entitlements/application/entitlement.service";
+} from "@/features/provisioning/application/entitlement.service";
 
 describe("catalog business rules", () => {
   it("rejects invalid add-on bounds and selections", () => {

@@ -1,1975 +1,238 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
-  title: Komanda Core API
+  title: Komanda Multi-Tenant API
   version: 1.0.0
-  description: >
-    Versioned contracts for tenant provisioning, catalog, storefront checkout,
-    orders, Mercado Pago connection, webhooks, and print agents. The Astro-based
-    komanda-business client owns plan selection, registration and verification UX;
-    Core validates its planId against migration-managed definitions, owns atomic
-    provisioning, issues and consumes identity-verification challenges, and enforces
-    entitlement snapshots. Mercado Pago onboarding is OAuth-only.
-    A path tenant identifier is never sufficient authorization; Core verifies
-    membership or the appropriate integration/agent identity.
-servers:
-  - url: https://app.komanda.com
-tags:
-  - name: Auth
-  - name: Provisioning
-  - name: Tenants
-  - name: Catalog Admin
-  - name: Storefront
-  - name: Payments
-  - name: Orders
-  - name: Printing
+  description: Multi-tenant API contracts for Komanda Core
 paths:
-  /api/v1/auth/sessions:
-    post:
-      tags: [Auth]
-      operationId: createSession
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginRequest"
-      responses:
-        "204":
-          description: Session created and secure cookie set.
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/CorrelationId"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-  /api/v1/auth/sessions/current:
-    delete:
-      tags: [Auth]
-      operationId: revokeCurrentSession
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      responses:
-        "204":
-          description: Session revoked.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-  /api/v1/auth/email-verifications/confirm:
-    post:
-      tags: [Auth]
-      operationId: confirmEmailVerification
-      description: Core consumes a single-use verification token and activates the pending identity.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EmailVerificationConfirmRequest"
-      responses:
-        "204":
-          description: Identity verified; the token cannot be reused.
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/auth/onboarding-handoffs/consume:
-    post:
-      tags: [Auth]
-      operationId: consumeOnboardingHandoff
-      description: >
-        Atomically consumes the short-lived handoff after Core email
-        verification and establishes the owner's revocable Core session.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OnboardingHandoffConsumeRequest"
-      responses:
-        "204":
-          description: Handoff consumed and secure session cookie set.
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationError"
   /api/v1/provisioning/tenants:
     post:
-      tags: [Provisioning]
       operationId: provisionTenant
-      description: >
-        Consumes the versioned registration handoff from komanda-business. Core
-        validates the active planId and atomically creates or links the pending owner
-        identity, tenant, primary location, owner membership, onboarding settings
-        and immutable entitlement snapshot. Core issues the verification challenge;
-        this operation does not activate sales. Idempotency-Key is mandatory.
-      security:
-        - serviceBearer: []
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ProvisionTenantRequest"
       responses:
-        "201":
-          description: Tenant provisioned.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProvisionTenantResponse"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationError"
+        '201':
+          description: Tenant provisioned successfully
+  /api/v1/auth/email-verifications/confirm:
+    post:
+      operationId: confirmEmailVerification
+      responses:
+        '200':
+          description: Email verified
+  /api/v1/auth/onboarding-handoffs/consume:
+    post:
+      operationId: consumeOnboardingHandoff
+      responses:
+        '200':
+          description: Handoff consumed
+  /api/v1/auth/sessions:
+    post:
+      operationId: createSession
+      responses:
+        '200':
+          description: Session created
+    delete:
+      operationId: deleteSession
+      responses:
+        '204':
+          description: Session revoked
+  /api/v1/auth/sessions/current:
+    get:
+      operationId: getCurrentSession
+      responses:
+        '200':
+          description: Current session info
   /api/v1/tenants:
     get:
-      tags: [Tenants]
-      operationId: listAuthorizedTenants
-      security:
-        - sessionCookie: []
-        - userBearer: []
+      operationId: listTenants
       responses:
-        "200":
-          description: Active memberships for the authenticated user.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/TenantSummary"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+        '200':
+          description: List of accessible tenants
   /api/v1/tenants/{tenantId}/readiness:
     get:
-      tags: [Tenants]
       operationId: getTenantReadiness
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
       responses:
-        "200":
-          description: Current activation requirements.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TenantReadiness"
-        "404":
-          $ref: "#/components/responses/NotFound"
-  /api/v1/tenants/{tenantId}/activation:
-    post:
-      tags: [Tenants]
-      operationId: activateTenant
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      responses:
-        "200":
-          description: Tenant is active.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TenantSummary"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: Readiness requirements are incomplete.
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+        '200':
+          description: Tenant operational readiness status
   /api/v1/tenants/{tenantId}/settings:
-    get:
-      tags: [Tenants]
-      operationId: getTenantSettings
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-      responses:
-        "200":
-          description: Tenant operational settings.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TenantSettings"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
-      tags: [Tenants]
       operationId: updateTenantSettings
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IfMatch"
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/TenantSettingsPatch"
       responses:
-        "200":
-          description: Updated settings.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TenantSettings"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/VersionConflict"
-  /api/v1/tenants/{tenantId}/catalog/categories:
-    get:
-      tags: [Catalog Admin]
-      operationId: listCategories
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-      responses:
-        "200":
-          description: Tenant categories.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Category"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    post:
-      tags: [Catalog Admin]
-      operationId: createCategory
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CategoryInput"
-      responses:
-        "201":
-          description: Category created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Category"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/tenants/{tenantId}/catalog/categories/{categoryId}:
-    patch:
-      tags: [Catalog Admin]
-      operationId: updateCategory
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/CategoryId"
-        - $ref: "#/components/parameters/IfMatch"
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/CategoryPatch"
-      responses:
-        "200":
-          description: Category updated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Category"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/VersionConflict"
-    delete:
-      tags: [Catalog Admin]
-      operationId: archiveCategory
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/CategoryId"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "204":
-          description: Category archived.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-  /api/v1/tenants/{tenantId}/catalog/items:
-    get:
-      tags: [Catalog Admin]
-      operationId: listCatalogItems
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-      responses:
-        "200":
-          description: Tenant items.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/CatalogItem"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    post:
-      tags: [Catalog Admin]
-      operationId: createCatalogItem
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CatalogItemInput"
-      responses:
-        "201":
-          description: Item created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CatalogItem"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/tenants/{tenantId}/catalog/items/{itemId}:
-    patch:
-      tags: [Catalog Admin]
-      operationId: updateCatalogItem
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/ItemId"
-        - $ref: "#/components/parameters/IfMatch"
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/CatalogItemPatch"
-      responses:
-        "200":
-          description: Item updated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CatalogItem"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/VersionConflict"
-    delete:
-      tags: [Catalog Admin]
-      operationId: archiveCatalogItem
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/ItemId"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "204":
-          description: Item archived and historical snapshots retained.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-  /api/v1/tenants/{tenantId}/catalog/addon-groups:
-    post:
-      tags: [Catalog Admin]
-      operationId: createAddonGroup
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddonGroupInput"
-      responses:
-        "201":
-          description: Add-on group created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AddonGroup"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/tenants/{tenantId}/catalog/addon-groups/{addonGroupId}:
-    patch:
-      tags: [Catalog Admin]
-      operationId: updateAddonGroup
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/AddonGroupId"
-        - $ref: "#/components/parameters/IfMatch"
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/AddonGroupPatch"
-      responses:
-        "200":
-          description: Add-on group updated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AddonGroup"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/VersionConflict"
-    delete:
-      tags: [Catalog Admin]
-      operationId: archiveAddonGroup
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/AddonGroupId"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "204":
-          description: Add-on group archived.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-  /api/v1/tenants/{tenantId}/catalog/combos:
-    post:
-      tags: [Catalog Admin]
-      operationId: createCombo
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ComboInput"
-      responses:
-        "201":
-          description: Combo created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Combo"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/tenants/{tenantId}/catalog/combos/{comboId}:
-    patch:
-      tags: [Catalog Admin]
-      operationId: updateCombo
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/ComboId"
-        - $ref: "#/components/parameters/IfMatch"
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/ComboPatch"
-      responses:
-        "200":
-          description: Combo updated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Combo"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/VersionConflict"
-    delete:
-      tags: [Catalog Admin]
-      operationId: archiveCombo
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/ComboId"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "204":
-          description: Combo archived.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-  /api/v1/tenants/{tenantId}/media/uploads:
-    post:
-      tags: [Catalog Admin]
-      operationId: createMediaUpload
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MediaUploadRequest"
-      responses:
-        "201":
-          description: Pending asset and short-lived upload URL.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MediaUploadResponse"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/tenants/{tenantId}/media/{assetId}/complete:
-    post:
-      tags: [Catalog Admin]
-      operationId: completeMediaUpload
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/AssetId"
-      responses:
-        "200":
-          description: Object metadata and checksum verified; asset is ready.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [assetId, status, publicUrl]
-                properties:
-                  assetId:
-                    type: string
-                    format: uuid
-                  status:
-                    type: string
-                    const: ready
-                  publicUrl:
-                    type: string
-                    format: uri
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-  /api/v1/storefronts/{tenantSlug}/catalog:
-    get:
-      tags: [Storefront]
-      operationId: getPublicCatalog
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/TenantSlug"
-      responses:
-        "200":
-          description: Published tenant catalog.
-          headers:
-            ETag:
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PublicCatalog"
-        "404":
-          $ref: "#/components/responses/NotFound"
-  /api/v1/storefronts/{tenantSlug}/carts:
-    post:
-      tags: [Storefront]
-      operationId: createCart
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/TenantSlug"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateCartRequest"
-      responses:
-        "201":
-          description: Server-validated cart.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Cart"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/ValidationError"
-  /api/v1/storefronts/{tenantSlug}/carts/{cartId}:
-    get:
-      tags: [Storefront]
-      operationId: getCart
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/TenantSlug"
-        - $ref: "#/components/parameters/CartId"
-      responses:
-        "200":
-          description: Cart if it belongs to this storefront and has not expired.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Cart"
-        "404":
-          $ref: "#/components/responses/NotFound"
-  /api/v1/storefronts/{tenantSlug}/carts/{cartId}/payment-sessions:
-    post:
-      tags: [Payments]
-      operationId: createPaymentSession
-      security: []
-      parameters:
-        - $ref: "#/components/parameters/TenantSlug"
-        - $ref: "#/components/parameters/CartId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreatePaymentSessionRequest"
-      responses:
-        "201":
-          description: Mercado Pago session created with the tenant's active OAuth seller authorization.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentSession"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "503":
-          $ref: "#/components/responses/DependencyUnavailable"
+        '200':
+          description: Tenant settings updated
   /api/v1/tenants/{tenantId}/integrations/mercadopago:
     get:
-      tags: [Payments]
       operationId: getMercadoPagoIntegration
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
       responses:
-        "200":
-          description: Redacted integration status.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/IntegrationStatus"
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '200':
+          description: Integration status
     delete:
-      tags: [Payments]
-      operationId: revokeMercadoPagoIntegration
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IfMatch"
+      operationId: deleteMercadoPagoIntegration
       responses:
-        "204":
-          description: Authorization revoked and tenant payment readiness disabled.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/VersionConflict"
+        '200':
+          description: Integration revoked
   /api/v1/tenants/{tenantId}/integrations/mercadopago/oauth:
     post:
-      tags: [Payments]
-      operationId: startMercadoPagoOAuth
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
+      operationId: initiateMercadoPagoOAuth
       responses:
-        "200":
-          description: Short-lived authorization URL with state and PKCE.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [authorizationUrl, expiresAt]
-                properties:
-                  authorizationUrl:
-                    type: string
-                    format: uri
-                  expiresAt:
-                    type: string
-                    format: date-time
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '200':
+          description: OAuth URL generated
   /api/v1/integrations/mercadopago/oauth/callback:
     get:
-      tags: [Payments]
-      operationId: completeMercadoPagoOAuth
-      security: []
-      parameters:
-        - name: code
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: state
-          in: query
-          required: true
-          schema:
-            type: string
+      operationId: handleMercadoPagoOAuthCallback
       responses:
-        "303":
-          description: Authorization persisted and browser redirected to tenant settings.
-        "400":
-          $ref: "#/components/responses/ValidationError"
+        '302':
+          description: OAuth callback handled
   /api/v1/integrations/mercadopago/webhooks/{routingKey}:
     post:
-      tags: [Payments]
-      operationId: receiveMercadoPagoWebhook
-      security: []
-      parameters:
-        - name: routingKey
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: x-signature
-          in: header
-          required: true
-          schema:
-            type: string
-        - name: x-request-id
-          in: header
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      operationId: handleMercadoPagoWebhook
       responses:
-        "202":
-          description: Authenticated notification persisted for idempotent processing.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '200':
+          description: Webhook processed
+  /api/v1/storefronts/{tenantSlug}/catalog:
+    get:
+      operationId: getStorefrontCatalog
+      responses:
+        '200':
+          description: Public storefront catalog
+  /api/v1/storefronts/{tenantSlug}/carts:
+    post:
+      operationId: createStorefrontCart
+      responses:
+        '201':
+          description: Cart created
+  /api/v1/storefronts/{tenantSlug}/carts/{cartId}:
+    get:
+      operationId: getStorefrontCart
+      responses:
+        '200':
+          description: Cart details
+  /api/v1/storefronts/{tenantSlug}/carts/{cartId}/payment-sessions:
+    post:
+      operationId: createStorefrontPaymentSession
+      responses:
+        '201':
+          description: Payment session created
   /api/v1/tenants/{tenantId}/orders:
     get:
-      tags: [Orders]
-      operationId: listOrders
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [approved, preparing, ready, delivered, cancelled]
-        - name: cursor
-          in: query
-          schema:
-            type: string
+      operationId: listTenantOrders
       responses:
-        "200":
-          description: Cursor-paginated tenant orders.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrderPage"
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '200':
+          description: List of tenant orders
     post:
-      tags: [Orders]
-      operationId: createDirectOrder
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateDirectOrderRequest"
+      operationId: createTenantOrder
       responses:
-        "201":
-          description: Direct order, payment record and optional print job created atomically.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Order"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
+        '201':
+          description: Order created
   /api/v1/tenants/{tenantId}/orders/{orderId}:
     get:
-      tags: [Orders]
-      operationId: getOrder
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/OrderId"
+      operationId: getTenantOrder
       responses:
-        "200":
-          description: Tenant order detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Order"
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '200':
+          description: Order details
     patch:
-      tags: [Orders]
-      operationId: transitionOrder
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/OrderId"
-        - $ref: "#/components/parameters/IfMatch"
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              type: object
-              required: [fulfillmentStatus]
-              properties:
-                fulfillmentStatus:
-                  type: string
-                  enum: [preparing, ready, delivered, cancelled]
+      operationId: transitionTenantOrder
       responses:
-        "200":
-          description: Order transitioned.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Order"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
+        '200':
+          description: Order transitioned
   /api/v1/tenants/{tenantId}/orders/events:
     get:
-      tags: [Orders]
-      operationId: streamOrderEvents
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - name: Last-Event-ID
-          in: header
-          schema:
-            type: string
+      operationId: streamTenantOrderEvents
       responses:
-        "200":
-          description: >
-            text/event-stream. Event id is the monotonic tenant sequence and data
-            contains only orders/events for the authorized tenant.
-          content:
-            text/event-stream:
-              schema:
-                type: string
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '200':
+          description: SSE event stream
   /api/v1/tenants/{tenantId}/print-agents:
     post:
-      tags: [Printing]
       operationId: enrollPrintAgent
-      security:
-        - sessionCookie: []
-        - userBearer: []
-      parameters:
-        - $ref: "#/components/parameters/TenantId"
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [locationId, name]
-              properties:
-                locationId:
-                  type: string
-                  format: uuid
-                name:
-                  type: string
       responses:
-        "201":
-          description: >
-            Agent enrolled. The plaintext token is returned exactly once and
-            only its digest is stored.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrintAgentEnrollment"
-        "404":
-          $ref: "#/components/responses/NotFound"
+        '201':
+          description: Agent enrolled
   /api/v1/print/jobs/claim:
     post:
-      tags: [Printing]
       operationId: claimPrintJob
-      security:
-        - agentBearer: []
       responses:
-        "200":
-          description: One leased job in the authenticated agent tenant/location.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrintJobClaim"
-        "204":
-          description: No job available.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+        '200':
+          description: Print job claimed
   /api/v1/print/jobs/{jobId}/result:
     post:
-      tags: [Printing]
       operationId: reportPrintJobResult
-      security:
-        - agentBearer: []
-      parameters:
-        - name: jobId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: "#/components/parameters/IdempotencyKey"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PrintJobResult"
       responses:
-        "200":
-          description: Idempotent result accepted.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-components:
-  securitySchemes:
-    sessionCookie:
-      type: apiKey
-      in: cookie
-      name: komanda_session
-    userBearer:
-      type: http
-      scheme: bearer
-      bearerFormat: opaque-user-session
-    serviceBearer:
-      type: http
-      scheme: bearer
-      bearerFormat: opaque-service-token
-    agentBearer:
-      type: http
-      scheme: bearer
-      bearerFormat: opaque-agent-token
-  headers:
-    CorrelationId:
-      description: Request correlation identifier.
-      schema:
-        type: string
-        format: uuid
-  parameters:
-    TenantId:
-      name: tenantId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    TenantSlug:
-      name: tenantSlug
-      in: path
-      required: true
-      schema:
-        type: string
-        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
-    CategoryId:
-      name: categoryId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    ItemId:
-      name: itemId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    AddonGroupId:
-      name: addonGroupId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    ComboId:
-      name: comboId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    AssetId:
-      name: assetId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    CartId:
-      name: cartId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    OrderId:
-      name: orderId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 128
-    IfMatch:
-      name: If-Match
-      in: header
-      required: true
-      description: Current integer resource version.
-      schema:
-        type: string
-        pattern: '^[0-9]+$'
-  responses:
-    Unauthorized:
-      description: Authentication or signature is invalid.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/Problem"
-    NotFound:
-      description: Resource is absent or outside the authorized tenant.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/Problem"
-    Conflict:
-      description: State, idempotency or relationship conflict.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/Problem"
-    VersionConflict:
-      description: If-Match does not match current resource version.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/Problem"
-    ValidationError:
-      description: Request validation failed.
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/Problem"
-    DependencyUnavailable:
-      description: Required external provider is temporarily unavailable.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-      content:
-        application/problem+json:
-          schema:
-            $ref: "#/components/schemas/Problem"
-  schemas:
-    Problem:
-      type: object
-      required: [type, title, status, correlationId]
-      properties:
-        type:
-          type: string
-          format: uri-reference
-        title:
-          type: string
-        status:
-          type: integer
-        detail:
-          type: string
-        code:
-          type: string
-        correlationId:
-          type: string
-          format: uuid
-        errors:
-          type: array
-          items:
-            type: object
-            required: [field, code]
-            properties:
-              field:
-                type: string
-              code:
-                type: string
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 8
-    EmailVerificationConfirmRequest:
-      type: object
-      required: [token]
-      properties:
-        token:
-          type: string
-          minLength: 32
-    OnboardingHandoffConsumeRequest:
-      type: object
-      additionalProperties: false
-      required: [tenantId, token]
-      properties:
-        tenantId:
-          type: string
-          format: uuid
-        token:
-          type: string
-          minLength: 32
-    ProvisionTenantRequest:
-      type: object
-      required: [planId, owner, tenant, primaryLocation]
-      properties:
-        planId:
-          type: string
-          pattern: "^[a-z0-9][a-z0-9._-]{1,63}$"
-          description: Stable commercial plan identifier selected in komanda-business and validated by Core.
-        owner:
-          type: object
-          required: [email, password]
-          properties:
-            email:
-              type: string
-              format: email
-            password:
-              type: string
-              minLength: 8
-        tenant:
-          type: object
-          required: [name, slug, currency, timezone]
-          properties:
-            name:
-              type: string
-              minLength: 1
-            slug:
-              type: string
-            currency:
-              type: string
-              pattern: "^[A-Z]{3}$"
-            timezone:
-              type: string
-        primaryLocation:
-          type: object
-          required: [name]
-          properties:
-            name:
-              type: string
-    ProvisionTenantResponse:
-      type: object
-      required: [tenant, membership, primaryLocation, entitlementSnapshot, ownerVerification, readiness, onboardingHandoff]
-      properties:
-        tenant:
-          $ref: "#/components/schemas/TenantSummary"
-        membership:
-          type: object
-          required: [role]
-          properties:
-            role:
-              type: string
-              const: owner
-        primaryLocation:
-          $ref: "#/components/schemas/Location"
-        entitlementSnapshot:
-          $ref: "#/components/schemas/EntitlementSnapshot"
-        ownerVerification:
-          oneOf:
-            - type: object
-              required: [status, expiresAt]
-              properties:
-                status:
-                  type: string
-                  const: pending_verification
-                expiresAt:
-                  type: string
-                  format: date-time
-            - type: object
-              required: [status, expiresAt]
-              properties:
-                status:
-                  type: string
-                  const: verified
-                expiresAt:
-                  type: "null"
-        readiness:
-          $ref: "#/components/schemas/TenantReadiness"
-        onboardingHandoff:
-          $ref: "#/components/schemas/OnboardingHandoff"
-    OnboardingHandoff:
-      type: object
-      required: [token, expiresAt]
-      description: Single-use, short-lived credential used to establish the owner's Core onboarding session.
-      properties:
-        token:
-          type: string
-          minLength: 32
-        expiresAt:
-          type: string
-          format: date-time
-    EntitlementSnapshot:
-      type: object
-      required: [planId, planVersion, entitlements, effectiveAt]
-      properties:
-        planId:
-          type: string
-        planVersion:
-          type: integer
-          minimum: 1
-        entitlements:
-          type: object
-          additionalProperties: false
-          required: [catalogManagement, onlinePayments, printing]
-          description: Immutable operational flags resolved and enforced by Core at provisioning time.
-          properties:
-            catalogManagement:
-              type: boolean
-            onlinePayments:
-              type: boolean
-            printing:
-              type: boolean
-        effectiveAt:
-          type: string
-          format: date-time
-    TenantSummary:
-      type: object
-      required: [id, name, slug, status, role]
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        slug:
-          type: string
-        status:
-          type: string
-          enum: [onboarding, active, suspended]
-        role:
-          type: string
-          const: owner
-    Location:
-      type: object
-      required: [id, name, timezone, status]
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        timezone:
-          type: string
-        status:
-          type: string
-          enum: [active, inactive]
-    TenantReadiness:
-      type: object
-      required: [ready, checks]
-      properties:
-        ready:
-          type: boolean
-        checks:
-          type: array
-          items:
-            type: object
-            required: [code, complete]
-            properties:
-              code:
-                type: string
-                enum:
-                  - identity_verified
-                  - public_slug
-                  - primary_location
-                  - currency
-                  - published_item
-                  - payment_connected
-                  - print_agent_connected
-              complete:
-                type: boolean
-              requiredForActivation:
-                type: boolean
-    TenantSettings:
-      type: object
-      required: [tenantId, salesEnabled, printingEnabled, currency, timezone, version]
-      properties:
-        tenantId:
-          type: string
-          format: uuid
-        contactName:
-          type: [string, "null"]
-        contactEmail:
-          type: [string, "null"]
-        contactPhone:
-          type: [string, "null"]
-        salesEnabled:
-          type: boolean
-        printingEnabled:
-          type: boolean
-        currency:
-          type: string
-        timezone:
-          type: string
-        version:
-          type: integer
-    TenantSettingsPatch:
-      type: object
-      properties:
-        contactName:
-          type: [string, "null"]
-        contactEmail:
-          type: [string, "null"]
-        contactPhone:
-          type: [string, "null"]
-        salesEnabled:
-          type: boolean
-        printingEnabled:
-          type: boolean
-        timezone:
-          type: string
-    CategoryInput:
-      type: object
-      required: [name, sortOrder, status]
-      properties:
-        name:
-          type: string
-        description:
-          type: [string, "null"]
-        sortOrder:
-          type: integer
-          minimum: 0
-        status:
-          type: string
-          enum: [draft, active]
-    CategoryPatch:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: [string, "null"]
-        sortOrder:
-          type: integer
-          minimum: 0
-        status:
-          type: string
-          enum: [draft, active, archived]
-    Category:
-      allOf:
-        - $ref: "#/components/schemas/CategoryInput"
-        - type: object
-          required: [id, version]
-          properties:
-            id:
-              type: string
-              format: uuid
-            version:
-              type: integer
-    CatalogItemInput:
-      type: object
-      required: [categoryId, name, price, currency, status]
-      properties:
-        categoryId:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: [string, "null"]
-        price:
-          type: string
-          pattern: '^[0-9]+\.[0-9]{2}$'
-        currency:
-          type: string
-          pattern: "^[A-Z]{3}$"
-        imageAssetId:
-          type: [string, "null"]
-          format: uuid
-        status:
-          type: string
-          enum: [draft, active, unavailable]
-        addonGroupIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-    CatalogItemPatch:
-      type: object
-      properties:
-        categoryId:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: [string, "null"]
-        price:
-          type: string
-        imageAssetId:
-          type: [string, "null"]
-          format: uuid
-        status:
-          type: string
-          enum: [draft, active, unavailable, archived]
-        addonGroupIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-    CatalogItem:
-      allOf:
-        - $ref: "#/components/schemas/CatalogItemInput"
-        - type: object
-          required: [id, version]
-          properties:
-            id:
-              type: string
-              format: uuid
-            version:
-              type: integer
-    AddonOptionInput:
-      type: object
-      required: [name, priceDelta, status]
-      properties:
-        name:
-          type: string
-        priceDelta:
-          type: string
-        status:
-          type: string
-          enum: [active, unavailable]
-    AddonGroupInput:
-      type: object
-      required: [name, minSelected, maxSelected, options]
-      properties:
-        name:
-          type: string
-        minSelected:
-          type: integer
-          minimum: 0
-        maxSelected:
-          type: integer
-          minimum: 0
-        options:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/AddonOptionInput"
-    AddonGroup:
-      allOf:
-        - $ref: "#/components/schemas/AddonGroupInput"
-        - type: object
-          required: [id, version]
-          properties:
-            id:
-              type: string
-              format: uuid
-            version:
-              type: integer
-    AddonGroupPatch:
-      type: object
-      properties:
-        name:
-          type: string
-        minSelected:
-          type: integer
-          minimum: 0
-        maxSelected:
-          type: integer
-          minimum: 0
-        status:
-          type: string
-          enum: [draft, active, archived]
-        options:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/AddonOptionInput"
-    ComboItemInput:
-      type: object
-      required: [itemId, quantity]
-      properties:
-        itemId:
-          type: string
-          format: uuid
-        quantity:
-          type: integer
-          minimum: 1
-    ComboInput:
-      type: object
-      required: [categoryId, name, price, currency, items, status]
-      properties:
-        categoryId:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: [string, "null"]
-        price:
-          type: string
-        currency:
-          type: string
-        imageAssetId:
-          type: [string, "null"]
-          format: uuid
-        status:
-          type: string
-          enum: [draft, active, unavailable]
-        items:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/ComboItemInput"
-    Combo:
-      allOf:
-        - $ref: "#/components/schemas/ComboInput"
-        - type: object
-          required: [id, version]
-          properties:
-            id:
-              type: string
-              format: uuid
-            version:
-              type: integer
-    ComboPatch:
-      type: object
-      properties:
-        categoryId:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: [string, "null"]
-        price:
-          type: string
-        imageAssetId:
-          type: [string, "null"]
-          format: uuid
-        status:
-          type: string
-          enum: [draft, active, unavailable, archived]
-        items:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/ComboItemInput"
-    MediaUploadRequest:
-      type: object
-      required: [fileName, mimeType, byteSize, checksumSha256]
-      properties:
-        fileName:
-          type: string
-        mimeType:
-          type: string
-          enum: [image/jpeg, image/png, image/webp]
-        byteSize:
-          type: integer
-          minimum: 1
-        checksumSha256:
-          type: string
-          pattern: "^[a-f0-9]{64}$"
-    MediaUploadResponse:
-      type: object
-      required: [assetId, uploadUrl, expiresAt]
-      properties:
-        assetId:
-          type: string
-          format: uuid
-        uploadUrl:
-          type: string
-          format: uri
-        expiresAt:
-          type: string
-          format: date-time
-    PublicCatalog:
-      type: object
-      required: [tenant, revision, categories]
-      properties:
-        tenant:
-          type: object
-          required: [name, slug, currency]
-          properties:
-            name:
-              type: string
-            slug:
-              type: string
-            currency:
-              type: string
-        revision:
-          type: integer
-        categories:
-          type: array
-          items:
-            type: object
-            required: [id, name, items, combos]
-            properties:
-              id:
-                type: string
-                format: uuid
-              name:
-                type: string
-              items:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CatalogItem"
-              combos:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Combo"
-    CreateCartLineRequest:
-      type: object
-      required: [kind, resourceId, quantity]
-      properties:
-        kind:
-          type: string
-          enum: [item, combo]
-        resourceId:
-          type: string
-          format: uuid
-        quantity:
-          type: integer
-          minimum: 1
-        optionIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-        note:
-          type: string
-          maxLength: 500
-    CreateCartRequest:
-      type: object
-      required: [lines]
-      properties:
-        lines:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/CreateCartLineRequest"
-    Cart:
-      type: object
-      required: [id, tenantId, status, currency, lines, subtotal, discountTotal, total, expiresAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        tenantId:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [open, validated, checkout_started, converted, expired]
-        currency:
-          type: string
-        lines:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-        subtotal:
-          type: string
-        discountTotal:
-          type: string
-        total:
-          type: string
-        expiresAt:
-          type: string
-          format: date-time
-        version:
-          type: integer
-    CreatePaymentSessionRequest:
-      type: object
-      required: [customer]
-      properties:
-        customer:
-          $ref: "#/components/schemas/Customer"
-        notes:
-          type: string
-          maxLength: 1000
-        cartVersion:
-          type: integer
-    PaymentSession:
-      type: object
-      required: [paymentAttemptId, preferenceId, redirectUrl, amount, currency]
-      properties:
-        paymentAttemptId:
-          type: string
-          format: uuid
-        preferenceId:
-          type: string
-        redirectUrl:
-          type: string
-          format: uri
-        amount:
-          type: string
-        currency:
-          type: string
-    IntegrationStatus:
-      type: object
-      required: [provider, status, version]
-      properties:
-        provider:
-          type: string
-          const: mercadopago
-        status:
-          type: string
-          enum: [pending, active, expired, revoked, error]
-        sellerAccountHint:
-          type: [string, "null"]
-        scopes:
-          type: array
-          items:
-            type: string
-        expiresAt:
-          type: [string, "null"]
-          format: date-time
-        lastVerifiedAt:
-          type: [string, "null"]
-          format: date-time
-        version:
-          type: integer
-    Customer:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        phone:
-          type: string
-    CreateDirectOrderRequest:
-      type: object
-      required: [cartId, customer]
-      properties:
-        cartId:
-          type: string
-          format: uuid
-        customer:
-          $ref: "#/components/schemas/Customer"
-        notes:
-          type: string
-    Order:
-      type: object
-      required:
-        [id, tenantId, purchaseNumber, fulfillmentStatus, paymentStatus, source, lines, total, currency, version]
-      properties:
-        id:
-          type: string
-          format: uuid
-        tenantId:
-          type: string
-          format: uuid
-        purchaseNumber:
-          type: integer
-        fulfillmentStatus:
-          type: string
-          enum: [approved, preparing, ready, delivered, cancelled]
-        paymentStatus:
-          type: string
-          enum: [pending, paid, failed, refunded]
-        source:
-          type: string
-          enum: [mercadopago_webhook, admin_direct]
-        customer:
-          $ref: "#/components/schemas/Customer"
-        lines:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-        total:
-          type: string
-        currency:
-          type: string
-        printStatus:
-          type: string
-          enum: [not_requested, queued, processing, printed, failed]
-        version:
-          type: integer
-        createdAt:
-          type: string
-          format: date-time
-    OrderPage:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: "#/components/schemas/Order"
-        nextCursor:
-          type: [string, "null"]
-    PrintJobClaim:
-      type: object
-      required: [job, leaseExpiresAt]
-      properties:
-        job:
-          type: object
-          required: [id, orderId, attemptNumber, payload]
-          properties:
-            id:
-              type: string
-              format: uuid
-            orderId:
-              type: string
-              format: uuid
-            attemptNumber:
-              type: integer
-            payload:
-              type: object
-              additionalProperties: true
-        leaseExpiresAt:
-          type: string
-          format: date-time
-    PrintAgentEnrollment:
-      type: object
-      required: [agentId, tenantId, locationId, token]
-      properties:
-        agentId:
-          type: string
-          format: uuid
-        tenantId:
-          type: string
-          format: uuid
-        locationId:
-          type: string
-          format: uuid
-        token:
-          type: string
-          description: Returned once; never available through GET.
-    PrintJobResult:
-      type: object
-      required: [status, attemptNumber]
-      properties:
-        status:
-          type: string
-          enum: [printed, failed]
-        attemptNumber:
-          type: integer
-          minimum: 1
-        errorCode:
-          type: string
-        errorMessage:
-          type: string
+        '200':
+          description: Print job result recorded
+  /api/v1/tenants/{tenantId}/catalog/categories:
+    get:
+      operationId: listCategories
+      responses:
+        '200':
+          description: List categories
+    post:
+      operationId: createCategory
+      responses:
+        '201':
+          description: Category created
+  /api/v1/tenants/{tenantId}/catalog/categories/{categoryId}:
+    patch:
+      operationId: updateCategory
+      responses:
+        '200':
+          description: Category updated
+    delete:
+      operationId: deleteCategory
+      responses:
+        '200':
+          description: Category deleted
+  /api/v1/tenants/{tenantId}/catalog/items:
+    get:
+      operationId: listItems
+      responses:
+        '200':
+          description: List items
+    post:
+      operationId: createItem
+      responses:
+        '201':
+          description: Item created
+  /api/v1/tenants/{tenantId}/catalog/items/{itemId}:
+    patch:
+      operationId: updateItem
+      responses:
+        '200':
+          description: Item updated
+    delete:
+      operationId: deleteItem
+      responses:
+        '200':
+          description: Item deleted
+  /api/v1/tenants/{tenantId}/catalog/addon-groups:
+    post:
+      operationId: createAddonGroup
+      responses:
+        '201':
+          description: Addon group created
+  /api/v1/tenants/{tenantId}/catalog/addon-groups/{addonGroupId}:
+    patch:
+      operationId: updateAddonGroup
+      responses:
+        '200':
+          description: Addon group updated
+  /api/v1/tenants/{tenantId}/catalog/combos:
+    post:
+      operationId: createCombo
+      responses:
+        '201':
+          description: Combo created
+  /api/v1/tenants/{tenantId}/catalog/combos/{comboId}:
+    patch:
+      operationId: updateCombo
+      responses:
+        '200':
+          description: Combo updated
+  /api/v1/tenants/{tenantId}/media/uploads:
+    post:
+      operationId: createMediaUpload
+      responses:
+        '201':
+          description: Upload presigned URL created
+  /api/v1/tenants/{tenantId}/media/{assetId}/complete:
+    post:
+      operationId: completeMediaUpload
+      responses:
+        '200':
+          description: Media asset complete

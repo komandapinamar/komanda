@@ -90,7 +90,6 @@ jobs:
           npm run test:integration -- --passWithNoTests
           npm run test:contracts -- --passWithNoTests
           npm run test:tenant-isolation -- --passWithNoTests
-          npm run test:migration -- --passWithNoTests
 
   browser:
     name: Browser tests

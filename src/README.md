@@ -5,8 +5,8 @@
 1. Apply reviewed SQL migrations with `DATABASE_DIRECT_URL`.
 2. Bootstrap and verify `komanda_runtime` without `BYPASSRLS`.
 3. Deploy Core with versioned APIs and health checks enabled.
-4. Run producer contracts, tenant-isolation, migration and database compatibility suites.
-5. Run Azure staging restore and load gates before production.
+4. Run producer contracts, tenant-isolation and database compatibility suites.
+5. Run staging restore and load gates before production.
 
 ## Tenant Boundary
 

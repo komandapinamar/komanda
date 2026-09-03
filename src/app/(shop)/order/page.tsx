@@ -1,5 +1,6 @@
 import OrderProductCard from "@/features/shop/order/components/OrderProductCard";
 import OrderShell from "@/features/shop/order/components/OrderShell";
+import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
 import { getCategories, getMenuItems } from "@/features/shop/menu/services/menu.service";
 import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
 import type { MenuItem } from "@/types/types";
@@ -47,6 +48,7 @@ export default async function Order() {
 
   return (
     <OrderShell>
+      <MenuAnalyticsTracker tenantSlug={tenantSlug} />
       <main className="space-y-6 p-4 bg-[var(--color-accent-primary)] min-h-[100dvh]">
         <header className="space-y-2 text-[var(--color-accent-secondary)]">
           {/*

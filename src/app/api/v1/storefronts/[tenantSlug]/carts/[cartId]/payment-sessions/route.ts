@@ -4,7 +4,7 @@ import {
   PaymentSessionConflictError,
   PaymentSessionProviderUnavailableError,
   PaymentSessionService,
-} from "@/features/shop/payments/application/payment-session.service";
+} from "@/features/payments/application/payment-session.service";
 import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
 import {
   IdempotencyConflictError,

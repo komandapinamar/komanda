@@ -36,6 +36,9 @@ export default async function TenantAdminLayout({
             {canAccess(authority.membership.role, "pedidos") && (
               <Link href={`/admin/${tenantId}/orders`}>Pedidos</Link>
             )}
+            {canAccess(authority.membership.role, "analytics") && (
+              <Link href={`/admin/${tenantId}/analytics`}>Analítica</Link>
+            )}
             {canAccess(authority.membership.role, "catalog") && (
               <Link href={`/admin/${tenantId}/catalog`}>Catálogo</Link>
             )}

@@ -4,6 +4,7 @@ export const RoleSchema = z.enum(["owner", "admin", "employee"]);
 
 export const AddMemberSchema = z.object({
   email: z.string().email(),
+  password: z.string().min(8).max(128),
   role: RoleSchema,
 });
 

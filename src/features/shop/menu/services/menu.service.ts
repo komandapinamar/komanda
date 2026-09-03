@@ -37,6 +37,10 @@ export async function getPublicCatalog(tenantSlug: string) {
   return new PublicTenantService().catalog(tenantSlug);
 }
 
+export async function getPublicTenantsDirectory() {
+  return new PublicTenantService().listActiveDirectory();
+}
+
 function requiredTenantSlug(tenantSlug?: string) {
   const resolved = tenantSlug?.trim();
   if (!resolved) throw new Error("An explicit tenant slug is required.");

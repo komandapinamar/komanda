@@ -31,11 +31,9 @@ jobs:
       fail-fast: false
       matrix:
         root:
-          - infra/database/neon
-          - infra/database/azure/staging
-          - infra/database/azure/production
           - infra/database/gcp/staging
           - infra/database/gcp/production
+          - infra/mail/gcp/staging
           - infra/state/gcp
     defaults:
       run:

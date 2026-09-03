@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createHash, randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import type { Role } from "@/db/schema/platform";
 import {
@@ -37,7 +36,6 @@ type OAuthStatePayload = {
   userId: string;
   membershipId: string;
   role: Role;
-  codeVerifier: string;
   expiresAt: string;
 };
 
@@ -51,10 +49,6 @@ type EncodedOAuthState = {
 
 function base64Url(buffer: Buffer) {
   return buffer.toString("base64url");
-}
-
-function sha256Base64Url(value: string) {
-  return base64Url(createHash("sha256").update(value).digest());
 }
 
 function encryptionConfig() {
@@ -164,22 +158,17 @@ export class MercadoPagoIntegrationService {
       throw new MercadoPagoIntegrationNotFoundError("Invalid actor.");
     }
 
-    const codeVerifier = base64Url(randomBytes(32));
     const expiresAt = new Date(this.now().getTime() + 10 * 60 * 1000);
     const state = encodeOAuthState({
       tenantId: context.tenantId,
       userId: context.actor.userId,
       membershipId: context.actor.membershipId,
       role: context.actor.role,
-      codeVerifier,
       expiresAt: expiresAt.toISOString(),
     });
 
     return {
-      authorizationUrl: this.oauth().authorizationUrl({
-        state,
-        codeChallenge: sha256Base64Url(codeVerifier),
-      }),
+      authorizationUrl: this.oauth().authorizationUrl({ state }),
       expiresAt: expiresAt.toISOString(),
     };
   }
@@ -191,7 +180,7 @@ export class MercadoPagoIntegrationService {
   }) {
     const state = decodeOAuthState(input.state);
     const tokens = await this.withDependencyMapping(() =>
-      this.oauth().exchangeCode(input.code, state.codeVerifier),
+      this.oauth().exchangeCode(input.code),
     );
 
     const context = createVerifiedTenantContext({

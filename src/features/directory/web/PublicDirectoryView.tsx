@@ -77,7 +77,7 @@ export function PublicDirectoryView({ tenants }: Props) {
 
       {/* Hero Section */}
       <section className="relative z-10 mx-auto max-w-6xl px-6 pt-20 pb-12 text-center">
-        <h1 className="mb-6 text-5xl font-black uppercase leading-[0.9] tracking-tighter text-white md:text-7xl drop-shadow-lg">
+        <h1 className="mb-6 text-6xl font-black uppercase leading-[0.9] tracking-tighter text-white md:text-7xl drop-shadow-lg">
           Pedí, Pagá y Disfrutá.
         </h1>
         <p className="mx-auto max-w-2xl text-lg font-bold text-zinc-300 drop-shadow">

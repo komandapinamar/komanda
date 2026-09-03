@@ -7,7 +7,7 @@ const applicationAndDomainFiles = [
   "features/orders/application/transition-order.service.ts",
   "features/printing/application/print-agent.service.ts",
   "features/printing/application/print-job.service.ts",
-  "features/shop/payments/application/payment-session.service.ts",
+  "features/payments/application/payment-session.service.ts",
 ];
 
 describe("layer boundaries", () => {

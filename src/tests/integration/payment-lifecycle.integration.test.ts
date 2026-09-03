@@ -44,7 +44,7 @@ describe("payment lifecycle", () => {
     const {
       MercadoPagoCheckoutClient,
       PaymentSessionProviderUnavailableError,
-    } = await import("@/features/shop/payments/application/payment-session.service");
+    } = await import("@/features/payments/application/payment-session.service");
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 504 })));
 
     await expect(
@@ -76,7 +76,7 @@ describe("payment lifecycle", () => {
 
   it("keeps payment sessions OAuth-only and deny-by-default on online_payments", async () => {
     const source = await readFile(
-      "features/shop/payments/application/payment-session.service.ts",
+      "features/payments/application/payment-session.service.ts",
       "utf8",
     );
 
