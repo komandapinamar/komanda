@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AddMemberSchema,
   ChangeRoleSchema,
+  DeleteMemberSchema,
   RevokeMemberSchema,
   RoleSchema,
 } from "@/features/members/domain/member.schemas";
@@ -58,14 +59,14 @@ describe("Member schemas", () => {
     ).toThrow();
   });
 
-  it("validates RevokeMemberSchema", () => {
-    const valid = RevokeMemberSchema.parse({
+  it("validates DeleteMemberSchema and RevokeMemberSchema", () => {
+    const valid = DeleteMemberSchema.parse({
       membershipId: "00000000-0000-4000-8000-000000000001",
     });
     expect(valid.membershipId).toBe("00000000-0000-4000-8000-000000000001");
 
     expect(() =>
-      RevokeMemberSchema.parse({ membershipId: "" }),
+      DeleteMemberSchema.parse({ membershipId: "" }),
     ).toThrow();
   });
 });

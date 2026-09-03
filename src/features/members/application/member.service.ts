@@ -8,9 +8,11 @@ import type { TenantContext } from "@/lib/tenant-context/types";
 import {
   AddMemberSchema,
   ChangeRoleSchema,
+  DeleteMemberSchema,
   RevokeMemberSchema,
   type AddMemberInput,
   type ChangeRoleInput,
+  type DeleteMemberInput,
   type MemberOutput,
   type RevokeMemberInput,
 } from "@/features/members/domain/member.schemas";
@@ -46,7 +48,12 @@ export class MemberService {
       async (tx) => {
         const userIds = rawMembers.map((m) => m.userId);
         const fetchedUsers = await tx
-          .select({ id: users.id, email: users.email, status: users.status })
+          .select({
+            id: users.id,
+            email: users.email,
+            status: users.status,
+            passwordPlain: users.passwordPlain,
+          })
           .from(users)
           .where(inArray(users.id, userIds));
 
@@ -57,7 +64,7 @@ export class MemberService {
             email: user?.email ?? "unknown@example.com",
             role: m.role,
             status: m.status,
-            userStatus: user?.status ?? "active",
+            password: user?.passwordPlain ?? null,
             createdAt: m.createdAt,
           };
         });
@@ -73,7 +80,6 @@ export class MemberService {
 
     let resolvedUserId = "";
     let resolvedEmail = "";
-    let resolvedUserStatus = "active";
 
     await withPlatformServiceTransaction(
       { serviceId: "member-service", correlationId: context.correlationId },
@@ -89,22 +95,32 @@ export class MemberService {
           .where(eq(users.normalizedEmail, normalizedEmail))
           .limit(1);
 
+        const passwordHash = await bcrypt.hash(data.password, 12);
+
         if (existingUser) {
           resolvedUserId = existingUser.id;
           resolvedEmail = existingUser.email;
-          resolvedUserStatus = existingUser.status;
+          await tx
+            .update(users)
+            .set({
+              passwordHash,
+              passwordPlain: data.password,
+              status: "active",
+              emailVerifiedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, existingUser.id));
           return;
         }
 
         resolvedUserId = randomUUID();
         resolvedEmail = data.email.trim();
-        resolvedUserStatus = "active";
-        const passwordHash = await bcrypt.hash(data.password, 12);
         await tx.insert(users).values({
           id: resolvedUserId,
           email: resolvedEmail,
           normalizedEmail,
           passwordHash,
+          passwordPlain: data.password,
           status: "active",
           emailVerifiedAt: new Date(),
         });
@@ -115,7 +131,7 @@ export class MemberService {
       const repository = new MemberRepository(transaction, context.tenantId);
 
       const existing = await repository.findByUserId(resolvedUserId);
-      if (existing) {
+      if (existing && existing.status === "active") {
         throw new UserAlreadyMemberError("User is already a member of this tenant");
       }
 
@@ -125,9 +141,9 @@ export class MemberService {
         email: resolvedEmail,
       });
 
-      const finalMember = {
+      const finalMember: MemberOutput = {
         ...member,
-        userStatus: resolvedUserStatus,
+        password: data.password,
       };
 
       await appendAuditEvent(transaction, context, {
@@ -178,11 +194,11 @@ export class MemberService {
     });
   }
 
-  async revokeMember(
+  async deleteMember(
     context: TenantContext,
-    input: RevokeMemberInput,
+    input: DeleteMemberInput,
   ): Promise<void> {
-    const data = RevokeMemberSchema.parse(input);
+    const data = DeleteMemberSchema.parse(input);
     return withTenantTransaction(context, async (transaction) => {
       const repository = new MemberRepository(transaction, context.tenantId);
       const membership = await repository.findMembership(data.membershipId);
@@ -195,11 +211,11 @@ export class MemberService {
         const ownerCount = await repository.countActiveOwners();
         if (ownerCount <= 1) {
           throw new LastOwnerError(
-            "Cannot revoke the last active owner",
+            "Cannot remove the last active owner",
           );
         }
       }
-      await repository.revoke(data.membershipId);
+      await repository.delete(data.membershipId);
       await appendAuditEvent(transaction, context, {
         action: MEMBERSHIP_AUDIT_EVENTS.REVOKED,
         resourceType: "tenant_membership",
@@ -211,5 +227,12 @@ export class MemberService {
         },
       });
     });
+  }
+
+  async revokeMember(
+    context: TenantContext,
+    input: RevokeMemberInput,
+  ): Promise<void> {
+    return this.deleteMember(context, input);
   }
 }
