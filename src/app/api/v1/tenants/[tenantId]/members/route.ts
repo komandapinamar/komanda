@@ -175,13 +175,13 @@ export async function DELETE(request: Request, route: RouteContext) {
     const context = await administrativeTenantContext(request, tenantId, correlationId);
     requireOwner(context);
     const input = RevokeMemberSchema.parse(await request.json());
-    await new MemberService().revokeMember(context, input);
+    await new MemberService().deleteMember(context, input);
     return new Response(null, { status: 204 });
   } catch (error) {
     if (error instanceof LastOwnerError) {
       return problemResponse({
         status: 400,
-        title: "Cannot revoke the last owner",
+        title: "Cannot remove the last owner",
         code: "LAST_OWNER",
         correlationId,
       });
@@ -198,7 +198,7 @@ export async function DELETE(request: Request, route: RouteContext) {
         })),
       });
     }
-    logUnexpectedError(correlationId, "members.revoke", error);
+    logUnexpectedError(correlationId, "members.delete", error);
     return nonDisclosingNotFound(correlationId);
   }
 }

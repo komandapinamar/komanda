@@ -32,32 +32,16 @@ function toOptionalNumber(value: unknown) {
 
 function normalizeCartLine(line: unknown): OfficialCartLine {
   const source = (line ?? {}) as Record<string, unknown>;
-  const unitPrice = toNumber(
-    source.unitPrice ??
-      source.unitPriceSnapshot ??
-      source.unit_price_snapshot ??
-      source.price ??
-      source.unit_price,
-    0,
-  );
+  const unitPrice = toNumber(source.unitPrice, 0);
   const quantity = toNumber(source.quantity, 0);
 
   return {
-    documentId: String(
-      source.documentId ??
-        source.document_id ??
-        source.itemId ??
-        source.item_id ??
-        "",
-    ),
+    documentId: String(source.documentId ?? source.resourceId ?? ""),
     quantity,
-    name: String(source.name ?? source.nameSnapshot ?? source.title ?? "Producto"),
+    name: String(source.name ?? "Producto"),
     unitPrice,
-    lineTotal: toNumber(
-      source.lineTotal ?? source.line_total ?? source.total,
-      unitPrice * quantity,
-    ),
-    image: String(source.image ?? source.imageUrlSnapshot ?? ""),
+    lineTotal: toNumber(source.lineTotal, unitPrice * quantity),
+    image: String(source.image ?? source.imageUrl ?? ""),
     available: source.available === undefined ? true : Boolean(source.available),
     note: source.note ? String(source.note) : undefined,
   };

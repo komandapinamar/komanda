@@ -47,9 +47,8 @@ link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-
 ## Database
 
 Database infrastructure is declared with OpenTofu under
-[`infra/database`](infra/database/README.md). Neon is restricted to synthetic
-development; independent Azure PostgreSQL instances serve staging and
-production. The non-owner runtime role is created separately with
+[`infra/database`](infra/database/gcp/RUNBOOK.md). GCP Cloud SQL PostgreSQL
+serves staging and production. The non-owner runtime role is created separately with
 `npm --prefix src run db:bootstrap-roles` and is verified without `BYPASSRLS`.
 
 Never apply database infrastructure with local state or `-auto-approve` in
@@ -66,21 +65,6 @@ to remove legacy tables if they contain rows.
 Health checks are available at `/api/health` and report database, object storage,
 Mercado Pago, outbox and printing independently. Rollback uses a Core-compatible
 release or a forward fix; the legacy system is not a rollback target.
-
-Using Neon + Drizzle inside chikenstop-nextjs
-
-- Table schema in /db/schema.ts
-- To push schema in the neon table should run
-
-```bash
-npm run db:push
-```
-
-(this is in case there are changes in temporary_carts table)
-
-- Environment variable: CART_TTL_MINUTES to indicate the time of the cart living in the database.
-  - in times of a lot of usage may want to reduce it to a few minutes
-- For persistence in the navigatos it's not using the DB but saves it in localStorage
 
 # MercadoPago API
 
@@ -141,30 +125,6 @@ sudo systemctl status print-service.service
 The authoritative model is PostgreSQL. Every catalog, cart, payment, order and
 printing record carries an explicit tenant boundary and is protected by RLS.
 
----
-
-# VPS Configuration
->
->[!NOTE]
->This system was tested used with dokploy. For now, migrations and configurations will be centered around this tool.
-
-### Migrating Dokploy to a different VPS
-
-Transfer the entire filesystem using rsync:
-
-```bash
-rsync -aAXv --delete \ --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found","/swapfile"} \ -e "ssh -i /path/to/private_key" user@source_vps_ip:/ /
-```
-
-After the migration, update the server IP in the Dokploy database:
-
-```sql
-UPDATE admin SET "serverIp" = 'new_server_ip' WHERE "serverIp" = 'old_server_ip';
-```
-
->[!IMPORTANT]
->Environment variables should be saved in advance for each service running inside dokploy.
-
 ## Deployment Configuration
 
 Core uses the environment examples in `src/.env.staging.example` and
@@ -172,9 +132,6 @@ Core uses the environment examples in `src/.env.staging.example` and
 `npm --prefix src run db:verify-roles:test` with the runtime URL, then deploy the
 application using `DATABASE_URL` as `komanda_runtime`. The runtime role must never
 be the migration owner and must not have `BYPASSRLS`.
-
-The database infrastructure and Azure staging gate are documented in
-`infra/database/README.md` and `infra/database/azure/RUNBOOK.md`.
 
 # Infrasture and use cases
 

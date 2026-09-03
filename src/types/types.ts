@@ -63,35 +63,17 @@ export type OfficialCart = {
   expiresAt?: string;
 };
 
-// !!!! may be adding more of this later
 export type CustomerInfo = {
   name: string;
   email?: string;
   phone?: string;
 };
 
-export type OrderSource =
-  | "mercadopago-webhook"
-  | "admin-direct"
-  | "mercadopago_webhook"
-  | "admin_direct";
+export type OrderSource = "mercadopago_webhook" | "admin_direct";
 
 export type CheckoutFormValues = {
   customer: CustomerInfo;
   notes: string;
-};
-
-export type CreateOrderPayload = {
-  cartId: string;
-  customer: CustomerInfo;
-  notes?: string;
-  metadata?: OrderRequestMetadata;
-};
-
-export type CreatedOrder = {
-  id: string;
-  purchaseNumber: string;
-  status: OrderStatus;
 };
 
 export type AdminDashboardLineOption = {
@@ -135,16 +117,6 @@ export type AdminOrdersStreamPayload = {
   generatedAt: string;
 };
 
-export type OrderRequestMetadata = {
-  checkoutPaymentId: string;
-  paymentId: string;
-  preferenceId: string;
-  orderRequestIdempotencyKey: string;
-  approvedAt: string;
-  source: OrderSource;
-  purchaseNumber?: string;
-};
-
 export type OrderStatus =
   | "approved"
   | "preparing"
@@ -152,47 +124,7 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
-export type CheckoutPaymentStatus =
-  | "initiated"
-  | "processing"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "failed"
-  | "duplicate";
-
-export type CheckoutPaymentPrintStatus =
-  | "not_requested"
-  | "queued"
-  | "processing"
-  | "printed"
-  | "failed";
-
 export type PrintJobStatus = "pending" | "processing" | "printed" | "failed";
-
-export type PrintJobSource = "mercadopago-webhook" | "admin-direct";
-
-export type PrintJobPayload = {
-  orderId: string;
-  purchaseNumber: string;
-  cartId: string;
-  checkoutPaymentId: string;
-  paymentId: string;
-  preferenceId: string;
-  source: PrintJobSource;
-  copies: number;
-  customer: CustomerInfo;
-  notes?: string;
-  currency: string;
-  amount: number;
-  approvedAt: string;
-  items: OfficialCartLine[];
-  summary: {
-    subtotal: number;
-    discountTotal: number;
-    total: number;
-  };
-};
 
 export type CreatePaymentSessionPayload = {
   cartId: string;

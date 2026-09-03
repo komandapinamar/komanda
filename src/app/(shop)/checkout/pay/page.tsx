@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import { getCart } from "@/features/shop/cart/services/cart.service";
-import { createPaymentSession } from "@/features/shop/payments/services/payment-session.service";
+import { createPaymentSession } from "@/features/shop/payments/payment-session.client";
 import type {
   CartLine,
   CheckoutFormValues,

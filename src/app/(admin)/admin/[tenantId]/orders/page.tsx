@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import AdminOrdersLive from "@/features/admin-panel/components/AdminOrdersLive";
+import AdminOrdersLive from "@/features/orders/web/AdminOrdersLive";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { OrderQueryService } from "@/features/orders/application/order-query.service";

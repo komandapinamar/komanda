@@ -10,6 +10,7 @@ import { centsToMoney, revalidateCartSelection } from "@/features/cart/domain/ca
 import { OrderConflictError, OrderNotFoundError } from "./order-errors";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import { PrintJobService } from "@/features/printing/application/print-job.service";
+import { BillingRepository } from "@/features/billing/infrastructure/billing.repository";
 
 const customerSchema = z
   .object({
@@ -130,6 +131,19 @@ export class CreateOrderService {
           );
         } catch (printError) {
           console.warn("[create-order] Failed to enqueue print job:", printError);
+        }
+        try {
+          await new BillingRepository(transaction, context.tenantId).issueDocument({
+            orderId: order.id,
+            locationId: order.locationId,
+            documentType: "ticket_interno",
+            customerDocType: "CF",
+            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+              ? String(order.customer.name)
+              : undefined,
+          });
+        } catch (billingError) {
+          console.warn("[create-order] Failed to issue billing document:", billingError);
         }
       }
 
@@ -266,6 +280,19 @@ export class CreateOrderService {
         } catch (printError) {
           console.warn("[create-order] Failed to enqueue print job:", printError);
         }
+        try {
+          await new BillingRepository(transaction, context.tenantId).issueDocument({
+            orderId: order.id,
+            locationId: order.locationId,
+            documentType: "ticket_interno",
+            customerDocType: "CF",
+            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+              ? String(order.customer.name)
+              : undefined,
+          });
+        } catch (billingError) {
+          console.warn("[create-order] Failed to issue billing document:", billingError);
+        }
       }
 
       return order;
@@ -345,6 +372,19 @@ export class CreateOrderService {
           );
         } catch (printError) {
           console.warn("[create-order] Failed to enqueue print job:", printError);
+        }
+        try {
+          await new BillingRepository(transaction, context.tenantId).issueDocument({
+            orderId: order.id,
+            locationId: order.locationId,
+            documentType: "ticket_interno",
+            customerDocType: "CF",
+            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+              ? String(order.customer.name)
+              : undefined,
+          });
+        } catch (billingError) {
+          console.warn("[create-order] Failed to issue billing document:", billingError);
         }
       }
 

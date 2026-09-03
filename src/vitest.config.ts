@@ -82,15 +82,6 @@ export default defineConfig({
         ...sharedProject,
         test: {
           ...shared,
-          name: "migration",
-          include: ["tests/migration/**/*.test.ts"],
-          sequence: { concurrent: false },
-        },
-      }),
-      defineProject({
-        ...sharedProject,
-        test: {
-          ...shared,
           name: "database-compatibility",
           include: ["tests/database-compatibility/**/*.test.ts"],
           sequence: { concurrent: false },

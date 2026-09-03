@@ -29,7 +29,8 @@ export default async function CheckoutPaySuccessPage({ searchParams }: SuccessPa
   const adminCustomerName = getSingleValue(resolvedSearchParams.customer_name)?.trim() ?? "";
   const adminPrintStatus =
     getSingleValue(resolvedSearchParams.print_status)?.trim().toLowerCase() ?? "";
-  const isAdminDirectOrder = source === "admin-direct" && Boolean(adminOrderId);
+  const isAdminDirectOrder =
+    (source === "admin_direct" || source === "admin-direct") && Boolean(adminOrderId);
 
   const purchaseNumberLabel = adminPurchaseNumber ? `Compra #${adminPurchaseNumber}` : "";
 

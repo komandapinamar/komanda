@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { CatalogService } from "@/features/catalog/application/catalog.service";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
-import { AdminDirectOrderForm } from "@/features/admin-panel/components/AdminDirectOrderForm";
+import { AdminDirectOrderForm } from "@/features/orders/web/AdminDirectOrderForm";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
 export default async function NewDirectOrderPage({

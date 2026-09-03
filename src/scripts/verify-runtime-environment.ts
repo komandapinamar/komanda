@@ -142,16 +142,9 @@ function main() {
     for (const name of [
       "MOCK_TENANT_SLUG",
       "NEXT_PUBLIC_MOCK_TENANT_SLUG",
-      "INITIAL_TENANT_ID",
-      "INITIAL_TENANT_LOCATION_ID",
-      "INITIAL_TENANT_SLUG",
-      "LEGACY_INITIAL_TENANT_ENABLED",
-      "MP_ACCESS_TOKEN",
-      "PRINT_SERVICE_TOKEN",
-      "ADMIN_JWT_SECRET",
     ]) {
       if (value(name)) {
-        errors.push(`${name} is not allowed after the multi-tenant cutover.`);
+        errors.push(`${name} is not allowed in production.`);
       }
     }
   }

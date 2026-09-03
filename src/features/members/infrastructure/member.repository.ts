@@ -33,7 +33,7 @@ export class MemberRepository {
       .where(
         and(
           eq(tenantMemberships.tenantId, this.tenantId),
-          inArray(tenantMemberships.status, ["active", "revoked"]),
+          eq(tenantMemberships.status, "active"),
         ),
       );
     return rows;
@@ -48,9 +48,9 @@ export class MemberRepository {
     return user ?? null;
   }
 
-  async findByUserId(userId: string): Promise<{ id: string } | null> {
+  async findByUserId(userId: string): Promise<{ id: string; status: string } | null> {
     const [membership] = await this.transaction
-      .select({ id: tenantMemberships.id })
+      .select({ id: tenantMemberships.id, status: tenantMemberships.status })
       .from(tenantMemberships)
       .where(
         and(
@@ -67,6 +67,37 @@ export class MemberRepository {
     email: string;
     role: "owner" | "admin" | "employee";
   }): Promise<MemberOutput> {
+    const [existing] = await this.transaction
+      .select()
+      .from(tenantMemberships)
+      .where(
+        and(
+          eq(tenantMemberships.tenantId, this.tenantId),
+          eq(tenantMemberships.userId, input.userId),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      const [updated] = await this.transaction
+        .update(tenantMemberships)
+        .set({
+          role: input.role,
+          status: "active",
+          updatedAt: new Date(),
+        })
+        .where(eq(tenantMemberships.id, existing.id))
+        .returning();
+
+      return {
+        id: updated.id,
+        email: input.email,
+        role: updated.role,
+        status: updated.status,
+        createdAt: updated.createdAt,
+      };
+    }
+
     const [membership] = await this.transaction
       .insert(tenantMemberships)
       .values({
@@ -76,6 +107,7 @@ export class MemberRepository {
         status: "active",
       })
       .returning();
+
     return {
       id: membership.id,
       email: input.email,
@@ -100,16 +132,19 @@ export class MemberRepository {
       );
   }
 
-  async revoke(membershipId: string): Promise<void> {
+  async delete(membershipId: string): Promise<void> {
     await this.transaction
-      .update(tenantMemberships)
-      .set({ status: "revoked" })
+      .delete(tenantMemberships)
       .where(
         and(
           eq(tenantMemberships.tenantId, this.tenantId),
           eq(tenantMemberships.id, membershipId),
         ),
       );
+  }
+
+  async revoke(membershipId: string): Promise<void> {
+    return this.delete(membershipId);
   }
 
   async countActiveOwners(): Promise<number> {

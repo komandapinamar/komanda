@@ -10,7 +10,7 @@ import { verifyDatabaseRoles } from "./verify-database-roles";
 import { verifyMigrationJournal } from "./verify-migration-journal";
 
 type DatabaseEnvironment = "staging" | "production";
-type DatabaseProvider = "azure" | "gcp" | "external";
+type DatabaseProvider = "gcp" | "external";
 
 const PRODUCTION_CONFIRMATION = "I_UNDERSTAND_THIS_TOUCHES_PRODUCTION";
 
@@ -30,18 +30,16 @@ function databaseEnvironment(): DatabaseEnvironment {
 
 function databaseProvider(): DatabaseProvider {
   const value = (process.env.DATABASE_PROVIDER ?? "").trim().toLowerCase();
-  if (value === "azure" || value === "gcp" || value === "external") {
+  if (value === "gcp" || value === "external") {
     return value;
   }
   throw new Error(
-    "DATABASE_PROVIDER must be azure, gcp, or external to validate the connection host.",
+    "DATABASE_PROVIDER must be gcp or external to validate the connection host.",
   );
 }
 
 function providerLabel(provider: DatabaseProvider) {
   switch (provider) {
-    case "azure":
-      return "azure-postgresql-flexible-server";
     case "gcp":
       return "google-cloud-sql-postgres";
     case "external":
