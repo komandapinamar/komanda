@@ -92,7 +92,7 @@ export function PublicDirectoryView({ tenants }: Props) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nombre de negocio o ubicación..."
-              className="w-full rounded-2xl border-4 border-black bg-white/95 px-6 py-4 text-base font-normal text-zinc-900 placeholder:text-zinc-500 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-[var(--color-accent-secondary)]"
+              className="w-full rounded-2xl bg-white/95 px-6 py-4 text-base font-normal text-zinc-900 placeholder:text-zinc-500 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-[var(--color-accent-secondary)]"
             />
           </div>
           <p className="mt-3 text-left text-xs font-black uppercase tracking-wider text-zinc-400">
@@ -104,21 +104,21 @@ export function PublicDirectoryView({ tenants }: Props) {
       </section>
 
       {/* Tenants Grid */}
-      <section className="relative z-10 mx-auto px-6 pb-24">
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24">
         {filteredTenants.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 lg:mx-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
             {filteredTenants.map((tenant) => (
               <article
                 key={tenant.id}
-                className="flex flex-col justify-between rounded-2xl border-4 border-black bg-white p-6 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0_black]"
+                className="flex flex-col justify-between rounded-xl border-2 border-zinc-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] backdrop-blur-2xl p-6 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0_var(--color-zinc-200)]"
               >
                 <div>
                   <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-3 border-black bg-[var(--color-accent-secondary)] text-2xl font-black text-black shadow-[2px_2px_0_0_black]">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm border-3 border-black bg-[var(--color-accent-secondary)] text-2xl font-black text-black shadow-[0px_0px_0px_3px_var(--color-zinc-100)]">
                       {tenant.name.slice(0, 1).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-xl font-black uppercase tracking-tight text-zinc-900">
+                      <h2 className="truncate text-3xl font-black uppercase tracking-tight text-white underline">
                         {tenant.name}
                       </h2>
                       <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">
@@ -162,7 +162,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                 <div className="mt-8">
                   <a
                     href={tenant.storefrontUrl}
-                    className="block w-full rounded-xl border-3 border-black bg-[var(--color-accent-primary)] py-3 px-4 text-center text-sm font-black uppercase tracking-wider text-[var(--color-accent-secondary)] shadow-[3px_3px_0_0_black] transition hover:bg-black active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0_0_black]"
+                    className="block w-full rounded-xl border-2  border-[var(--color-zinc-200)] py-3 px-4 text-center text-sm font-black uppercase tracking-wider text-[var(--color-accent-secondary)] shadow-[3px_3px_0_0_black] transition hover:bg-zinc-500 active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0_0_white]"
                   >
                     Ver Menú & Pedir →
                   </a>
@@ -171,7 +171,7 @@ export function PublicDirectoryView({ tenants }: Props) {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border-4 border-dashed border-white/30 bg-black/40 p-12 text-center backdrop-blur-md">
+          <div className="rounded-2xl border-4 border-dashed border-white/30 bg-black/40 p-12 text-center backdrop-blur-sm">
             {tenants.length === 0 ? (
               <div className="mx-auto max-w-md space-y-4">
                 <p className="text-2xl font-black uppercase text-white">

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { canAccess } from "@/lib/authorization/permissions";
 import { TenantSettingsService } from "@/features/tenancy/application/tenant-settings.service";
 import { TenantSettingsPanel } from "@/features/tenancy/web/TenantSettingsPanel";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
@@ -20,7 +21,7 @@ export default async function TenantSettingsPage({
   } catch {
     notFound();
   }
-  if (authority.membership.role !== "owner") {
+  if (!canAccess(authority.membership.role, "configuracion")) {
     notFound();
   }
   const context = createVerifiedTenantContext({

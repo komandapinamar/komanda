@@ -100,9 +100,10 @@ export function AdminDirectOrderForm({
         );
       }
 
-      const order = (await response.json()) as { purchaseNumber: string; id: string };
-      router.push(
-        `/checkout/pay/success?source=admin_direct&order_id=${order.id}&purchase_number=${order.purchaseNumber}&customer_name=${encodeURIComponent(customerName.trim())}`,
+      const order = (await response.json()) as { purchaseNumber?: string; id?: string };
+      const ref = order.purchaseNumber || order.id || "1";
+      router.replace(
+        `/admin/${tenantId}/orders?created=${encodeURIComponent(ref)}`,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear el pedido.");

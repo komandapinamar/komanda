@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import AdminOrdersLive from "@/features/orders/web/AdminOrdersLive";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { canAccess } from "@/lib/authorization/permissions";
 import { OrderQueryService } from "@/features/orders/application/order-query.service";
 import type { OrderView } from "@/features/orders/infrastructure/order.repository";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
@@ -45,16 +46,27 @@ function toDashboardOrder(order: OrderView): AdminDashboardOrder {
 
 export default async function TenantOrdersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tenantId: string }>;
+  searchParams?: Promise<{ created?: string | string[] }>;
 }) {
   const { tenantId } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const createdParam = Array.isArray(resolvedSearchParams.created)
+    ? resolvedSearchParams.created[0]
+    : resolvedSearchParams.created;
+  const createdRef = createdParam?.trim() || null;
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) redirect("/login");
   let authority;
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);
   } catch {
+    notFound();
+  }
+
+  if (!canAccess(authority.membership.role, "pedidos")) {
     notFound();
   }
 
@@ -79,9 +91,6 @@ export default async function TenantOrdersPage({
             Operación
           </p>
           <h1 className="mt-2 text-3xl font-semibold">Pedidos en curso</h1>
-          <p className="mt-2 text-zinc-400">
-            Los cambios se reciben por eventos incrementales del tenant activo.
-          </p>
         </div>
         <Link
           href={`/admin/${tenantId}/orders/new`}
@@ -90,6 +99,18 @@ export default async function TenantOrdersPage({
           Crear pedido directo
         </Link>
       </header>
+
+      {createdRef ? (
+        <div
+          role="status"
+          className="rounded-sm border border-emerald-500/40 bg-emerald-950/40 p-4 text-emerald-300"
+        >
+          <p className="font-medium">
+            Pedido creado correctamente
+            {createdRef !== "1" ? ` (#${createdRef})` : ""}.
+          </p>
+        </div>
+      ) : null}
 
       <AdminOrdersLive
         tenantId={tenantId}

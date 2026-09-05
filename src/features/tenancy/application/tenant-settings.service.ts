@@ -44,6 +44,7 @@ const settingsPatchSchema = z
     contactPhone: nullableTrimmedString,
     salesEnabled: z.boolean().optional(),
     printingEnabled: z.boolean().optional(),
+    menuTheme: z.enum(["classic", "reels"]).optional(),
     timezone: z.string().trim().min(1).optional(),
   })
   .strict();
@@ -61,6 +62,7 @@ function serializeSettings(input: {
     contactPhone: input.settings.contactPhone,
     salesEnabled: input.settings.salesEnabled,
     printingEnabled: input.settings.printingEnabled,
+    menuTheme: input.settings.menuTheme,
     currency: input.tenant.defaultCurrency,
     timezone: input.tenant.defaultTimezone,
     version: input.settings.version,
@@ -224,6 +226,7 @@ export class TenantSettingsService {
       ...(patch.printingEnabled !== undefined
         ? { printingEnabled: patch.printingEnabled }
         : {}),
+      ...(patch.menuTheme !== undefined ? { menuTheme: patch.menuTheme } : {}),
     };
   }
 

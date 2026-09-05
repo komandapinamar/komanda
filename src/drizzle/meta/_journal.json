@@ -8,6 +8,13 @@
       "when": 1788395170810,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788398799815,
+      "tag": "0001_supreme_yellow_claw",
+      "breakpoints": true
     }
   ]
 }

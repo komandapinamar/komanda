@@ -15,6 +15,21 @@ export type Combo = {
   menu_items: MenuItem[] | null;
 };
 
+export type ProductModifierOption = {
+  id: string;
+  name: string;
+  priceDelta?: number;
+};
+
+export type ProductModifierGroup = {
+  id: string;
+  name: string;
+  required?: boolean;
+  minSelect?: number;
+  maxSelect?: number;
+  options: ProductModifierOption[];
+};
+
 export type MenuItem = {
   documentId: string;
   name: string;
@@ -23,6 +38,9 @@ export type MenuItem = {
   image: string;
   category: Category | null;
   combos: Combo[] | null;
+  videoUrl?: string | null;
+  hasOptions?: boolean;
+  modifierGroups?: ProductModifierGroup[] | null;
 };
 
 export type CartLine = {

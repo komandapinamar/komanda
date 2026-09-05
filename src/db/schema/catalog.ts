@@ -104,6 +104,7 @@ export const catalogItems = pgTable(
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
     imageAssetId: uuid("image_asset_id"),
+    videoAssetId: uuid("video_asset_id"),
     status: text("status").$type<CatalogStatus>().default("draft").notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
     version: integer("version").default(1).notNull(),
@@ -125,6 +126,11 @@ export const catalogItems = pgTable(
       columns: [table.tenantId, table.imageAssetId],
       foreignColumns: [mediaAssets.tenantId, mediaAssets.id],
       name: "catalog_items_media_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.videoAssetId],
+      foreignColumns: [mediaAssets.tenantId, mediaAssets.id],
+      name: "catalog_items_video_media_fk",
     }).onDelete("restrict"),
     unique("catalog_items_tenant_id_id_key").on(table.tenantId, table.id),
     uniqueIndex("catalog_items_tenant_name_active_uidx")

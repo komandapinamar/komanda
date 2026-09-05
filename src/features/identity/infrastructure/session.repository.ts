@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { tenantMemberships, tenants, userSessions, users } from "@/db/schema";
+import { tenantLocations, tenantMemberships, tenants, userSessions, users } from "@/db/schema";
 import {
   withIdentityTransaction,
   withPlatformServiceTransaction,
@@ -12,6 +12,7 @@ import type {
   LiveMembership,
   SessionIdentity,
   SessionRepository,
+  TenantLocationSummary,
 } from "@/features/identity/application/session.service";
 
 export class DatabaseSessionRepository implements SessionRepository {
@@ -166,6 +167,38 @@ export class DatabaseSessionRepository implements SessionRepository {
           tenantName: tenant.name,
           tenantSlug: tenant.slug,
         }));
+      },
+    );
+  }
+
+  async findActivePrimaryLocation(tenantId: string): Promise<TenantLocationSummary | null> {
+    return withIdentityTransaction(
+      { tenantId, correlationId: randomUUID() },
+      async (transaction) => {
+        const [location] = await transaction
+          .select({
+            id: tenantLocations.id,
+            name: tenantLocations.name,
+            timezone: tenantLocations.timezone,
+            status: tenantLocations.status,
+          })
+          .from(tenantLocations)
+          .where(
+            and(
+              eq(tenantLocations.tenantId, tenantId),
+              eq(tenantLocations.isPrimary, true),
+              eq(tenantLocations.status, "active"),
+            ),
+          )
+          .limit(1);
+        return location
+          ? {
+              id: location.id,
+              name: location.name,
+              timezone: location.timezone,
+              status: location.status,
+            }
+          : null;
       },
     );
   }

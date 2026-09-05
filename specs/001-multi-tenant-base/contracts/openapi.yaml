@@ -39,6 +39,24 @@ paths:
       responses:
         '200':
           description: Current session info
+  /api/v1/auth/mobile/sessions:
+    post:
+      operationId: createMobileSession
+      responses:
+        '200':
+          description: Mobile bearer session created
+        '401':
+          description: Unauthorized / Invalid credentials
+        '422':
+          description: Validation failed
+  /api/v1/auth/mobile/context:
+    get:
+      operationId: getMobileContext
+      responses:
+        '200':
+          description: Mobile operational context with authorized active tenants and primary locations
+        '401':
+          description: Unauthorized / Invalid session
   /api/v1/tenants:
     get:
       operationId: listTenants

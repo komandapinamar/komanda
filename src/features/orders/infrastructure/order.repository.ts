@@ -293,7 +293,7 @@ export class OrderRepository {
         source: input.source,
         fulfillmentStatus: "approved",
         paymentStatus: input.paymentStatus,
-        customerSnapshot: redactSensitiveData(input.customer) as Record<string, unknown>,
+        customerSnapshot: input.customer,
         notes: input.notes,
         subtotal: input.cart.subtotal,
         discountTotal: input.cart.discountTotal,

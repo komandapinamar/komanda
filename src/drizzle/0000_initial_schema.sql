@@ -82,7 +82,6 @@ CREATE TABLE "tenants" (
 	"suspended_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "tenants_id_tenant_key" UNIQUE("id","id"),
 	CONSTRAINT "tenants_currency_format_check" CHECK (char_length("tenants"."default_currency") = 3),
 	CONSTRAINT "tenants_version_positive_check" CHECK ("tenants"."version" > 0)
 );

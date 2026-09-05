@@ -4,6 +4,7 @@ import { CatalogService } from "@/features/catalog/application/catalog.service";
 import { CatalogEditor } from "@/features/catalog/web/CatalogEditor";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { canAccess, canWriteCatalog } from "@/lib/authorization/permissions";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
 export default async function CatalogPage({
@@ -18,6 +19,9 @@ export default async function CatalogPage({
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);
   } catch {
+    notFound();
+  }
+  if (!canAccess(authority.membership.role, "catalog")) {
     notFound();
   }
   const context = createVerifiedTenantContext({
@@ -37,7 +41,7 @@ export default async function CatalogPage({
     service.listItems(context),
   ]);
 
-  const isReadOnly = authority.membership.role === "employee";
+  const isReadOnly = !canWriteCatalog(authority.membership.role);
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">

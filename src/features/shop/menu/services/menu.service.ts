@@ -15,6 +15,7 @@ function mapItem(
     image: item.imageUrl ?? "",
     category,
     combos: null,
+    videoUrl: item.videoUrl ?? null,
   };
 }
 
@@ -41,14 +42,7 @@ export async function getPublicTenantsDirectory() {
   return new PublicTenantService().listActiveDirectory();
 }
 
-function requiredTenantSlug(tenantSlug?: string) {
-  const resolved = tenantSlug?.trim();
-  if (!resolved) throw new Error("An explicit tenant slug is required.");
-  return resolved;
-}
-
-export async function getCategories(tenantSlug?: string): Promise<Category[]> {
-  const catalog = await getPublicCatalog(requiredTenantSlug(tenantSlug));
+export function transformCatalogToCategories(catalog: PublicCatalog): Category[] {
   return catalog.categories.map((source) => {
     const category: Category = {
       documentId: source.id,
@@ -64,6 +58,25 @@ export async function getCategories(tenantSlug?: string): Promise<Category[]> {
       combos: combos.length > 0 ? combos : null,
     };
   });
+}
+
+export async function getTenantMenuTheme(
+  tenantSlug?: string,
+): Promise<"classic" | "reels"> {
+  const catalog = await getPublicCatalog(requiredTenantSlug(tenantSlug));
+  const theme = catalog.menuTheme ?? catalog.tenant?.menuTheme;
+  return theme === "reels" ? "reels" : "classic";
+}
+
+function requiredTenantSlug(tenantSlug?: string) {
+  const resolved = tenantSlug?.trim();
+  if (!resolved) throw new Error("An explicit tenant slug is required.");
+  return resolved;
+}
+
+export async function getCategories(tenantSlug?: string): Promise<Category[]> {
+  const catalog = await getPublicCatalog(requiredTenantSlug(tenantSlug));
+  return transformCatalogToCategories(catalog);
 }
 
 export async function getMenuItems(tenantSlug?: string): Promise<MenuItem[]> {

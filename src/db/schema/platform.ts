@@ -49,7 +49,6 @@ export const tenants = pgTable(
   },
   (table) => [
     uniqueIndex("tenants_normalized_slug_uidx").on(table.normalizedSlug),
-    unique("tenants_id_tenant_key").on(table.id, table.id),
     check("tenants_currency_format_check", sql`char_length(${table.defaultCurrency}) = 3`),
     check("tenants_version_positive_check", sql`${table.version} > 0`),
   ],
@@ -213,6 +212,7 @@ export const tenantSettings = pgTable(
     salesEnabled: boolean("sales_enabled").default(false).notNull(),
     printingEnabled: boolean("printing_enabled").default(false).notNull(),
     orderPrefix: text("order_prefix").default("K").notNull(),
+    menuTheme: text("menu_theme").$type<"classic" | "reels">().default("classic").notNull(),
     branding: jsonb("branding").$type<Record<string, unknown>>().default({}).notNull(),
     version: integer("version").default(1).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
@@ -229,6 +229,10 @@ export const tenantSettings = pgTable(
     check(
       "tenant_settings_order_prefix_check",
       sql`${table.orderPrefix} ~ '^[A-Z0-9]{1,8}$'`,
+    ),
+    check(
+      "tenant_settings_menu_theme_check",
+      sql`${table.menuTheme} in ('classic', 'reels')`,
     ),
   ],
 );

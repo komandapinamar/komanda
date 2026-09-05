@@ -10,7 +10,7 @@ export type Section =
   | "analytics";
 
 const SECTION_PERMISSIONS: Record<Section, Role[]> = {
-  estado: ["owner", "admin", "employee"],
+  estado: ["owner"],
   pedidos: ["owner", "admin", "employee"],
   catalog: ["owner", "admin"],
   configuracion: ["owner"],

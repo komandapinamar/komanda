@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { canAccess } from "@/lib/authorization/permissions";
 import { MemberService } from "@/features/members/application/member.service";
 import { MemberManager } from "@/features/members/web/MemberManager";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
@@ -20,7 +21,7 @@ export default async function MembersPage({
   } catch {
     notFound();
   }
-  if (authority.membership.role !== "owner") {
+  if (!canAccess(authority.membership.role, "members")) {
     notFound();
   }
   const context = createVerifiedTenantContext({

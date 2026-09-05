@@ -123,28 +123,20 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        try {
-          await new PrintJobService().enqueueOrderTicketInTransaction(
-            transaction,
-            context,
-            order,
-          );
-        } catch (printError) {
-          console.warn("[create-order] Failed to enqueue print job:", printError);
-        }
-        try {
-          await new BillingRepository(transaction, context.tenantId).issueDocument({
-            orderId: order.id,
-            locationId: order.locationId,
-            documentType: "ticket_interno",
-            customerDocType: "CF",
-            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
-              ? String(order.customer.name)
-              : undefined,
-          });
-        } catch (billingError) {
-          console.warn("[create-order] Failed to issue billing document:", billingError);
-        }
+        await new PrintJobService().enqueueOrderTicketInTransaction(
+          transaction,
+          context,
+          order,
+        );
+        await new BillingRepository(transaction, context.tenantId).issueDocument({
+          orderId: order.id,
+          locationId: order.locationId,
+          documentType: "ticket_interno",
+          customerDocType: "CF",
+          customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+            ? String(order.customer.name)
+            : undefined,
+        });
       }
 
       return order;
@@ -271,28 +263,20 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        try {
-          await new PrintJobService().enqueueOrderTicketInTransaction(
-            transaction,
-            context,
-            order,
-          );
-        } catch (printError) {
-          console.warn("[create-order] Failed to enqueue print job:", printError);
-        }
-        try {
-          await new BillingRepository(transaction, context.tenantId).issueDocument({
-            orderId: order.id,
-            locationId: order.locationId,
-            documentType: "ticket_interno",
-            customerDocType: "CF",
-            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
-              ? String(order.customer.name)
-              : undefined,
-          });
-        } catch (billingError) {
-          console.warn("[create-order] Failed to issue billing document:", billingError);
-        }
+        await new PrintJobService().enqueueOrderTicketInTransaction(
+          transaction,
+          context,
+          order,
+        );
+        await new BillingRepository(transaction, context.tenantId).issueDocument({
+          orderId: order.id,
+          locationId: order.locationId,
+          documentType: "ticket_interno",
+          customerDocType: "CF",
+          customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+            ? String(order.customer.name)
+            : undefined,
+        });
       }
 
       return order;
@@ -364,28 +348,20 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        try {
-          await new PrintJobService().enqueueOrderTicketInTransaction(
-            transaction,
-            context,
-            order,
-          );
-        } catch (printError) {
-          console.warn("[create-order] Failed to enqueue print job:", printError);
-        }
-        try {
-          await new BillingRepository(transaction, context.tenantId).issueDocument({
-            orderId: order.id,
-            locationId: order.locationId,
-            documentType: "ticket_interno",
-            customerDocType: "CF",
-            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
-              ? String(order.customer.name)
-              : undefined,
-          });
-        } catch (billingError) {
-          console.warn("[create-order] Failed to issue billing document:", billingError);
-        }
+        await new PrintJobService().enqueueOrderTicketInTransaction(
+          transaction,
+          context,
+          order,
+        );
+        await new BillingRepository(transaction, context.tenantId).issueDocument({
+          orderId: order.id,
+          locationId: order.locationId,
+          documentType: "ticket_interno",
+          customerDocType: "CF",
+          customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+            ? String(order.customer.name)
+            : undefined,
+        });
       }
 
       return order;

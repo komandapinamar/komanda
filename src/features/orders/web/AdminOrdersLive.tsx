@@ -354,7 +354,7 @@ export default function AdminOrdersLive({
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-bold">{order.customer.name}</h3>
+                    <h3 className="text-xl font-bold">{order.customer?.name || "Sin nombre"}</h3>
                     <p className="text-sm opacity-75">Aprobado: {formatDate(order.approvedAt)}</p>
                     <p className="text-sm opacity-75">Creado: {formatDate(order.createdAt)}</p>
                   </div>
