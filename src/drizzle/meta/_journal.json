@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788395170810,
+      "tag": "0000_initial_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788398799815,
+      "tag": "0001_supreme_yellow_claw",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788400000000,
+      "tag": "0002_add_tenant_preset",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788410000000,
+      "tag": "0003_add_barcode_and_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788420000000,
+      "tag": "0004_add_cash_shifts",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788430000000,
+      "tag": "0005_add_slack_cash_alert_webhook_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788440000000,
+      "tag": "0006_add_print_pairings",
+      "breakpoints": true
+    }
+  ]
+}
