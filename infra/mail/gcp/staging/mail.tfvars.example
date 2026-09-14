@@ -1,3 +1,0 @@
-project = "replace-with-gcp-project-id"
-domain  = "komanda.app"
-# resend_verification = "provided-by-resend"
