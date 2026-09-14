@@ -1,3 +1,0 @@
-project    = "replace-with-gcp-project-id"
-bucket_name = "komanda-tfstate"
-location   = "SOUTHAMERICA-EAST1"
