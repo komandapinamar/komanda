@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --color-accent-primary: #18181b;
-  --color-accent-secondary: #f59e0b;
-  --color-accent-tertiary: #f3e2bf;
+  --color-accent-primary: #000000;
+  --color-accent-secondary: #ffffff;
+  --color-accent-tertiary: #ffffff;
 }
 
 html,
@@ -11,4 +11,8 @@ body {
   min-height: 100%;
   overflow-x: hidden;
   background: var(--color-accent-primary);
+}
+
+body {
+  font-family: var(--font-instrument-sans), sans-serif;
 }

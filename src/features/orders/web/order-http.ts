@@ -30,6 +30,20 @@ export function orderErrorResponse(error: unknown, correlationId: string) {
   }
 
   if (
+    error instanceof Error &&
+    (error.name === "ForbiddenRoleError" ||
+      ("code" in error && (error as { code?: string }).code === "FORBIDDEN_ROLE"))
+  ) {
+    return problemResponse({
+      status: 403,
+      title: "Forbidden",
+      code: "FORBIDDEN_ROLE",
+      detail: error.message || "Access is restricted to the required role.",
+      correlationId,
+    });
+  }
+
+  if (
     error instanceof ZodError ||
     error instanceof OrderValidationError ||
     error instanceof InvalidOrderVersionHeaderError

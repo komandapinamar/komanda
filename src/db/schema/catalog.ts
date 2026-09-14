@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   foreignKey,
   index,
@@ -103,7 +104,13 @@ export const catalogItems = pgTable(
     description: text("description"),
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
+    barcode: text("barcode"),
+    isGeneric: boolean("is_generic").default(false).notNull(),
+    genericIcon: text("generic_icon"),
+    trackStock: boolean("track_stock").default(false).notNull(),
+    stockQuantity: integer("stock_quantity").default(0).notNull(),
     imageAssetId: uuid("image_asset_id"),
+    videoAssetId: uuid("video_asset_id"),
     status: text("status").$type<CatalogStatus>().default("draft").notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
     version: integer("version").default(1).notNull(),
@@ -126,10 +133,18 @@ export const catalogItems = pgTable(
       foreignColumns: [mediaAssets.tenantId, mediaAssets.id],
       name: "catalog_items_media_fk",
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.videoAssetId],
+      foreignColumns: [mediaAssets.tenantId, mediaAssets.id],
+      name: "catalog_items_video_media_fk",
+    }).onDelete("restrict"),
     unique("catalog_items_tenant_id_id_key").on(table.tenantId, table.id),
     uniqueIndex("catalog_items_tenant_name_active_uidx")
       .on(table.tenantId, table.normalizedName)
       .where(sql`${table.archivedAt} is null`),
+    uniqueIndex("catalog_items_tenant_barcode_uidx")
+      .on(table.tenantId, table.barcode)
+      .where(sql`${table.barcode} is not null and ${table.archivedAt} is null`),
     index("catalog_items_tenant_category_status_sort_idx").on(
       table.tenantId,
       table.categoryId,
@@ -139,6 +154,7 @@ export const catalogItems = pgTable(
     check("catalog_items_price_check", sql`${table.price} > 0`),
     check("catalog_items_currency_check", sql`char_length(${table.currency}) = 3`),
     check("catalog_items_sort_check", sql`${table.sortOrder} >= 0`),
+    check("catalog_items_stock_quantity_check", sql`${table.stockQuantity} >= 0`),
     check("catalog_items_version_check", sql`${table.version} > 0`),
   ],
 );
@@ -307,4 +323,18 @@ export const comboItems = pgTable(
     check("combo_items_quantity_check", sql`${table.quantity} > 0`),
     check("combo_items_sort_check", sql`${table.sortOrder} >= 0`),
   ],
+);
+
+export const globalProductCatalog = pgTable(
+  "global_product_catalog",
+  {
+    barcode: text("barcode").primaryKey(),
+    name: text("name").notNull(),
+    suggestedCategory: text("suggested_category"),
+    imageUrl: text("image_url"),
+    brand: text("brand"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
 );

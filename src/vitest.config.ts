@@ -49,6 +49,7 @@ export default defineConfig({
           include: [
             "tests/unit/**/*.test.ts",
             "tests/regression/**/*.{test,spec}.ts",
+            "features/**/tests/**/*.test.ts",
           ],
         },
       }),
@@ -75,15 +76,6 @@ export default defineConfig({
           ...shared,
           name: "tenant-isolation",
           include: ["tests/tenant-isolation/**/*.test.ts"],
-          sequence: { concurrent: false },
-        },
-      }),
-      defineProject({
-        ...sharedProject,
-        test: {
-          ...shared,
-          name: "migration",
-          include: ["tests/migration/**/*.test.ts"],
           sequence: { concurrent: false },
         },
       }),

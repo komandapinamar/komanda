@@ -67,11 +67,6 @@ export class TenantReadinessService {
       if (!tenant) throw new Error("Tenant readiness is unavailable.");
       const checks = [
         {
-          code: "identity_verified",
-          complete: session.userStatus === "active",
-          requiredForActivation: true,
-        },
-        {
           code: "public_slug",
           complete: tenant.normalizedSlug.length > 0,
           requiredForActivation: true,

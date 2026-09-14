@@ -2,13 +2,29 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getPublicCatalog } from "@/features/shop/menu/services/menu.service";
+import { PublicTenantService } from "@/features/tenancy/application/public-tenant.service";
+import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
+import { PublicDirectoryView } from "@/features/directory/web/PublicDirectoryView";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const tenantSlug =
-    (await headers()).get("x-komanda-tenant-slug");
-  if (!tenantSlug) notFound();
+  const requestHeaders = await headers();
+  const tenantSlug = requestHeaders.get("x-komanda-tenant-slug");
+
+  if (!tenantSlug) {
+    const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+    const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
+    const service = new PublicTenantService();
+    const rawTenants = await service.listActiveDirectory();
+    const directoryTenants = rawTenants.map((t) => ({
+      ...t,
+      storefrontUrl: buildStorefrontUrl(t.slug, { host, protocol }),
+    }));
+
+    return <PublicDirectoryView tenants={directoryTenants} />;
+  }
+
   let catalog;
   try {
     catalog = await getPublicCatalog(tenantSlug);
@@ -32,7 +48,7 @@ export default async function Home() {
         </p>
         <Link
           href="/order"
-          className="rounded-full border-4 border-black bg-[var(--color-accent-primary)] px-12 py-5 text-3xl font-black uppercase tracking-wider text-[var(--color-accent-secondary)] shadow-[0_10px_0_0_black]"
+          className="rounded-full border-4 border-black bg-[var(--color-accent-primary)] px-12 py-5 text-3xl font-black uppercase tracking-tighter text-[var(--color-accent-secondary)] shadow-[0_10px_0_0_black]"
         >
           Ver menú
         </Link>

@@ -8,7 +8,7 @@ const databaseTest = process.env.DATABASE_TEST_INTEGRATION === "1" ? it : it.ski
 describe("catalog tenant isolation", () => {
   it("declares tenant-composite relationships, optimistic versions and forced RLS", async () => {
     const migration = await readFile(
-      "drizzle/0006_multitenant_catalog.sql",
+      "drizzle/0000_initial_schema.sql",
       "utf8",
     );
     for (const table of [
@@ -24,10 +24,10 @@ describe("catalog tenant isolation", () => {
       expect(migration).toContain(`ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`);
     }
     expect(migration).toContain(
-      'FOREIGN KEY ("tenant_id", "category_id") REFERENCES "catalog_categories"("tenant_id", "id")',
+      'FOREIGN KEY ("tenant_id","category_id") REFERENCES "public"."catalog_categories"("tenant_id","id")',
     );
     expect(migration).toContain(
-      'FOREIGN KEY ("tenant_id", "item_id") REFERENCES "catalog_items"("tenant_id", "id")',
+      'FOREIGN KEY ("tenant_id","item_id") REFERENCES "public"."catalog_items"("tenant_id","id")',
     );
     expect(migration).toContain('"version" integer DEFAULT 1 NOT NULL');
   });

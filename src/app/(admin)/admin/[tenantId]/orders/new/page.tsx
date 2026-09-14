@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { CatalogService } from "@/features/catalog/application/catalog.service";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
-import { AdminDirectOrderForm } from "@/features/admin-panel/components/AdminDirectOrderForm";
+import { canAccess } from "@/lib/authorization/permissions";
+import { AdminDirectOrderForm } from "@/features/orders/web/AdminDirectOrderForm";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
 export default async function NewDirectOrderPage({
@@ -18,6 +19,10 @@ export default async function NewDirectOrderPage({
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);
   } catch {
+    notFound();
+  }
+
+  if (!canAccess(authority.membership.role, "pedidos")) {
     notFound();
   }
 

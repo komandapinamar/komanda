@@ -58,6 +58,31 @@ export const printAgents = pgTable(
   ],
 );
 
+export const printAgentPairings = pgTable(
+  "print_agent_pairings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    locationId: uuid("location_id").notNull(),
+    codeDigest: text("code_digest").notNull(),
+    status: text("status").$type<"pending" | "claimed" | "expired">().default("pending").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+    claimedAgentId: uuid("claimed_agent_id"),
+    ...timestamps,
+  },
+  (table) => [
+    foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.id], name: "print_pairings_tenant_fk" }).onDelete("restrict"),
+    foreignKey({ columns: [table.tenantId, table.locationId], foreignColumns: [tenantLocations.tenantId, tenantLocations.id], name: "print_pairings_location_fk" }).onDelete("restrict"),
+    foreignKey({ columns: [table.tenantId, table.claimedAgentId], foreignColumns: [printAgents.tenantId, printAgents.id], name: "print_pairings_agent_fk" }).onDelete("restrict"),
+    unique("print_pairings_tenant_id_id_key").on(table.tenantId, table.id),
+    uniqueIndex("print_pairings_code_digest_uidx").on(table.codeDigest),
+    index("print_pairings_tenant_location_status_idx").on(table.tenantId, table.locationId, table.status),
+    check("print_pairings_attempts_check", sql`${table.attempts} >= 0 AND ${table.attempts} <= 5`),
+    check("print_pairings_status_check", sql`${table.status} in ('pending', 'claimed', 'expired')`),
+  ],
+);
+
 export const tenantPrintJobs = pgTable(
   "print_jobs",
   {

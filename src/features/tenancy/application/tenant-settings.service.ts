@@ -44,6 +44,9 @@ const settingsPatchSchema = z
     contactPhone: nullableTrimmedString,
     salesEnabled: z.boolean().optional(),
     printingEnabled: z.boolean().optional(),
+    menuTheme: z.enum(["classic", "reels"]).optional(),
+    preset: z.enum(["gastronomy", "express_retail"]).optional(),
+    slackCashAlertWebhookUrl: z.string().trim().url().nullable().optional(),
     timezone: z.string().trim().min(1).optional(),
   })
   .strict();
@@ -61,6 +64,9 @@ function serializeSettings(input: {
     contactPhone: input.settings.contactPhone,
     salesEnabled: input.settings.salesEnabled,
     printingEnabled: input.settings.printingEnabled,
+    menuTheme: input.settings.menuTheme,
+    slackCashAlertWebhookUrl: input.settings.slackCashAlertWebhookUrl,
+    preset: input.tenant.preset,
     currency: input.tenant.defaultCurrency,
     timezone: input.tenant.defaultTimezone,
     version: input.settings.version,
@@ -107,11 +113,12 @@ export class TenantSettingsService {
         }
       }
 
-      if (patch.timezone) {
+      if (patch.timezone || patch.preset) {
         await transaction
           .update(tenants)
           .set({
-            defaultTimezone: patch.timezone,
+            ...(patch.timezone ? { defaultTimezone: patch.timezone } : {}),
+            ...(patch.preset ? { preset: patch.preset } : {}),
             version: sql`${tenants.version} + 1`,
             updatedAt: new Date(),
           })
@@ -223,6 +230,10 @@ export class TenantSettingsService {
         : {}),
       ...(patch.printingEnabled !== undefined
         ? { printingEnabled: patch.printingEnabled }
+        : {}),
+      ...(patch.menuTheme !== undefined ? { menuTheme: patch.menuTheme } : {}),
+      ...(patch.slackCashAlertWebhookUrl !== undefined
+        ? { slackCashAlertWebhookUrl: patch.slackCashAlertWebhookUrl }
         : {}),
     };
   }

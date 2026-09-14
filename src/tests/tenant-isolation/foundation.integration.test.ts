@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 describe("multi-tenant foundation migration", () => {
   it("declares default-deny FORCE RLS and a non-bypass runtime role", async () => {
     const migration = await readFile(
-      resolve(process.cwd(), "drizzle/0003_multitenant_platform_expand.sql"),
+      resolve(process.cwd(), "drizzle/0000_initial_schema.sql"),
       "utf8",
     );
     expect(migration).toContain("komanda_runtime");

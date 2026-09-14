@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AddMemberSchema,
   ChangeRoleSchema,
+  DeleteMemberSchema,
   RevokeMemberSchema,
   RoleSchema,
 } from "@/features/members/domain/member.schemas";
@@ -22,17 +23,23 @@ describe("Member schemas", () => {
   it("validates AddMemberSchema", () => {
     const valid = AddMemberSchema.parse({
       email: "user@test.com",
+      password: "password123",
       role: "admin",
     });
     expect(valid.email).toBe("user@test.com");
+    expect(valid.password).toBe("password123");
     expect(valid.role).toBe("admin");
 
     expect(() =>
-      AddMemberSchema.parse({ email: "not-an-email", role: "admin" }),
+      AddMemberSchema.parse({ email: "not-an-email", password: "password123", role: "admin" }),
     ).toThrow();
 
     expect(() =>
-      AddMemberSchema.parse({ email: "user@test.com", role: "superadmin" }),
+      AddMemberSchema.parse({ email: "user@test.com", password: "short", role: "admin" }),
+    ).toThrow();
+
+    expect(() =>
+      AddMemberSchema.parse({ email: "user@test.com", password: "password123", role: "superadmin" }),
     ).toThrow();
   });
 
@@ -52,14 +59,14 @@ describe("Member schemas", () => {
     ).toThrow();
   });
 
-  it("validates RevokeMemberSchema", () => {
-    const valid = RevokeMemberSchema.parse({
+  it("validates DeleteMemberSchema and RevokeMemberSchema", () => {
+    const valid = DeleteMemberSchema.parse({
       membershipId: "00000000-0000-4000-8000-000000000001",
     });
     expect(valid.membershipId).toBe("00000000-0000-4000-8000-000000000001");
 
     expect(() =>
-      RevokeMemberSchema.parse({ membershipId: "" }),
+      DeleteMemberSchema.parse({ membershipId: "" }),
     ).toThrow();
   });
 });

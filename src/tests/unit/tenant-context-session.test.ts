@@ -141,4 +141,112 @@ describe("revocable session service", () => {
       service.authorizeTenant("valid-token", "tenant-a"),
     ).rejects.toBeInstanceOf(TenantAccessDeniedError);
   });
+
+  it("returns only active authorized tenants and their active primary locations for mobile context", async () => {
+    const repository: SessionRepository = {
+      findCredentialByEmail: vi.fn(),
+      insertSession: vi.fn(),
+      findSessionByDigest: vi.fn(async () => ({
+        sessionId: "session-m",
+        userId: "user-m",
+        email: "op@komanda.test",
+        userStatus: "active" as const,
+        expiresAt: new Date("2026-09-04T12:00:00.000Z"),
+        revokedAt: null,
+      })),
+      touchSession: vi.fn(),
+      revokeSession: vi.fn(),
+      findLiveMembership: vi.fn(),
+      listLiveMemberships: vi.fn(async () => [
+        {
+          id: "mem-1",
+          tenantId: "tenant-active-1",
+          role: "admin" as const,
+          status: "active" as const,
+          tenantStatus: "active" as const,
+          tenantName: "Pizzeria Uno",
+          tenantSlug: "pizzeria-uno",
+        },
+        {
+          id: "mem-2",
+          tenantId: "tenant-suspended",
+          role: "owner" as const,
+          status: "active" as const,
+          tenantStatus: "suspended" as const,
+          tenantName: "Suspended Bar",
+          tenantSlug: "suspended-bar",
+        },
+        {
+          id: "mem-3",
+          tenantId: "tenant-onboarding",
+          role: "owner" as const,
+          status: "active" as const,
+          tenantStatus: "onboarding" as const,
+          tenantName: "New Coffee",
+          tenantSlug: "new-coffee",
+        },
+        {
+          id: "mem-4",
+          tenantId: "tenant-revoked-mem",
+          role: "employee" as const,
+          status: "revoked" as const,
+          tenantStatus: "active" as const,
+          tenantName: "Old Job",
+          tenantSlug: "old-job",
+        },
+        {
+          id: "mem-5",
+          tenantId: "tenant-active-no-loc",
+          role: "employee" as const,
+          status: "active" as const,
+          tenantStatus: "active" as const,
+          tenantName: "Pizzeria Dos",
+          tenantSlug: "pizzeria-dos",
+        },
+      ]),
+      findActivePrimaryLocation: vi.fn(async (tenantId: string) => {
+        if (tenantId === "tenant-active-1") {
+          return {
+            id: "loc-1",
+            name: "Sucursal Centro",
+            timezone: "America/Argentina/Buenos_Aires",
+            status: "active" as const,
+          };
+        }
+        return null;
+      }),
+    };
+
+    const service = new SessionService(
+      repository,
+      async () => true,
+      () => new Date("2026-09-03T12:00:00.000Z"),
+    );
+
+    const context = await service.getAuthorizedMobileContext("valid-bearer-token");
+
+    // Only active tenant with active membership should be included
+    expect(context).toHaveLength(2);
+    expect(context[0]).toEqual({
+      id: "tenant-active-1",
+      name: "Pizzeria Uno",
+      slug: "pizzeria-uno",
+      status: "active",
+      role: "admin",
+      primaryLocation: {
+        id: "loc-1",
+        name: "Sucursal Centro",
+        timezone: "America/Argentina/Buenos_Aires",
+        status: "active",
+      },
+    });
+    expect(context[1]).toEqual({
+      id: "tenant-active-no-loc",
+      name: "Pizzeria Dos",
+      slug: "pizzeria-dos",
+      status: "active",
+      role: "employee",
+      primaryLocation: null,
+    });
+  });
 });

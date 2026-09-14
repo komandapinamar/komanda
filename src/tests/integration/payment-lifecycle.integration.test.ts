@@ -44,7 +44,7 @@ describe("payment lifecycle", () => {
     const {
       MercadoPagoCheckoutClient,
       PaymentSessionProviderUnavailableError,
-    } = await import("@/features/shop/payments/application/payment-session.service");
+    } = await import("@/features/payments/application/payment-session.service");
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 504 })));
 
     await expect(
@@ -76,7 +76,7 @@ describe("payment lifecycle", () => {
 
   it("keeps payment sessions OAuth-only and deny-by-default on online_payments", async () => {
     const source = await readFile(
-      "features/shop/payments/application/payment-session.service.ts",
+      "features/payments/application/payment-session.service.ts",
       "utf8",
     );
 
@@ -90,7 +90,7 @@ describe("payment lifecycle", () => {
   it("scopes persisted payment idempotency to a single tenant cart", async () => {
     const [schemaSource, migrationSource, repositorySource] = await Promise.all([
       readFile("db/schema/commerce.ts", "utf8"),
-      readFile("drizzle/0008_multitenant_payments.sql", "utf8"),
+      readFile("drizzle/0000_initial_schema.sql", "utf8"),
       readFile("features/payments/infrastructure/integration.repository.ts", "utf8"),
     ]);
 
@@ -98,7 +98,7 @@ describe("payment lifecycle", () => {
       "payment_attempts_tenant_idempotency_key",
     );
     expect(migrationSource).toContain(
-      'UNIQUE ("tenant_id", "idempotency_key")',
+      'UNIQUE("tenant_id","idempotency_key")',
     );
     expect(repositorySource).toContain("Idempotency key belongs to another cart");
   });

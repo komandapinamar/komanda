@@ -17,6 +17,19 @@ describe("PostgreSQL 17 provider compatibility", () => {
     expect(source).not.toContain("neon-serverless");
   });
 
+  it("keeps the orders tender baseline aligned with the runtime contract", async () => {
+    const source = await readFile("drizzle/0000_initial_schema.sql", "utf8");
+    const orders = source.slice(
+      source.indexOf('CREATE TABLE "orders"'),
+      source.indexOf("--> statement-breakpoint", source.indexOf('CREATE TABLE "orders"')),
+    );
+
+    expect(orders).toContain('"tender" text DEFAULT \'cash\' NOT NULL');
+    expect(orders).toContain(
+      'CONSTRAINT "orders_tender_check" CHECK ("orders"."tender" in (\'cash\', \'posnet\'))',
+    );
+  });
+
   databaseTest("preserves role, RLS and tenant idempotency invariants", async () => {
     const directUrl = process.env.DATABASE_DIRECT_URL;
     const runtimeUrl = process.env.DATABASE_URL;
@@ -38,6 +51,33 @@ describe("PostgreSQL 17 provider compatibility", () => {
       const versionNumber = Number(version.rows[0]?.server_version_num);
       expect(versionNumber).toBeGreaterThanOrEqual(170_000);
       expect(versionNumber).toBeLessThan(180_000);
+
+      const tenderColumn = await owner.query<{
+        is_nullable: "YES" | "NO";
+        column_default: string | null;
+      }>(`
+        select is_nullable, column_default
+        from information_schema.columns
+        where table_schema = 'public' and table_name = 'orders' and column_name = 'tender'
+      `);
+      expect(tenderColumn.rows).toEqual([
+        expect.objectContaining({
+          is_nullable: "NO",
+          column_default: expect.stringContaining("cash"),
+        }),
+      ]);
+
+      const tenderConstraint = await owner.query<{ definition: string }>(`
+        select pg_get_constraintdef(oid) as definition
+        from pg_constraint
+        where conname = 'orders_tender_check'
+      `);
+      expect(tenderConstraint.rows).toEqual([
+        expect.objectContaining({
+          definition: expect.stringContaining("'cash'::text"),
+        }),
+      ]);
+      expect(tenderConstraint.rows[0]?.definition).toContain("'posnet'::text");
 
       const runtimeRole = await runtime.query<{
         current_user: string;

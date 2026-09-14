@@ -11,21 +11,19 @@ consumes versioned Core contracts and never accesses this database directly. Fut
 Expo or other mobile clients consume those same contracts rather than depend on
 Next.js pages or Server Actions.
 
-See [the project constitution](.specify/memory/constitution.md) for repository
-ownership, fault-containment, tenant-isolation, performance, and delivery rules.
-
 ## Current Runtime
 
 Core is the operational source of truth. Storefronts, catalog, authentication,
 payments, orders and printing use tenant-scoped PostgreSQL APIs. The former Strapi,
 global-admin, global-payment and global-print paths are not part of the runtime.
 
+link a figma: <https://www.figma.com/design/FOgLkQeRY7oDcvaONt6H5A/komanda?node-id=17-48&t=KNZSgvzYHZo4vrVB-1>
+
 ## Database
 
 Database infrastructure is declared with OpenTofu under
-[`infra/database`](infra/database/README.md). Neon is restricted to synthetic
-development; independent Azure PostgreSQL instances serve staging and
-production. The non-owner runtime role is created separately with
+[`../infra/database`](../infra/database/gcp/RUNBOOK.md). GCP Cloud SQL PostgreSQL
+serves staging and production. The non-owner runtime role is created separately with
 `npm --prefix src run db:bootstrap-roles` and is verified without `BYPASSRLS`.
 
 Never apply database infrastructure with local state or `-auto-approve` in
@@ -43,54 +41,24 @@ Health checks are available at `/api/health` and report database, object storage
 Mercado Pago, outbox and printing independently. Rollback uses a Core-compatible
 release or a forward fix; the legacy system is not a rollback target.
 
-Using Neon + Drizzle inside chikenstop-nextjs
-
-- Table schema in /db/schema.ts
-- To push schema in the neon table should run
-
-```bash
-npm run db:push
-```
-
-(this is in case there are changes in temporary_carts table)
-
-- Environment variable: CART_TTL_MINUTES to indicate the time of the cart living in the database.
-  - in times of a lot of usage may want to reduce it to a few minutes
-- For persistence in the navigatos it's not using the DB but saves it in localStorage
-
 # MercadoPago API
 
 Each tenant connects its seller account with OAuth. Payment sessions and signed
 webhooks use the tenant integration and `KOMANDA_PUBLIC_BASE_URL`.
 
+## Local Printing
+
+`komanda-desktop` is the supported local agent for network ESC/POS printers. Pair it
+from the Backoffice with a one-time four-digit code, configure enabled printer
+profiles, and install the Windows or Arch Linux package. The agent keeps its token in
+OS-protected storage, polls the durable Core print queue, and sends independent TCP
+connections to printer port 9100. Telpo-integrated printers remain owned by the
+Android client and are never discovered by the desktop agent.
+
 # Data Modelling
 
 The authoritative model is PostgreSQL. Every catalog, cart, payment, order and
 printing record carries an explicit tenant boundary and is protected by RLS.
-
----
-
-# VPS Configuration (OPTIONAL)
->
->[!NOTE]
->This system was tested used with dokploy. For now, migrations and configurations will be centered around this tool.
-
-### Migrating Dokploy to a different VPS
-
-Transfer the entire filesystem using rsync:
-
-```bash
-rsync -aAXv --delete \ --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found","/swapfile"} \ -e "ssh -i /path/to/private_key" user@source_vps_ip:/ /
-```
-
-After the migration, update the server IP in the Dokploy database:
-
-```sql
-UPDATE admin SET "serverIp" = 'new_server_ip' WHERE "serverIp" = 'old_server_ip';
-```
-
->[!IMPORTANT]
->Environment variables should be saved in advance for each service running inside dokploy.
 
 ## Deployment Configuration
 
@@ -99,9 +67,6 @@ Core uses the environment examples in `src/.env.staging.example` and
 `npm --prefix src run db:verify-roles:test` with the runtime URL, then deploy the
 application using `DATABASE_URL` as `komanda_runtime`. The runtime role must never
 be the migration owner and must not have `BYPASSRLS`.
-
-The database infrastructure and Azure staging gate are documented in
-`infra/database/README.md` and `infra/database/azure/RUNBOOK.md`.
 
 # Infrasture and use cases
 

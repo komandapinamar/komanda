@@ -12,6 +12,7 @@ import {
   IdempotencyInProgressError,
 } from "@/lib/idempotency/idempotency.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
+import { PrintPairingEntitlementError, PrintPairingNotFoundError } from "@/features/printing/application/print-pairing.service";
 
 export function bearerTokenFromRequest(request: Request) {
   const authorization = request.headers.get("authorization")?.trim();
@@ -23,6 +24,7 @@ export function bearerTokenFromRequest(request: Request) {
 export function printingErrorResponse(error: unknown, correlationId: string) {
   if (
     error instanceof PrintAgentNotFoundError ||
+    error instanceof PrintPairingNotFoundError ||
     error instanceof PrintJobNotFoundError ||
     (error instanceof Error && error.message === "INVALID_SESSION")
   ) {
@@ -40,6 +42,7 @@ export function printingErrorResponse(error: unknown, correlationId: string) {
 
   if (
     error instanceof PrintAgentEntitlementError ||
+    error instanceof PrintPairingEntitlementError ||
     error instanceof PrintJobConflictError ||
     error instanceof IdempotencyConflictError ||
     error instanceof IdempotencyInProgressError

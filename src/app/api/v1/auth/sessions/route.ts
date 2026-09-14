@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { NextResponse } from "next/server";
 import {
   InvalidCredentialsError,
@@ -14,7 +14,10 @@ import { correlationIdFromRequest } from "@/lib/observability/request-context";
 import { problemResponse } from "@/lib/http/problem";
 
 const loginSchema = z
-  .object({ email: z.email().max(320), password: z.string().min(8).max(128) })
+  .object({
+    email: z.string().trim().email().max(320),
+    password: z.string().min(8).max(128),
+  })
   .strict();
 
 export async function POST(request: Request) {
@@ -41,16 +44,31 @@ export async function POST(request: Request) {
     );
     return response;
   } catch (error) {
+    if (error instanceof ZodError) {
+      return problemResponse({
+        status: 422,
+        title: "Validation failed",
+        code: "VALIDATION_FAILED",
+        detail: error.issues[0]?.message ?? "Formato de credenciales inválido",
+        correlationId,
+      });
+    }
+
+    if (error instanceof InvalidCredentialsError) {
+      return problemResponse({
+        status: 401,
+        title: "Credenciales incorrectas",
+        code: "INVALID_CREDENTIALS",
+        detail: "El correo electrónico o la contraseña ingresada no son correctos.",
+        correlationId,
+      });
+    }
+
     return problemResponse({
-      status: error instanceof InvalidCredentialsError ? 401 : 422,
-      title:
-        error instanceof InvalidCredentialsError
-          ? "Unauthorized"
-          : "Validation failed",
-      code:
-        error instanceof InvalidCredentialsError
-          ? "INVALID_CREDENTIALS"
-          : "VALIDATION_FAILED",
+      status: 500,
+      title: "Error al iniciar sesión",
+      code: "INTERNAL_ERROR",
+      detail: error instanceof Error ? error.message : "Error inesperado",
       correlationId,
     });
   }

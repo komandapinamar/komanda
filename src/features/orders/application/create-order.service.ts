@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { tenants, tenantLocations } from "@/db/schema";
+import { tenants, tenantLocations, tenantSettings, cashRegisterMovements } from "@/db/schema";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
@@ -10,6 +10,8 @@ import { centsToMoney, revalidateCartSelection } from "@/features/cart/domain/ca
 import { OrderConflictError, OrderNotFoundError } from "./order-errors";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import { PrintJobService } from "@/features/printing/application/print-job.service";
+import { BillingRepository } from "@/features/billing/infrastructure/billing.repository";
+import { SlackAlertService } from "@/features/integrations/application/slack-alert.service";
 
 const customerSchema = z
   .object({
@@ -55,7 +57,9 @@ const directOrderItemSchema = z
 const createDirectOrderSchemaFromItems = z
   .object({
     items: z.array(directOrderItemSchema).min(1).max(100),
-    customer: customerSchema,
+    customer: customerSchema.optional().default({ name: "Cliente Autoservicio" }),
+    tender: z.enum(["cash", "posnet"]).default("cash"),
+    paymentStatus: z.enum(["paid", "pending"]).default("paid"),
     notes: z
       .preprocess(
         (value) =>
@@ -85,7 +89,8 @@ export class CreateOrderService {
       const { order, created } = await repository.createFromCartSnapshot({
         cart,
         source: "admin_direct",
-        paymentStatus: "pending",
+        paymentStatus: "paid",
+        tender: "cash",
         customer: request.customer,
         notes: request.notes,
         idempotencyKey,
@@ -94,6 +99,19 @@ export class CreateOrderService {
       });
 
       if (created) {
+        if (typeof (transaction as { insert?: unknown }).insert === "function") {
+          await transaction.insert(cashRegisterMovements).values({
+            tenantId: context.tenantId,
+            locationId: order.locationId,
+            orderId: order.id,
+            type: "sale_deposit",
+            amount: order.total,
+            occurredAt: new Date(),
+            recordedByUserId:
+              context.actor.kind === "user" ? context.actor.userId : null,
+            idempotencyKey: `cash_deposit:${order.id}`,
+          });
+        }
         await appendAuditEvent(transaction, context, {
           action: "order.create_direct",
           resourceType: "order",
@@ -122,15 +140,20 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        try {
-          await new PrintJobService().enqueueOrderTicketInTransaction(
-            transaction,
-            context,
-            order,
-          );
-        } catch (printError) {
-          console.warn("[create-order] Failed to enqueue print job:", printError);
-        }
+        await new PrintJobService().enqueueOrderTicketInTransaction(
+          transaction,
+          context,
+          order,
+        );
+        await new BillingRepository(transaction, context.tenantId).issueDocument({
+          orderId: order.id,
+          locationId: order.locationId,
+          documentType: "ticket_interno",
+          customerDocType: "CF",
+          customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+            ? String(order.customer.name)
+            : undefined,
+        });
       }
 
       return order;
@@ -220,7 +243,8 @@ export class CreateOrderService {
       const { order, created } = await orderRepo.createFromCartSnapshot({
         cart,
         source: "admin_direct",
-        paymentStatus: "pending",
+        paymentStatus: request.paymentStatus,
+        tender: request.tender,
         customer: request.customer as Record<string, unknown>,
         notes: request.notes,
         idempotencyKey,
@@ -229,6 +253,19 @@ export class CreateOrderService {
       });
 
       if (created) {
+        if (request.tender === "cash" && request.paymentStatus === "paid") {
+          await transaction.insert(cashRegisterMovements).values({
+            tenantId: context.tenantId,
+            locationId: order.locationId,
+            orderId: order.id,
+            type: "sale_deposit",
+            amount: order.total,
+            occurredAt: new Date(),
+            recordedByUserId:
+              context.actor.kind === "user" ? context.actor.userId : null,
+            idempotencyKey: `cash_deposit:${order.id}`,
+          });
+        }
         await appendAuditEvent(transaction, context, {
           action: "order.create_direct",
           resourceType: "order",
@@ -257,14 +294,41 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        try {
-          await new PrintJobService().enqueueOrderTicketInTransaction(
-            transaction,
-            context,
-            order,
-          );
-        } catch (printError) {
-          console.warn("[create-order] Failed to enqueue print job:", printError);
+        await new PrintJobService().enqueueOrderTicketInTransaction(
+          transaction,
+          context,
+          order,
+        );
+        if (request.paymentStatus === "paid") {
+          await new BillingRepository(transaction, context.tenantId).issueDocument({
+            orderId: order.id,
+            locationId: order.locationId,
+            customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+              ? String(order.customer.name)
+              : undefined,
+          });
+        }
+
+        if (request.tender === "cash") {
+          const [settings] = await transaction
+            .select({ webhook: tenantSettings.slackCashAlertWebhookUrl })
+            .from(tenantSettings)
+            .where(eq(tenantSettings.tenantId, context.tenantId))
+            .limit(1);
+
+          if (settings?.webhook) {
+            void new SlackAlertService().dispatchCashOrderAlert({
+              webhookUrl: settings.webhook,
+              ticketNumber: order.purchaseNumber,
+              total: order.total,
+              currency: order.currency,
+              items: lines.map((l) => ({
+                name: l.name,
+                quantity: l.quantity,
+                lineTotal: l.lineTotal,
+              })),
+            });
+          }
         }
       }
 
@@ -337,15 +401,20 @@ export class CreateOrderService {
             paymentStatus: order.paymentStatus,
           },
         });
-        try {
-          await new PrintJobService().enqueueOrderTicketInTransaction(
-            transaction,
-            context,
-            order,
-          );
-        } catch (printError) {
-          console.warn("[create-order] Failed to enqueue print job:", printError);
-        }
+        await new PrintJobService().enqueueOrderTicketInTransaction(
+          transaction,
+          context,
+          order,
+        );
+        await new BillingRepository(transaction, context.tenantId).issueDocument({
+          orderId: order.id,
+          locationId: order.locationId,
+          documentType: "ticket_interno",
+          customerDocType: "CF",
+          customerName: typeof order.customer === "object" && order.customer && "name" in order.customer
+            ? String(order.customer.name)
+            : undefined,
+        });
       }
 
       return order;

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import AdminLoginForm from "@/features/admin-panel/components/AdminLoginForm";
+import AdminLoginForm from "@/features/identity/web/AdminLoginForm";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 

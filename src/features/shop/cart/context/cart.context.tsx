@@ -147,6 +147,13 @@ export function CartProvider({
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("komanda:cart_add", {
+          detail: { itemId: item.documentId },
+        }),
+      );
+    }
     setItems((currentItems) => {
       const existingItem = currentItems.find(
         (cartLine) => cartLine.item.documentId === item.documentId,
@@ -301,8 +308,12 @@ export function CartProvider({
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
+export function useOptionalCart() {
+  return useContext(CartContext);
+}
+
 export function useCart() {
-  const context = useContext(CartContext);
+  const context = useOptionalCart();
 
   if (!context) {
     throw new Error("useCart must be used inside a CartProvider");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function PrintingIntegrationPanel({
   tenantId,
@@ -11,29 +11,41 @@ export function PrintingIntegrationPanel({
 }) {
   const [name, setName] = useState("Cocina principal");
   const [agentId, setAgentId] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [pairing, setPairing] = useState<{ id: string; code: string; expiresAt: string } | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function enroll() {
+  async function createPairing() {
     setMessage(null);
-    setToken(null);
-    const response = await fetch(`/api/v1/tenants/${tenantId}/print-agents`, {
+    const response = await fetch(`/api/v1/tenants/${tenantId}/print-pairings`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": crypto.randomUUID(),
       },
-      body: JSON.stringify({ locationId, name }),
+      body: JSON.stringify({ locationId }),
     });
     if (!response.ok) {
-      setMessage("No se pudo enrolar el agente de impresión.");
+      setMessage("No se pudo crear el emparejamiento.");
       return;
     }
-    const body = (await response.json()) as { agentId: string; token: string };
-    setAgentId(body.agentId);
-    setToken(body.token);
-    setMessage("Agente enrolado.");
+    const body = (await response.json()) as { pairingId: string; code: string; expiresAt: string };
+    setPairing({ id: body.pairingId, code: body.code, expiresAt: body.expiresAt });
+    setStatus("pending");
+    setMessage("Enter this one-time code in Komanda Desktop.");
   }
+
+  useEffect(() => {
+    if (!pairing || status !== "pending") return;
+    const timer = window.setInterval(async () => {
+      const response = await fetch(`/api/v1/tenants/${tenantId}/print-pairings/${pairing.id}`);
+      if (!response.ok) return;
+      const body = (await response.json()) as { status: string; agentId: string | null };
+      setStatus(body.status);
+      if (body.agentId) { setAgentId(body.agentId); setPairing(null); setMessage("Desktop agent paired."); }
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [pairing, status, tenantId]);
 
   async function revoke() {
     if (!agentId) return;
@@ -47,7 +59,8 @@ export function PrintingIntegrationPanel({
       return;
     }
     setAgentId(null);
-    setToken(null);
+    setPairing(null);
+    setStatus(null);
     setMessage("Agente revocado.");
   }
 
@@ -68,29 +81,20 @@ export function PrintingIntegrationPanel({
       </label>
       <button
         type="button"
-        onClick={enroll}
+        onClick={createPairing}
         className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950"
       >
-        Enrolar agente
+        Generate pairing code
       </button>
-      {token ? (
+      {pairing ? (
         <div className="space-y-2">
-          <p className="text-sm text-zinc-400">Token del agente</p>
-          <textarea
-            readOnly
-            value={token}
-            rows={3}
-            className="w-full rounded-md border border-zinc-700 bg-zinc-950 p-3 font-mono text-sm text-zinc-100"
-          />
-          <button
-            type="button"
-            onClick={revoke}
-            className="rounded-md border border-red-400 px-4 py-2 text-sm font-semibold text-red-200"
-          >
-            Revocar agente
-          </button>
+          <p className="text-sm text-zinc-400">One-time pairing code</p>
+          <p className="font-mono text-4xl tracking-[0.4em] text-amber-300">{pairing.code}</p>
+          <p className="text-xs text-zinc-500">Expires {new Date(pairing.expiresAt).toLocaleTimeString()}</p>
         </div>
       ) : null}
+      {agentId && !pairing ? <p className="text-sm text-zinc-400">Paired agent: {agentId} ({status ?? "active"})</p> : null}
+      {agentId && !pairing ? <button type="button" onClick={revoke} className="rounded-md border border-red-400 px-4 py-2 text-sm font-semibold text-red-200">Revoke agent</button> : null}
     </section>
   );
 }
