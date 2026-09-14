@@ -32,6 +32,12 @@ export function TenantSettingsPanel({
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [message, setMessage] = useState<string | null>(null);
+  const [tenantType, setTenantType] = useState<
+    "gastronomy" | "express_retail"
+  >(initialSettings.preset ?? "gastronomy");
+  const [menuTheme, setMenuTheme] = useState<"classic" | "reels">(
+    initialSettings.menuTheme ?? "classic",
+  );
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,6 +71,8 @@ export function TenantSettingsPanel({
         }),
       )) as TenantSettingsView;
       setSettings(updated);
+      setTenantType(updated.preset ?? "gastronomy");
+      setMenuTheme(updated.menuTheme ?? "classic");
       setMessage("Configuración guardada.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error inesperado.");
@@ -134,6 +142,7 @@ export function TenantSettingsPanel({
               value="gastronomy"
               defaultChecked={(settings.preset ?? "gastronomy") === "gastronomy"}
               className="mt-0.5 accent-[var(--color-accent-tertiary)]"
+              onChange={() => setTenantType("gastronomy")}
             />
             <div>
               <span className="block text-sm font-medium text-zinc-100">Gastronomía (Komanda POS)</span>
@@ -149,6 +158,7 @@ export function TenantSettingsPanel({
               value="express_retail"
               defaultChecked={settings.preset === "express_retail"}
               className="mt-0.5 accent-[var(--color-accent-tertiary)]"
+              onChange={() => setTenantType("express_retail")}
             />
             <div>
               <span className="block text-sm font-medium text-zinc-100">Autoservicio / Kiosco (Komanda Kiosk)</span>
@@ -159,48 +169,53 @@ export function TenantSettingsPanel({
           </label>
         </div>
       </div>
-      <div className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
-        <div>
-          <span className="block text-sm font-medium text-zinc-200">
-            Tema del menú digital (QR)
-          </span>
-          <span className="block text-xs text-zinc-400">
-            Elegí la presentación visual que verán tus clientes al escanear la carta.
-          </span>
+
+      {tenantType === "gastronomy" ? (
+        <div className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+          <div>
+            <span className="block text-sm font-medium text-zinc-200">
+              Tema del menú digital (QR)
+            </span>
+            <span className="block text-xs text-zinc-400">
+              Elegí la presentación visual que verán tus clientes al escanear la carta.
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
+              <input
+                type="radio"
+                name="menuTheme"
+                value="classic"
+                checked={menuTheme === "classic"}
+                className="mt-0.5 accent-[var(--color-accent-tertiary)]"
+                onChange={() => setMenuTheme("classic")}
+              />
+              <div>
+                <span className="block text-sm font-medium text-zinc-100">Clásico</span>
+                <span className="mt-0.5 block text-xs text-zinc-400">
+                  Grilla tradicional con categorías, descripciones y tarjetas de platos.
+                </span>
+              </div>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
+              <input
+                type="radio"
+                name="menuTheme"
+                value="reels"
+                checked={menuTheme === "reels"}
+                className="mt-0.5 accent-[var(--color-accent-tertiary)]"
+                onChange={() => setMenuTheme("reels")}
+              />
+              <div>
+                <span className="block text-sm font-medium text-zinc-100">Reels</span>
+                <span className="mt-0.5 block text-xs text-zinc-400">
+                  Experiencia vertical inmersiva a pantalla completa con videos y fotos dinámicas.
+                </span>
+              </div>
+            </label>
+          </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
-            <input
-              type="radio"
-              name="menuTheme"
-              value="classic"
-              defaultChecked={(settings.menuTheme ?? "classic") === "classic"}
-              className="mt-0.5 accent-[var(--color-accent-tertiary)]"
-            />
-            <div>
-              <span className="block text-sm font-medium text-zinc-100">Clásico</span>
-              <span className="mt-0.5 block text-xs text-zinc-400">
-                Grilla tradicional con categorías, descripciones y tarjetas de platos.
-              </span>
-            </div>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
-            <input
-              type="radio"
-              name="menuTheme"
-              value="reels"
-              defaultChecked={settings.menuTheme === "reels"}
-              className="mt-0.5 accent-[var(--color-accent-tertiary)]"
-            />
-            <div>
-              <span className="block text-sm font-medium text-zinc-100">Reels</span>
-              <span className="mt-0.5 block text-xs text-zinc-400">
-                Experiencia vertical inmersiva a pantalla completa con videos y fotos dinámicas.
-              </span>
-            </div>
-          </label>
-        </div>
-      </div>
+      ) : null}
       <div className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
         <label className="grid gap-1">
           <span className="text-sm font-medium text-zinc-200">

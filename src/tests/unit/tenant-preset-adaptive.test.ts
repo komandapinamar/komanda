@@ -43,5 +43,29 @@ describe("Tenant Preset & Backoffice Adaptive Architecture", () => {
     expect(markup).toContain("Autoservicio / Kiosco (Komanda Kiosk)");
     expect(markup).toContain('value="express_retail"');
     expect(markup).toContain('value="gastronomy"');
+    expect(markup).not.toContain("Tema del menú digital (QR)");
+    expect(markup).not.toContain('name="menuTheme"');
+
+    const gastronomyMarkup = renderToStaticMarkup(
+      React.createElement(TenantSettingsPanel, {
+        initialSettings: {
+          tenantId: "11111111-1111-4111-8111-111111111111",
+          contactName: "Luka",
+          contactEmail: "luka@komanda.com",
+          contactPhone: null,
+          salesEnabled: true,
+          printingEnabled: false,
+          preset: "gastronomy",
+          menuTheme: "reels",
+          currency: "ARS",
+          timezone: "America/Argentina/Buenos_Aires",
+          version: 1,
+        },
+      }),
+    );
+
+    expect(gastronomyMarkup).toContain("Tema del menú digital (QR)");
+    expect(gastronomyMarkup).toContain('name="menuTheme"');
+    expect(gastronomyMarkup).toContain('checked="" value="reels"');
   });
 });
