@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import {
   printJobAttempts,
+  printAgents,
   tenantPrintJobs,
   tenantSettings,
 } from "@/db/schema";
@@ -188,6 +189,15 @@ export class PrintJobRepository {
         status: "claimed",
       })
       .onConflictDoNothing();
+    await this.transaction
+      .update(printAgents)
+      .set({ lastSeenAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(printAgents.tenantId, this.tenantId),
+          eq(printAgents.id, currentAgentId),
+        ),
+      );
     return serializeClaim(record);
   }
 
@@ -258,7 +268,10 @@ export class PrintJobRepository {
       .where(
         and(
           eq(tenantPrintJobs.tenantId, this.tenantId),
+          eq(tenantPrintJobs.locationId, currentLocationId),
           eq(tenantPrintJobs.id, input.jobId),
+          eq(tenantPrintJobs.claimedByAgentId, currentAgentId),
+          eq(tenantPrintJobs.attemptCount, input.attemptNumber),
         ),
       )
       .returning();

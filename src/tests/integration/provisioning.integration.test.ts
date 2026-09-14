@@ -86,10 +86,10 @@ describe("provision tenant orchestration", () => {
 
   it("keeps production mock bootstrap hard-disabled", async () => {
     const source = await import("node:fs/promises").then(({ readFile }) =>
-      readFile("scripts/seed-mock-tenant.ts", "utf8"),
+      readFile("scripts/seed-dev-tenant.ts", "utf8"),
     );
     expect(source).toContain('process.env.NODE_ENV === "production"');
-    expect(source).toContain("Mock tenant bootstrap is prohibited");
+    expect(source).toContain("Dev tenant bootstrap is prohibited in production.");
   });
 });
 

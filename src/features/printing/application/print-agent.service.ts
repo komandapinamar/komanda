@@ -49,7 +49,7 @@ function constantTimeEqual(left: string, right: string) {
   );
 }
 
-function makeToken() {
+export function makePrintAgentToken() {
   const prefix = randomBytes(8).toString("hex");
   const secret = randomBytes(32).toString("base64url");
   return {
@@ -111,7 +111,7 @@ export class PrintAgentService {
         return claim.body;
       }
 
-      const token = makeToken();
+       const token = makePrintAgentToken();
       const [agent] = await transaction
         .insert(printAgents)
         .values({

@@ -1,6 +1,8 @@
 import "server-only";
 
+import { and, eq } from "drizzle-orm";
 import { withPlatformServiceTransaction, withTenantTransaction } from "@/db/tenant-transaction";
+import { mpFinancialRecords, tenantOrders } from "@/db/schema";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import {
   IntegrationRepository,
@@ -21,12 +23,39 @@ export type ReceivedMercadoPagoWebhook = {
 export class MercadoPagoWebhookRoutingError extends Error {}
 export class MercadoPagoWebhookProviderError extends Error {}
 
-type MercadoPagoPayment = {
+export type MercadoPagoPaymentFeeDetail = {
+  type: string;
+  amount: number | string;
+  fee_payer?: string;
+};
+
+export type MercadoPagoPaymentTax = {
+  type: string;
+  amount: number | string;
+};
+
+export type MercadoPagoPayment = {
   id: string | number;
   status?: string;
   preference_id?: string | null;
   metadata?: Record<string, unknown> | null;
   date_approved?: string | null;
+  transaction_amount?: number | string;
+  transaction_details?: {
+    net_received_amount?: number | string;
+    total_paid_amount?: number | string;
+  };
+  fee_details?: Array<MercadoPagoPaymentFeeDetail>;
+  taxes_amount?: number | string;
+  taxes?: Array<MercadoPagoPaymentTax>;
+  charges_details?: Array<{
+    type?: string;
+    amounts?: { original?: number | string };
+    name?: string;
+  }>;
+  money_release_date?: string | null;
+  money_release_status?: "pending" | "released" | string | null;
+  date_released?: string | null;
 };
 
 export type MercadoPagoPaymentLookup = {
@@ -178,6 +207,7 @@ export async function receiveMercadoPagoWebhook(input: {
       });
       if (status === "approved" && updated) {
         const orders = new OrderRepository(transaction, context);
+        let targetOrder: { id: string; locationId: string } | null = null;
         const cart = await orders.loadCart(updated.cartId);
         if (cart && cart.status !== "converted") {
           const result = await orders.createFromCartSnapshot({
@@ -190,6 +220,9 @@ export async function receiveMercadoPagoWebhook(input: {
             paymentAttemptId: updated.id,
             approvedAt: updated.processedAt ?? new Date(),
           });
+          if (result.order) {
+            targetOrder = { id: result.order.id, locationId: result.order.locationId };
+          }
           if (result.created) {
             await appendAuditEvent(transaction, context, {
               action: "order.create_paid",
@@ -210,6 +243,107 @@ export async function receiveMercadoPagoWebhook(input: {
               console.warn("[webhook] Failed to enqueue print job:", printError);
             }
           }
+        } else {
+          const [existing] = await transaction
+            .select({ id: tenantOrders.id, locationId: tenantOrders.locationId })
+            .from(tenantOrders)
+            .where(
+              and(
+                eq(tenantOrders.tenantId, account.tenantId),
+                eq(tenantOrders.paymentAttemptId, updated.id),
+              ),
+            )
+            .limit(1);
+          if (existing) {
+            targetOrder = existing;
+          }
+        }
+
+        if (targetOrder) {
+          const rawFeeDetails = Array.isArray(payment.fee_details) ? payment.fee_details : [];
+          const feeDetails = rawFeeDetails.map((f) => ({
+            type: String(f.type || "mercadopago_fee"),
+            amount: Number(f.amount || 0).toFixed(2),
+            feePayer: String(f.fee_payer || "collector"),
+          }));
+
+          const rawTaxesDetails = Array.isArray(payment.taxes) ? payment.taxes : [];
+          const taxesDetails = rawTaxesDetails.map((t) => ({
+            type: String(t.type || "tax"),
+            amount: Number(t.amount || 0).toFixed(2),
+          }));
+
+          const grossNum = payment.transaction_amount != null
+            ? Number(payment.transaction_amount)
+            : Number(attempt.amount);
+          const grossAmount = grossNum.toFixed(2);
+
+          const feeNum = feeDetails.length > 0
+            ? feeDetails.reduce((sum, f) => sum + Number(f.amount), 0)
+            : (payment.transaction_details?.net_received_amount != null
+                ? Math.max(0, grossNum - Number(payment.transaction_details.net_received_amount) - Number(payment.taxes_amount || 0))
+                : 0);
+          const feeAmount = feeNum.toFixed(2);
+
+          const taxesNum = payment.taxes_amount != null
+            ? Number(payment.taxes_amount)
+            : (taxesDetails.length > 0 ? taxesDetails.reduce((sum, t) => sum + Number(t.amount), 0) : 0);
+          const taxesAmount = taxesNum.toFixed(2);
+
+          const netNum = payment.transaction_details?.net_received_amount != null
+            ? Number(payment.transaction_details.net_received_amount)
+            : (grossNum - feeNum - taxesNum);
+          const netReceivedAmount = netNum.toFixed(2);
+
+          const isFeeInclusiveOfTax = Boolean(
+            taxesNum === 0 && feeNum > 0 && taxesDetails.length === 0,
+          );
+
+          const moneyReleaseStatus = payment.money_release_status === "released" ? "released" : "pending";
+          const moneyReleaseExpectedAt = payment.money_release_date ? new Date(payment.money_release_date) : null;
+          const moneyReleasedAt = payment.date_released
+            ? new Date(payment.date_released)
+            : (moneyReleaseStatus === "released" ? new Date() : null);
+          const settlementDate = payment.date_approved ? new Date(payment.date_approved) : new Date();
+
+          await transaction
+            .insert(mpFinancialRecords)
+            .values({
+              tenantId: account.tenantId,
+              locationId: targetOrder.locationId,
+              orderId: targetOrder.id,
+              mpPaymentId: providerPaymentId,
+              grossAmount,
+              feeAmount,
+              feeDetails,
+              taxesAmount,
+              taxesDetails,
+              netReceivedAmount,
+              isFeeInclusiveOfTax,
+              moneyReleaseStatus,
+              moneyReleaseExpectedAt,
+              moneyReleasedAt,
+              settlementDate,
+            })
+            .onConflictDoUpdate({
+              target: mpFinancialRecords.mpPaymentId,
+              set: {
+                locationId: targetOrder.locationId,
+                orderId: targetOrder.id,
+                grossAmount,
+                feeAmount,
+                feeDetails,
+                taxesAmount,
+                taxesDetails,
+                netReceivedAmount,
+                isFeeInclusiveOfTax,
+                moneyReleaseStatus,
+                moneyReleaseExpectedAt,
+                moneyReleasedAt,
+                settlementDate,
+                updatedAt: new Date(),
+              },
+            });
         }
       }
     }

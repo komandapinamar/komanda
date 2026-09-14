@@ -96,10 +96,7 @@ export class ResendVerificationDelivery implements VerificationDelivery {
   }
 
   async deliver(input: VerificationMessage) {
-    const isShadowUserAcceptance = input.publicBaseUrlPath === "/accept-invitation";
-    const path = isShadowUserAcceptance
-      ? "/accept-invitation"
-      : "/api/v1/auth/email-verifications/confirm";
+    const path = input.publicBaseUrlPath ?? "/api/v1/auth/email-verifications/confirm";
 
     const verificationUrl = new URL(path, this.publicBaseUrl);
     verificationUrl.searchParams.set("token", input.token);
@@ -114,12 +111,12 @@ export class ResendVerificationDelivery implements VerificationDelivery {
       body: JSON.stringify({
         from: this.fromEmail,
         to: input.email,
-        subject: `You have been invited to join ${input.tenantName} on Komanda`,
+        subject: `Verify your email for ${input.tenantName} on Komanda`,
         html: `
           <p>Hello,</p>
-          <p>You have been invited to join <strong>${input.tenantName}</strong>.</p>
-          <p>Click the link below to accept the invitation and set up your account:</p>
-          <a href="${verificationUrl.toString()}">Accept Invitation</a>
+          <p>Please verify your email for <strong>${input.tenantName}</strong> on Komanda.</p>
+          <p>Click the link below to verify your account:</p>
+          <a href="${verificationUrl.toString()}">Verify Account</a>
           <p>This link expires on ${input.expiresAt.toUTCString()}.</p>
         `,
       }),

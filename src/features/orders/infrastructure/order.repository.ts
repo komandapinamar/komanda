@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import {
   carts,
+  catalogItems,
   orderEvents,
   orderLineOptions,
   orderLines,
@@ -33,6 +34,7 @@ export type OrderView = {
   purchaseNumber: string;
   fulfillmentStatus: FulfillmentStatus;
   paymentStatus: PaymentStatus;
+  tender: "cash" | "posnet";
   source: OrderSource;
   customer: Record<string, unknown>;
   notes: string | null;
@@ -99,6 +101,7 @@ function serializeOrder(
     purchaseNumber: order.purchaseNumber.toString(),
     fulfillmentStatus: order.fulfillmentStatus,
     paymentStatus: order.paymentStatus,
+    tender: (order.tender as "cash" | "posnet") ?? "cash",
     source: order.source,
     customer: order.customerSnapshot,
     notes: order.notes,
@@ -258,6 +261,7 @@ export class OrderRepository {
     cart: StoredCart;
     source: OrderSource;
     paymentStatus: PaymentStatus;
+    tender?: "cash" | "posnet";
     customer: Record<string, unknown>;
     notes?: string;
     idempotencyKey: string;
@@ -293,7 +297,8 @@ export class OrderRepository {
         source: input.source,
         fulfillmentStatus: "approved",
         paymentStatus: input.paymentStatus,
-        customerSnapshot: redactSensitiveData(input.customer) as Record<string, unknown>,
+        tender: input.tender ?? "cash",
+        customerSnapshot: input.customer,
         notes: input.notes,
         subtotal: input.cart.subtotal,
         discountTotal: input.cart.discountTotal,
@@ -309,6 +314,39 @@ export class OrderRepository {
     if (!order) throw new Error("Failed to create order.");
 
     for (const cartLine of input.cart.lines) {
+      if (cartLine.itemId) {
+        const deducted = await this.transaction
+          .update(catalogItems)
+          .set({
+            stockQuantity: sql`${catalogItems.stockQuantity} - ${cartLine.quantity}`,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(catalogItems.tenantId, this.tenantId),
+              eq(catalogItems.id, cartLine.itemId),
+              eq(catalogItems.trackStock, true),
+              sql`${catalogItems.stockQuantity} >= ${cartLine.quantity}`,
+            ),
+          )
+          .returning({ id: catalogItems.id });
+
+        const [itemCheck] = await this.transaction
+          .select({ trackStock: catalogItems.trackStock })
+          .from(catalogItems)
+          .where(
+            and(
+              eq(catalogItems.tenantId, this.tenantId),
+              eq(catalogItems.id, cartLine.itemId),
+            ),
+          )
+          .limit(1);
+
+        if (itemCheck?.trackStock && deducted.length === 0) {
+          throw new OrderConflictError(`INSUFFICIENT_STOCK: ${cartLine.nameSnapshot}`);
+        }
+      }
+
       const [line] = await this.transaction
         .insert(orderLines)
         .values({
@@ -362,15 +400,21 @@ export class OrderRepository {
     orderId: string;
     expectedVersion: number;
     nextStatus: FulfillmentStatus;
+    paymentStatus?: PaymentStatus;
   }) {
+    const updateValues: Record<string, unknown> = {
+      fulfillmentStatus: input.nextStatus,
+      deliveredAt: input.nextStatus === "delivered" ? new Date() : undefined,
+      version: sql`${tenantOrders.version} + 1`,
+      updatedAt: new Date(),
+    };
+    if (input.paymentStatus) {
+      updateValues.paymentStatus = input.paymentStatus;
+    }
+
     const [updated] = await this.transaction
       .update(tenantOrders)
-      .set({
-        fulfillmentStatus: input.nextStatus,
-        deliveredAt: input.nextStatus === "delivered" ? new Date() : undefined,
-        version: sql`${tenantOrders.version} + 1`,
-        updatedAt: new Date(),
-      })
+      .set(updateValues)
       .where(
         and(
           eq(tenantOrders.tenantId, this.tenantId),

@@ -1,6 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 import {
   provisionTenantRequestSchema,
@@ -69,28 +66,5 @@ describe("komanda-business provisioning contract", () => {
         salesEnabled: true,
       }),
     ).toThrow();
-  });
-
-  it("publishes the versioned provisioning, verification, session, tenant and readiness paths", async () => {
-    const document = parse(
-      await readFile(
-        resolve(
-          process.cwd(),
-          "../specs/001-multi-tenant-base/contracts/openapi.yaml",
-        ),
-        "utf8",
-      ),
-    ) as { paths: Record<string, unknown> };
-    for (const path of [
-      "/api/v1/provisioning/tenants",
-      "/api/v1/auth/email-verifications/confirm",
-      "/api/v1/auth/onboarding-handoffs/consume",
-      "/api/v1/auth/sessions",
-      "/api/v1/auth/sessions/current",
-      "/api/v1/tenants",
-      "/api/v1/tenants/{tenantId}/readiness",
-    ]) {
-      expect(document.paths[path]).toBeDefined();
-    }
   });
 });

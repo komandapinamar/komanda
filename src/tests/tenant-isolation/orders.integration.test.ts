@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 
 describe("orders tenant isolation", () => {
   it("uses tenant-qualified numbering, idempotency, relationships and RLS", async () => {
-    const migration = await readFile("drizzle/0009_multitenant_orders.sql", "utf8");
+    const migration = await readFile("drizzle/0000_initial_schema.sql", "utf8");
 
-    expect(migration).toContain('UNIQUE ("tenant_id", "purchase_number")');
-    expect(migration).toContain('UNIQUE ("tenant_id", "idempotency_key")');
+    expect(migration).toContain('UNIQUE("tenant_id","purchase_number")');
+    expect(migration).toContain('UNIQUE("tenant_id","idempotency_key")');
     expect(migration).toContain(
-      'FOREIGN KEY ("tenant_id", "cart_id")\n      REFERENCES "carts"("tenant_id", "id")',
+      'FOREIGN KEY ("tenant_id","cart_id") REFERENCES "public"."carts"("tenant_id","id")',
     );
     expect(migration).toContain(
-      'FOREIGN KEY ("tenant_id", "order_id") REFERENCES "orders"("tenant_id", "id")',
+      'FOREIGN KEY ("tenant_id","order_id") REFERENCES "public"."orders"("tenant_id","id")',
     );
     for (const table of [
       "orders",
@@ -41,7 +41,7 @@ describe("orders tenant isolation", () => {
 
   it("uses cursor-based tenant SSE instead of full-order polling", async () => {
     const [component, route] = await Promise.all([
-      readFile("features/admin-panel/components/AdminOrdersLive.tsx", "utf8"),
+      readFile("features/orders/web/AdminOrdersLive.tsx", "utf8"),
       readFile("app/api/v1/tenants/[tenantId]/orders/events/route.ts", "utf8"),
     ]);
 

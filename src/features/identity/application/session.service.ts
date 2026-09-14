@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import type { Role } from "@/db/schema/platform";
+import type { Role, TenantPreset } from "@/db/schema/platform";
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
@@ -21,6 +21,23 @@ export type LiveMembership = {
   tenantStatus: "onboarding" | "active" | "suspended";
   tenantName: string;
   tenantSlug: string;
+  tenantPreset?: TenantPreset;
+};
+
+export type TenantLocationSummary = {
+  id: string;
+  name: string;
+  timezone: string;
+  status: "active" | "inactive";
+};
+
+export type MobileTenantSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "onboarding" | "active" | "suspended";
+  role: Role;
+  primaryLocation: TenantLocationSummary | null;
 };
 
 export interface SessionRepository {
@@ -41,6 +58,7 @@ export interface SessionRepository {
   revokeSession(sessionId: string, userId: string, revokedAt: Date): Promise<void>;
   findLiveMembership(userId: string, tenantId: string): Promise<LiveMembership | null>;
   listLiveMemberships(userId: string): Promise<LiveMembership[]>;
+  findActivePrimaryLocation?(tenantId: string): Promise<TenantLocationSummary | null>;
 }
 
 export type PasswordVerifier = (
@@ -132,6 +150,31 @@ export class SessionService {
         membership.status === "active" &&
         membership.tenantStatus !== "suspended",
     );
+  }
+
+  async getAuthorizedMobileContext(token: string): Promise<MobileTenantSummary[]> {
+    const session = await this.resolve(token);
+    const memberships = await this.repository.listLiveMemberships(session.userId);
+    const activeMemberships = memberships.filter(
+      (membership) =>
+        membership.status === "active" &&
+        membership.tenantStatus === "active",
+    );
+    const results: MobileTenantSummary[] = [];
+    for (const membership of activeMemberships) {
+      const primaryLocation = this.repository.findActivePrimaryLocation
+        ? await this.repository.findActivePrimaryLocation(membership.tenantId)
+        : null;
+      results.push({
+        id: membership.tenantId,
+        name: membership.tenantName,
+        slug: membership.tenantSlug,
+        status: membership.tenantStatus,
+        role: membership.role,
+        primaryLocation,
+      });
+    }
+    return results;
   }
 
   async revoke(token: string) {

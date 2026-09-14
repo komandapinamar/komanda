@@ -10,14 +10,17 @@ import {
   itemAddonGroups,
   mediaAssets,
   tenantLocations,
+  tenantSettings,
   tenants,
 } from "@/db/schema";
+import { alias } from "drizzle-orm/pg-core";
 import {
   withPlatformServiceTransaction,
   withTenantTransaction,
 } from "@/db/tenant-transaction";
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
+import { parseLocationAddress } from "@/features/directory/utils/directory-maps";
 
 export class PublicTenantNotFoundError extends Error {}
 
@@ -29,7 +32,88 @@ export type PublicTenant = {
   locationId: string;
 };
 
+export type PublicDirectoryTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  currency: string;
+  locationName: string | null;
+  locationAddress: string | null;
+  mapQuery: string;
+  categoriesCount: number;
+};
+
 export class PublicTenantService {
+  async listActiveDirectory(): Promise<PublicDirectoryTenant[]> {
+    return withPlatformServiceTransaction(
+      { serviceId: "public-directory-resolver", correlationId: randomUUID() },
+      async (transaction) => {
+        const activeTenants = await transaction
+          .select({
+            id: tenants.id,
+            name: tenants.name,
+            slug: tenants.slug,
+            currency: tenants.defaultCurrency,
+          })
+          .from(tenants)
+          .where(eq(tenants.status, "active"))
+          .orderBy(asc(tenants.name));
+
+        const results: PublicDirectoryTenant[] = [];
+
+        for (const tenant of activeTenants) {
+          await transaction.execute(
+            sql`select set_config('app.tenant_id', ${tenant.id}, true)`,
+          );
+
+          const [primaryLocation] = await transaction
+            .select({
+              name: tenantLocations.name,
+              address: tenantLocations.address,
+            })
+            .from(tenantLocations)
+            .where(
+              and(
+                eq(tenantLocations.tenantId, tenant.id),
+                eq(tenantLocations.isPrimary, true),
+                eq(tenantLocations.status, "active"),
+              ),
+            )
+            .limit(1);
+
+          const { displayAddress, mapQuery } = parseLocationAddress(
+            primaryLocation?.address,
+            primaryLocation?.name ?? null,
+            tenant.name,
+          );
+
+          const categories = await transaction
+            .select({ id: catalogCategories.id })
+            .from(catalogCategories)
+            .where(
+              and(
+                eq(catalogCategories.tenantId, tenant.id),
+                eq(catalogCategories.status, "active"),
+              ),
+            );
+
+          results.push({
+            id: tenant.id,
+            name: tenant.name,
+            slug: tenant.slug,
+            currency: tenant.currency,
+            locationName: primaryLocation?.name ?? null,
+            locationAddress: displayAddress,
+            mapQuery,
+            categoriesCount: categories.length,
+          });
+        }
+
+        return results;
+      },
+    );
+  }
+
   async resolve(slug: string): Promise<PublicTenant> {
     const normalizedSlug = normalizeTenantSlug(slug);
     const tenant = await withPlatformServiceTransaction(
@@ -83,74 +167,109 @@ export class PublicTenantService {
       actor: { kind: "anonymous", tenantSlug: tenant.slug },
     });
     return withTenantTransaction(context, async (transaction) => {
-      const [categories, items, combos, groups, options, itemGroups, comboLines] =
-        await Promise.all([
-          transaction
-            .select()
-            .from(catalogCategories)
-            .where(
-              and(
-                eq(catalogCategories.tenantId, tenant.id),
-                eq(catalogCategories.status, "active"),
-              ),
-            )
-            .orderBy(asc(catalogCategories.sortOrder)),
-          transaction
-            .select({ item: catalogItems, media: mediaAssets })
-            .from(catalogItems)
-            .leftJoin(
-              mediaAssets,
-              and(
-                eq(mediaAssets.tenantId, catalogItems.tenantId),
-                eq(mediaAssets.id, catalogItems.imageAssetId),
-              ),
-            )
-            .where(
-              and(
-                eq(catalogItems.tenantId, tenant.id),
-                eq(catalogItems.status, "active"),
-              ),
-            )
-            .orderBy(asc(catalogItems.sortOrder)),
-          transaction
-            .select({ combo: catalogCombos, media: mediaAssets })
-            .from(catalogCombos)
-            .leftJoin(
-              mediaAssets,
-              and(
-                eq(mediaAssets.tenantId, catalogCombos.tenantId),
-                eq(mediaAssets.id, catalogCombos.imageAssetId),
-              ),
-            )
-            .where(
-              and(
-                eq(catalogCombos.tenantId, tenant.id),
-                eq(catalogCombos.status, "active"),
-              ),
+      const videoMediaAssets = alias(mediaAssets, "video_media_assets");
+
+      const [
+        settingsResult,
+        categories,
+        items,
+        combos,
+        groups,
+        options,
+        itemGroups,
+        comboLines,
+      ] = await Promise.all([
+        transaction
+          .select({ menuTheme: tenantSettings.menuTheme })
+          .from(tenantSettings)
+          .where(eq(tenantSettings.tenantId, tenant.id))
+          .limit(1),
+        transaction
+          .select()
+          .from(catalogCategories)
+          .where(
+            and(
+              eq(catalogCategories.tenantId, tenant.id),
+              eq(catalogCategories.status, "active"),
             ),
-          transaction
-            .select()
-            .from(addonGroups)
-            .where(
-              and(eq(addonGroups.tenantId, tenant.id), eq(addonGroups.status, "active")),
+          )
+          .orderBy(asc(catalogCategories.sortOrder)),
+        transaction
+          .select({
+            item: catalogItems,
+            media: mediaAssets,
+            videoMedia: videoMediaAssets,
+          })
+          .from(catalogItems)
+          .leftJoin(
+            mediaAssets,
+            and(
+              eq(mediaAssets.tenantId, catalogItems.tenantId),
+              eq(mediaAssets.id, catalogItems.imageAssetId),
             ),
-          transaction
-            .select()
-            .from(addonOptions)
-            .where(
-              and(eq(addonOptions.tenantId, tenant.id), eq(addonOptions.status, "active")),
+          )
+          .leftJoin(
+            videoMediaAssets,
+            and(
+              eq(videoMediaAssets.tenantId, catalogItems.tenantId),
+              eq(videoMediaAssets.id, catalogItems.videoAssetId),
             ),
-          transaction
-            .select()
-            .from(itemAddonGroups)
-            .where(eq(itemAddonGroups.tenantId, tenant.id)),
-          transaction
-            .select()
-            .from(comboItems)
-            .where(eq(comboItems.tenantId, tenant.id)),
-        ]);
+          )
+          .where(
+            and(
+              eq(catalogItems.tenantId, tenant.id),
+              eq(catalogItems.status, "active"),
+            ),
+          )
+          .orderBy(asc(catalogItems.sortOrder)),
+        transaction
+          .select({ combo: catalogCombos, media: mediaAssets })
+          .from(catalogCombos)
+          .leftJoin(
+            mediaAssets,
+            and(
+              eq(mediaAssets.tenantId, catalogCombos.tenantId),
+              eq(mediaAssets.id, catalogCombos.imageAssetId),
+            ),
+          )
+          .where(
+            and(
+              eq(catalogCombos.tenantId, tenant.id),
+              eq(catalogCombos.status, "active"),
+            ),
+          ),
+        transaction
+          .select()
+          .from(addonGroups)
+          .where(
+            and(eq(addonGroups.tenantId, tenant.id), eq(addonGroups.status, "active")),
+          ),
+        transaction
+          .select()
+          .from(addonOptions)
+          .where(
+            and(eq(addonOptions.tenantId, tenant.id), eq(addonOptions.status, "active")),
+          ),
+        transaction
+          .select()
+          .from(itemAddonGroups)
+          .where(eq(itemAddonGroups.tenantId, tenant.id)),
+        transaction
+          .select()
+          .from(comboItems)
+          .where(eq(comboItems.tenantId, tenant.id)),
+      ]);
+
+      const menuTheme = settingsResult[0]?.menuTheme ?? "classic";
+
       return {
-        tenant: { name: tenant.name, slug: tenant.slug, currency: tenant.currency },
+        tenant: {
+          name: tenant.name,
+          slug: tenant.slug,
+          currency: tenant.currency,
+          menuTheme,
+        },
+        menuTheme,
         revision: Math.max(
           1,
           ...categories.map(({ version }) => version),
@@ -162,9 +281,11 @@ export class PublicTenantService {
           name: category.name,
           items: items
             .filter(({ item }) => item.categoryId === category.id)
-            .map(({ item, media }) => ({
+            .map(({ item, media, videoMedia }) => ({
               ...item,
               imageUrl: media?.status === "ready" ? media.publicUrl : null,
+              videoUrl:
+                videoMedia?.status === "ready" ? (videoMedia.publicUrl ?? null) : null,
               addonGroups: itemGroups
                 .filter(({ itemId }) => itemId === item.id)
                 .map(({ addonGroupId }) => {

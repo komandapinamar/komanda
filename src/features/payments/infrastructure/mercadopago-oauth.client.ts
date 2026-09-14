@@ -30,7 +30,7 @@ export class MercadoPagoOAuthClient {
     },
   ) {}
 
-  authorizationUrl(input: { state: string; codeChallenge: string }) {
+  authorizationUrl(input: { state: string }) {
     const url = new URL(
       testEndpoint(
         "MERCADOPAGO_AUTHORIZATION_URL",
@@ -42,17 +42,14 @@ export class MercadoPagoOAuthClient {
     url.searchParams.set("platform_id", "mp");
     url.searchParams.set("redirect_uri", this.config.redirectUri);
     url.searchParams.set("state", input.state);
-    url.searchParams.set("code_challenge", input.codeChallenge);
-    url.searchParams.set("code_challenge_method", "S256");
     return url.toString();
   }
 
-  exchangeCode(code: string, codeVerifier: string) {
+  exchangeCode(code: string) {
     return this.tokenRequest({
       grant_type: "authorization_code",
       code,
       redirect_uri: this.config.redirectUri,
-      code_verifier: codeVerifier,
     });
   }
 

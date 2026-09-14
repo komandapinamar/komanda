@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 
 describe("printing tenant isolation", () => {
   it("defines tenant/location-scoped agents, jobs, attempts and RLS", async () => {
-    const migration = await readFile("drizzle/0010_multitenant_printing.sql", "utf8");
+    const migration = await readFile("drizzle/0000_initial_schema.sql", "utf8");
 
-    expect(migration).toContain('CREATE TABLE IF NOT EXISTS "print_agents"');
-    expect(migration).toContain('FOREIGN KEY ("tenant_id", "location_id")');
-    expect(migration).toContain('UNIQUE ("tenant_id", "idempotency_key")');
+    expect(migration).toContain('CREATE TABLE "print_agents"');
+    expect(migration).toContain('FOREIGN KEY ("tenant_id","location_id")');
+    expect(migration).toContain('UNIQUE("tenant_id","idempotency_key")');
     for (const table of ["print_agents", "print_jobs", "print_job_attempts"]) {
       expect(migration).toContain(`ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`);
       expect(migration).toContain(`${table}_runtime_isolation`);

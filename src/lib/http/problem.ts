@@ -12,12 +12,10 @@ function codeToSlug(code: string) {
 }
 
 function getProblemTypeBaseUrl() {
-  const value = process.env.KOMANDA_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
-  if (!value?.trim()) {
-    throw new Error(
-      "Missing KOMANDA_PUBLIC_BASE_URL or NEXT_PUBLIC_API_URL environment variable.",
-    );
-  }
+  const value =
+    process.env.KOMANDA_PUBLIC_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "https://komanda.app";
   return value.trim().replace(/\/+$/, "");
 }
 

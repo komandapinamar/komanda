@@ -3,8 +3,11 @@ import { integrationErrorResponse } from "@/features/payments/web/integration-ht
 import { problemResponse } from "@/lib/http/problem";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
-function redirectTo(request: Request, path: string) {
+export function redirectTo(request: Request, path: string) {
   const url = new URL(path, request.url);
+  if (url.hostname === "localhost" && url.protocol === "https:") {
+    url.protocol = "http:";
+  }
   return Response.redirect(url, 303);
 }
 

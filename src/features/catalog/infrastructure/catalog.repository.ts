@@ -138,6 +138,21 @@ export class CatalogRepository {
     return item ?? null;
   }
 
+  async findItemByBarcode(barcode: string) {
+    const [item] = await this.transaction
+      .select()
+      .from(catalogItems)
+      .where(
+        and(
+          eq(catalogItems.tenantId, this.tenantId),
+          eq(catalogItems.barcode, barcode),
+          sql`${catalogItems.archivedAt} is null`,
+        ),
+      )
+      .limit(1);
+    return item ?? null;
+  }
+
   async findItems(ids: string[]) {
     if (ids.length === 0) return [];
     return this.transaction

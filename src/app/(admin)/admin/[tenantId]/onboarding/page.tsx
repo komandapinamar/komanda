@@ -2,11 +2,11 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { canAccess } from "@/lib/authorization/permissions";
 import { TenantReadinessService } from "@/features/tenancy/application/tenant-readiness.service";
 import { TenantActivationPanel } from "@/features/tenancy/web/TenantActivationPanel";
 
 const labels: Record<string, string> = {
-  identity_verified: "Identidad verificada",
   public_slug: "Identificador público",
   primary_location: "Sede principal",
   currency: "Moneda operativa",
@@ -29,7 +29,7 @@ export default async function TenantOnboardingPage({
   } catch {
     notFound();
   }
-  if (authority.membership.role !== "owner") {
+  if (!canAccess(authority.membership.role, "estado")) {
     notFound();
   }
   const readiness = await new TenantReadinessService().get(

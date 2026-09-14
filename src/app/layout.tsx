@@ -1,14 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
-import { logoutAdmin } from "@/features/admin-panel/actions/logout.action";
+import { Instrument_Sans, Geist_Mono } from "next/font/google";
+import { logoutAdmin } from "@/features/identity/web/logout.action";
 import { cookies } from "next/headers";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
 });
 
@@ -42,18 +41,18 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-[var(--color-accent-primary)] antialiased overflow-x-hidden`}
+        className={`${instrumentSans.className} ${instrumentSans.variable} ${geistMono.variable} bg-[var(--color-accent-primary)] antialiased overflow-x-hidden`}
       >
         {children}
-        <footer className="bg-[var(--color-accent-primary)] text-[var(--color-accent-secondary)] underline p-2 text-center">
-          {isAdminLoggedIn ? (
+        {isAdminLoggedIn ? (
+          <footer className="bg-[var(--color-accent-primary)] text-[var(--color-accent-secondary)] underline p-2 text-center">
             <form action={logoutAdmin} className="inline">
               <button type="submit" className="hover:opacity-80 transition-opacity duration-200">
                 Cerrar sesion
               </button>
             </form>
-          ) : null}
-        </footer>
+          </footer>
+        ) : null}
       </body>
     </html>
   );

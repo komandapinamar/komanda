@@ -14,7 +14,7 @@ describe("degraded modes", () => {
 
   it("maps Mercado Pago dependency failure without exposing global token fallback", async () => {
     const source = await readFile(
-      "features/shop/payments/application/payment-session.service.ts",
+      "features/payments/application/payment-session.service.ts",
       "utf8",
     );
     expect(source).toContain("PaymentSessionProviderUnavailableError");

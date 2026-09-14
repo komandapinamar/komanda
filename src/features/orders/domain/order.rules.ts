@@ -24,8 +24,14 @@ export function isTerminalFulfillmentStatus(status: FulfillmentStatus) {
 export function assertFulfillmentTransition(
   current: FulfillmentStatus,
   next: FulfillmentStatus,
+  source?: "mercadopago_webhook" | "admin_direct" | string | null,
 ) {
   if (current === next) {
+    return;
+  }
+
+  // admin_direct manual orders can be cancelled from any non-cancelled state, including ready and delivered
+  if (source === "admin_direct" && next === "cancelled" && current !== "cancelled") {
     return;
   }
 

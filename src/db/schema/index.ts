@@ -6,3 +6,5 @@ export * from "./catalog";
 export * from "./commerce";
 export * from "./integrations";
 export * from "./printing";
+export * from "./analytics";
+export * from "./billing";

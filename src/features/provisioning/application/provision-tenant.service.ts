@@ -84,11 +84,6 @@ function responseFromAggregate(
   handoffToken: string,
 ): ProvisionTenantResponse {
   const checks = [
-    {
-      code: "identity_verified",
-      complete: aggregate.ownerVerified,
-      requiredForActivation: true,
-    },
     { code: "public_slug", complete: true, requiredForActivation: true },
     { code: "primary_location", complete: true, requiredForActivation: true },
     { code: "currency", complete: true, requiredForActivation: true },

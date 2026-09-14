@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import { getCart } from "@/features/shop/cart/services/cart.service";
-import { createPaymentSession } from "@/features/shop/payments/services/payment-session.service";
+import { createPaymentSession } from "@/features/shop/payments/payment-session.client";
 import type {
   CartLine,
   CheckoutFormValues,
@@ -67,9 +67,9 @@ function OfficialCartSummary({
       </div>
 
       <div className="space-y-3">
-        {officialCart.items.map((line: OfficialCartLine) => (
+        {officialCart.items.map((line: OfficialCartLine, index: number) => (
           <div
-            key={line.documentId}
+            key={line.documentId ? `${line.documentId}-${index}` : `cart-line-${index}`}
             className="rounded-sm border border-[var(--color-accent-secondary)]/40 p-3"
           >
             <div className="flex items-center justify-between gap-4">

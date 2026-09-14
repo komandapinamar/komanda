@@ -5,113 +5,50 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1773913769942,
-      "tag": "0000_workable_patch",
+      "when": 1788395170810,
+      "tag": "0000_initial_schema",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1773924264870,
-      "tag": "0001_amused_bloodaxe",
+      "when": 1788398799815,
+      "tag": "0001_supreme_yellow_claw",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1773933457354,
-      "tag": "0002_tense_fat_cobra",
+      "when": 1788400000000,
+      "tag": "0002_add_tenant_preset",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1783288119034,
-      "tag": "0003_multitenant_platform_expand",
+      "when": 1788410000000,
+      "tag": "0003_add_barcode_and_stock",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1783288119035,
-      "tag": "0004_multitenant_foundation_events",
+      "when": 1788420000000,
+      "tag": "0004_add_cash_shifts",
       "breakpoints": true
     },
     {
       "idx": 5,
       "version": "7",
-      "when": 1783288119036,
-      "tag": "0005_provisioning_entitlements",
+      "when": 1788430000000,
+      "tag": "0005_add_slack_cash_alert_webhook_url",
       "breakpoints": true
     },
     {
       "idx": 6,
       "version": "7",
-      "when": 1783290000000,
-      "tag": "0006_multitenant_catalog",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1783291000000,
-      "tag": "0007_multitenant_carts",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1783292000000,
-      "tag": "0008_multitenant_payments",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1783293000000,
-      "tag": "0009_multitenant_orders",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1783294000000,
-      "tag": "0010_multitenant_printing",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1783295000000,
-      "tag": "0011_migration_journal",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1783296000000,
-      "tag": "0012_multitenant_backfill",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1783297000000,
-      "tag": "0013_multitenant_enforce",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1783298000000,
-      "tag": "0014_migration_role_access",
-      "breakpoints": true
-    },
-    {
-      "idx": 15,
-      "version": "7",
-      "when": 1783299000000,
-      "tag": "0015_multitenant_contract_cleanup",
+      "when": 1788440000000,
+      "tag": "0006_add_print_pairings",
       "breakpoints": true
     }
   ]

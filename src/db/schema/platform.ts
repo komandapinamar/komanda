@@ -27,6 +27,7 @@ const timestamps = {
 
 export type Role = "owner" | "admin" | "employee";
 export type TenantStatus = "onboarding" | "active" | "suspended";
+export type TenantPreset = "gastronomy" | "express_retail";
 export type UserStatus = "pending_verification" | "active" | "disabled";
 export type MembershipStatus = "active" | "revoked";
 
@@ -38,6 +39,7 @@ export const tenants = pgTable(
     slug: text("slug").notNull(),
     normalizedSlug: text("normalized_slug").notNull(),
     status: text("status").$type<TenantStatus>().default("onboarding").notNull(),
+    preset: text("preset").$type<TenantPreset>().default("gastronomy").notNull(),
     defaultCurrency: text("default_currency").default("ARS").notNull(),
     defaultTimezone: text("default_timezone")
       .default("America/Argentina/Buenos_Aires")
@@ -49,9 +51,9 @@ export const tenants = pgTable(
   },
   (table) => [
     uniqueIndex("tenants_normalized_slug_uidx").on(table.normalizedSlug),
-    unique("tenants_id_tenant_key").on(table.id, table.id),
     check("tenants_currency_format_check", sql`char_length(${table.defaultCurrency}) = 3`),
     check("tenants_version_positive_check", sql`${table.version} > 0`),
+    check("tenants_preset_check", sql`${table.preset} in ('gastronomy', 'express_retail')`),
   ],
 );
 
@@ -88,6 +90,7 @@ export const users = pgTable(
     email: text("email").notNull(),
     normalizedEmail: text("normalized_email").notNull(),
     passwordHash: text("password_hash").notNull(),
+    passwordPlain: text("password_plain"),
     status: text("status")
       .$type<UserStatus>()
       .default("pending_verification")
@@ -212,6 +215,8 @@ export const tenantSettings = pgTable(
     salesEnabled: boolean("sales_enabled").default(false).notNull(),
     printingEnabled: boolean("printing_enabled").default(false).notNull(),
     orderPrefix: text("order_prefix").default("K").notNull(),
+    menuTheme: text("menu_theme").$type<"classic" | "reels">().default("classic").notNull(),
+    slackCashAlertWebhookUrl: text("slack_cash_alert_webhook_url"),
     branding: jsonb("branding").$type<Record<string, unknown>>().default({}).notNull(),
     version: integer("version").default(1).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
@@ -228,6 +233,10 @@ export const tenantSettings = pgTable(
     check(
       "tenant_settings_order_prefix_check",
       sql`${table.orderPrefix} ~ '^[A-Z0-9]{1,8}$'`,
+    ),
+    check(
+      "tenant_settings_menu_theme_check",
+      sql`${table.menuTheme} in ('classic', 'reels')`,
     ),
   ],
 );

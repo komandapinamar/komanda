@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import ProductCard from "@/features/shop/menu/components/ProductCard";
+import ProductCard from "@/features/shop/menu/classic/components/ProductCard";
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import { MenuItem } from "@/types/types";
 

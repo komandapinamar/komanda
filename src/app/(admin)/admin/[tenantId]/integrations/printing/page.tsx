@@ -5,6 +5,7 @@ import { tenantLocations } from "@/db/schema";
 import { withTenantTransaction } from "@/db/tenant-transaction";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { canAccess } from "@/lib/authorization/permissions";
 import { PrintingIntegrationPanel } from "@/features/printing/web/PrintingIntegrationPanel";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
@@ -20,6 +21,9 @@ export default async function TenantPrintingIntegrationPage({
   try {
     authority = await coreSessionService().authorizeTenant(token, tenantId);
   } catch {
+    notFound();
+  }
+  if (!canAccess(authority.membership.role, "integraciones")) {
     notFound();
   }
   const context = createVerifiedTenantContext({
