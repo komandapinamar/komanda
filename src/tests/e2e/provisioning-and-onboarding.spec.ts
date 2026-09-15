@@ -56,10 +56,10 @@ test.describe("provisioning and onboarding", () => {
 
     await page.getByRole("link", { name: new RegExp(pair.tenantA.name) }).click();
     await expect(page).toHaveURL(
-      new RegExp(`/admin/${pair.tenantA.id}/onboarding$`),
+      new RegExp(`/admin/${pair.tenantA.id}/settings$`),
     );
     await expect(
-      page.getByRole("heading", { name: "Antes de comenzar a vender" }),
+      page.getByRole("heading", { name: "Operación del negocio" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Activar ventas" }),
@@ -68,9 +68,9 @@ test.describe("provisioning and onboarding", () => {
     await page.getByRole("link", { name: "Cambiar negocio" }).click();
     await page.getByRole("link", { name: new RegExp(pair.tenantB.name) }).click();
     await expect(page).toHaveURL(
-      new RegExp(`/admin/${pair.tenantB.id}/onboarding$`),
+      new RegExp(`/admin/${pair.tenantB.id}/settings$`),
     );
-    await expect(page.getByText(`Contexto: ${pair.tenantB.id}`)).toBeVisible();
+    await expect(page.getByText(`Contexto: ${pair.tenantB.id}`)).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "Activar ventas" }),
     ).toBeDisabled();

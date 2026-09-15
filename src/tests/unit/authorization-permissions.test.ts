@@ -7,11 +7,9 @@ import {
 
 describe("authorization permissions", () => {
   const allSections: Section[] = [
-    "estado",
     "pedidos",
     "catalog",
     "configuracion",
-    "integraciones",
     "members",
     "analytics",
   ];
@@ -21,10 +19,8 @@ describe("authorization permissions", () => {
       expect(canAccess("employee", "pedidos")).toBe(true);
 
       const forbiddenSections: Section[] = [
-        "estado",
         "catalog",
         "configuracion",
-        "integraciones",
         "members",
         "analytics",
       ];
@@ -49,9 +45,7 @@ describe("authorization permissions", () => {
       expect(canAccess("admin", "analytics")).toBe(false);
 
       const forbiddenSections: Section[] = [
-        "estado",
         "configuracion",
-        "integraciones",
         "members",
         "analytics",
       ];

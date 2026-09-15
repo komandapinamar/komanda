@@ -23,7 +23,7 @@ export default async function TenantPrintingIntegrationPage({
   } catch {
     notFound();
   }
-  if (!canAccess(authority.membership.role, "integraciones")) {
+  if (!canAccess(authority.membership.role, "configuracion")) {
     notFound();
   }
   const context = createVerifiedTenantContext({

@@ -27,8 +27,8 @@ export default async function SelectBusinessPage() {
           {memberships.map((membership) => {
             const defaultPath = membership.tenantPreset === "express_retail" ? "analytics" : "orders";
             const href =
-              canAccess(membership.role, "estado") && membership.tenantStatus === "onboarding"
-                ? `/admin/${membership.tenantId}/onboarding`
+              canAccess(membership.role, "configuracion") && membership.tenantStatus === "onboarding"
+                ? `/admin/${membership.tenantId}/settings`
                 : `/admin/${membership.tenantId}/${defaultPath}`;
 
             return (

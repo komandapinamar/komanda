@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     });
     return redirectTo(
       request,
-      `/admin/${result.tenantId}/integrations?mercadopago=connected`,
+      `/admin/${result.tenantId}/settings?mercadopago=connected`,
     );
   } catch (error) {
     return integrationErrorResponse(error, correlationId);

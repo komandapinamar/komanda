@@ -28,15 +28,10 @@ export default async function TenantAdminLayout({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
           <div>
             <p className="tracking-tighter text-2xl font-thin">
-              {authority.membership.tenantPreset === "express_retail"
-                ? "Komanda Espresso"
-                : "Komanda Business"}
+                Komanda Business
             </p>
           </div>
           <nav className="flex items-center gap-4 text-sm">
-            {canAccess(authority.membership.role, "estado") && (
-              <Link href={`/admin/${tenantId}/onboarding`}>Estado</Link>
-            )}
             {authority.membership.tenantPreset !== "express_retail" &&
               canAccess(authority.membership.role, "pedidos") && (
                 <Link href={`/admin/${tenantId}/orders`}>Pedidos</Link>
@@ -49,9 +44,6 @@ export default async function TenantAdminLayout({
             )}
             {canAccess(authority.membership.role, "configuracion") && (
               <Link href={`/admin/${tenantId}/settings`}>Configuración</Link>
-            )}
-            {canAccess(authority.membership.role, "integraciones") && (
-              <Link href={`/admin/${tenantId}/integrations`}>Integraciones</Link>
             )}
             {canAccess(authority.membership.role, "members") && (
               <Link href={`/admin/${tenantId}/members`}>Miembros</Link>

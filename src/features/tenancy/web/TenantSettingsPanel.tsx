@@ -17,6 +17,14 @@ export type TenantSettingsView = {
   version: number;
 };
 
+const presetLabels: Record<
+  NonNullable<TenantSettingsView["preset"]>,
+  string
+> = {
+  gastronomy: "Gastronomía (Komanda POS)",
+  express_retail: "Autoservicio / Kiosco (Komanda Kiosk)",
+};
+
 async function jsonOrThrow(response: Response) {
   if (response.ok) return response.json();
   if (response.status === 409) {
@@ -32,9 +40,6 @@ export function TenantSettingsPanel({
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [message, setMessage] = useState<string | null>(null);
-  const [tenantType, setTenantType] = useState<
-    "gastronomy" | "express_retail"
-  >(initialSettings.preset ?? "gastronomy");
   const [menuTheme, setMenuTheme] = useState<"classic" | "reels">(
     initialSettings.menuTheme ?? "classic",
   );
@@ -44,7 +49,6 @@ export function TenantSettingsPanel({
     setMessage(null);
     const form = new FormData(event.currentTarget);
     const menuTheme = form.get("menuTheme");
-    const preset = form.get("preset");
     const slackWebhook = form.get("slackCashAlertWebhookUrl");
     try {
       const updated = (await jsonOrThrow(
@@ -64,14 +68,10 @@ export function TenantSettingsPanel({
             ...(menuTheme === "classic" || menuTheme === "reels"
               ? { menuTheme }
               : {}),
-            ...(preset === "gastronomy" || preset === "express_retail"
-              ? { preset }
-              : {}),
           }),
         }),
       )) as TenantSettingsView;
       setSettings(updated);
-      setTenantType(updated.preset ?? "gastronomy");
       setMenuTheme(updated.menuTheme ?? "classic");
       setMessage("Configuración guardada.");
     } catch (error) {
@@ -125,52 +125,19 @@ export function TenantSettingsPanel({
           />
         </label>
       </div>
-      <div className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
-        <div>
-          <span className="block text-sm font-medium text-zinc-200">
-            Perfil operativo del negocio
-          </span>
-          <span className="block text-xs text-zinc-400">
-            Define la experiencia del backoffice y los módulos disponibles para tu rubro.
-          </span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
-            <input
-              type="radio"
-              name="preset"
-              value="gastronomy"
-              defaultChecked={(settings.preset ?? "gastronomy") === "gastronomy"}
-              className="mt-0.5 accent-[var(--color-accent-tertiary)]"
-              onChange={() => setTenantType("gastronomy")}
-            />
-            <div>
-              <span className="block text-sm font-medium text-zinc-100">Gastronomía (Komanda POS)</span>
-              <span className="mt-0.5 block text-xs text-zinc-400">
-                Menú digital QR, gestión de pedidos y pagos online.
-              </span>
-            </div>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
-            <input
-              type="radio"
-              name="preset"
-              value="express_retail"
-              defaultChecked={settings.preset === "express_retail"}
-              className="mt-0.5 accent-[var(--color-accent-tertiary)]"
-              onChange={() => setTenantType("express_retail")}
-            />
-            <div>
-              <span className="block text-sm font-medium text-zinc-100">Autoservicio / Kiosco (Komanda Kiosk)</span>
-              <span className="mt-0.5 block text-xs text-zinc-400">
-                Venta rápida, códigos de barra, arqueo de caja y totem express.
-              </span>
-            </div>
-          </label>
-        </div>
+      <div className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+        <span className="block text-sm font-medium text-zinc-200">
+          Perfil operativo del negocio
+        </span>
+        <span className="block text-sm text-zinc-400">
+          {presetLabels[settings.preset ?? "gastronomy"]}
+        </span>
+        <span className="block text-xs text-zinc-500">
+          El perfil se define al registrar el negocio y no puede modificarse.
+        </span>
       </div>
 
-      {tenantType === "gastronomy" ? (
+      {settings.preset !== "express_retail" ? (
         <div className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
           <div>
             <span className="block text-sm font-medium text-zinc-200">
