@@ -50,6 +50,13 @@
       "when": 1788440000000,
       "tag": "0006_add_print_pairings",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788450000000,
+      "tag": "0007_allow_member_service_account_cleanup",
+      "breakpoints": true
     }
   ]
 }

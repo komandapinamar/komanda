@@ -15,7 +15,11 @@ function generateSlug(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function BusinessRegistrationWizard() {
+export default function BusinessRegistrationWizard({
+  authenticatedEmail,
+}: {
+  authenticatedEmail?: string;
+}) {
   const [step, setStep] = useState<1 | 2>(1);
   const [preset, setPreset] = useState<Preset>("gastronomy");
   const [businessName, setBusinessName] = useState("");
@@ -52,7 +56,7 @@ export default function BusinessRegistrationWizard() {
       setErrorMessage("Por favor ingresá un enlace identificador (slug).");
       return;
     }
-    if (!email.trim() || !password.trim()) {
+    if (!authenticatedEmail && (!email.trim() || !password.trim())) {
       setErrorMessage("Completá tu email y una contraseña de al menos 8 caracteres.");
       return;
     }
@@ -67,8 +71,7 @@ export default function BusinessRegistrationWizard() {
           businessName: businessName.trim(),
           slug: slug.trim(),
           preset,
-          email: email.trim(),
-          password,
+          ...(authenticatedEmail ? {} : { email: email.trim(), password }),
         }),
       });
 
@@ -102,6 +105,11 @@ export default function BusinessRegistrationWizard() {
         <p className="text-sm text-[var(--color-accent-tertiary)]/70">
           Configurá tu punto de venta en minutos. Elegí el modelo operativo que mejor se adapte a tu comercio.
         </p>
+        {authenticatedEmail && (
+          <p className="text-xs font-medium text-[var(--color-accent-tertiary)]/70">
+            Vas a usar la cuenta {authenticatedEmail}.
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-6 sm:p-8 shadow-sm">
@@ -302,10 +310,12 @@ export default function BusinessRegistrationWizard() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-semibold text-[var(--color-accent-tertiary)]">
-                  Creá tu cuenta de administrador
+                  {authenticatedEmail ? "Usar tu cuenta actual" : "Creá tu cuenta de administrador"}
                 </h2>
                 <p className="text-xs text-[var(--color-accent-tertiary)]/70 mt-1">
-                  Con estos datos vas a iniciar sesión para gestionar tu catálogo, precios y reportes.
+                  {authenticatedEmail
+                    ? `El negocio quedará vinculado a ${authenticatedEmail}.`
+                    : "Con estos datos vas a iniciar sesión para gestionar tu catálogo, precios y reportes."}
                 </p>
               </div>
 
@@ -327,7 +337,7 @@ export default function BusinessRegistrationWizard() {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              {!authenticatedEmail && <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label htmlFor="email" className="block text-xs font-semibold text-[var(--color-accent-tertiary)]/80 uppercase tracking-wider">
                     Correo electrónico
@@ -360,7 +370,7 @@ export default function BusinessRegistrationWizard() {
                     className="w-full rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm text-[var(--color-accent-tertiary)] placeholder-[var(--color-accent-tertiary)]/40 outline-none transition focus:border-[var(--color-accent-tertiary)]/50"
                   />
                 </div>
-              </div>
+              </div>}
 
               <div className="flex items-center gap-3 pt-2">
                 <button
@@ -373,7 +383,7 @@ export default function BusinessRegistrationWizard() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !email.trim() || password.length < 8}
+                   disabled={isSubmitting || (!authenticatedEmail && (!email.trim() || password.length < 8))}
                   className="flex-1 rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? "Creando negocio..." : "Crear negocio y comenzar"}

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, notExists } from "drizzle-orm";
 import { tenantMemberships, users } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import type { MemberOutput } from "@/features/members/domain/member.schemas";
@@ -139,6 +139,22 @@ export class MemberRepository {
         and(
           eq(tenantMemberships.tenantId, this.tenantId),
           eq(tenantMemberships.id, membershipId),
+        ),
+      );
+  }
+
+  async deleteUserIfUnassigned(userId: string): Promise<void> {
+    await this.transaction
+      .delete(users)
+      .where(
+        and(
+          eq(users.id, userId),
+          notExists(
+            this.transaction
+              .select({ userId: tenantMemberships.userId })
+              .from(tenantMemberships)
+              .where(eq(tenantMemberships.userId, userId)),
+          ),
         ),
       );
   }
