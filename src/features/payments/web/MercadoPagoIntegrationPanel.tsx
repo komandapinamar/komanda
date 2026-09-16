@@ -104,7 +104,7 @@ export function MercadoPagoIntegrationPanel({
         <button
           type="button"
           onClick={connect}
-          className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950"
+          className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
         >
           Conectar por OAuth
         </button>

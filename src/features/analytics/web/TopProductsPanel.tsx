@@ -49,7 +49,7 @@ export default function TopProductsPanel({
             onClick={() => setMetric("quantity")}
             className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
               metric === "quantity"
-                ? "bg-amber-400 text-zinc-950 shadow-sm"
+                ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -60,7 +60,7 @@ export default function TopProductsPanel({
             onClick={() => setMetric("revenue")}
             className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
               metric === "revenue"
-                ? "bg-amber-400 text-zinc-950 shadow-sm"
+                ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >

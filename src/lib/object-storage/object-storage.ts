@@ -1,9 +1,9 @@
 import {
   GetObjectCommand,
-  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { createHash } from "node:crypto";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export type PresignedUploadRequest = {
@@ -22,7 +22,9 @@ export type PresignedUpload = {
 };
 
 export interface ObjectStorage {
-  createPresignedUpload(input: PresignedUploadRequest): Promise<PresignedUpload>;
+  createPresignedUpload(
+    input: PresignedUploadRequest,
+  ): Promise<PresignedUpload>;
   verifyObject(
     key: string,
     expected: { byteSize: number; checksumSha256Base64: string },
@@ -34,6 +36,8 @@ const extensions: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
 
 export function buildTenantStorageKey(
@@ -46,7 +50,12 @@ export function buildTenantStorageKey(
     throw new Error("Unsupported media type.");
   }
 
-  if (!tenantId || !assetId || tenantId.includes("/") || assetId.includes("/")) {
+  if (
+    !tenantId ||
+    !assetId ||
+    tenantId.includes("/") ||
+    assetId.includes("/")
+  ) {
     throw new Error("Invalid tenant or asset identifier.");
   }
 
@@ -94,12 +103,20 @@ export class S3ObjectStorage implements ObjectStorage {
     key: string,
     expected: { byteSize: number; checksumSha256Base64: string },
   ) {
-    const result = await this.client.send(
-      new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+    // MinIO no informa ChecksumSHA256 en HeadObject, así que se verifica
+    // descargando el objeto y calculando su SHA-256.
+    const { Body } = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
     );
+    const hash = createHash("sha256");
+    let byteSize = 0;
+    for await (const chunk of Body as unknown as AsyncIterable<Uint8Array>) {
+      byteSize += chunk.length;
+      hash.update(chunk);
+    }
     return (
-      result.ContentLength === expected.byteSize &&
-      result.ChecksumSHA256 === expected.checksumSha256Base64
+      byteSize === expected.byteSize &&
+      hash.digest("base64") === expected.checksumSha256Base64
     );
   }
 

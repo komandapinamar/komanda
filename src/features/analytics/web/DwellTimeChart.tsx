@@ -53,7 +53,7 @@ export default function DwellTimeChart({
           </p>
         </div>
         {hoveredIndex !== null && items[hoveredIndex] && (
-          <div className="text-xs text-amber-400 font-medium">
+          <div className="text-xs text-(--color-accent-tertiary) font-medium">
             {formatBucketLabel(items[hoveredIndex].bucket, granularity)}:{" "}
             <span className="font-bold">
               {formatSeconds(items[hoveredIndex].avgDwellSeconds)}
@@ -79,7 +79,7 @@ export default function DwellTimeChart({
               {/* Tooltip on hover */}
               {isHovered && (
                 <div className="absolute -top-12 z-20 whitespace-nowrap rounded-md bg-zinc-800 px-2.5 py-1 text-xs text-zinc-100 shadow-lg ring-1 ring-zinc-700">
-                  <div className="font-semibold text-amber-400">
+                  <div className="font-semibold text-(--color-accent-tertiary)">
                     {formatSeconds(dwell)} promedio
                   </div>
                   <div className="text-[10px] text-zinc-400">
@@ -94,8 +94,8 @@ export default function DwellTimeChart({
                   style={{ height: `${heightPercent}%` }}
                   className={`w-full max-w-[28px] rounded-t-md transition-all ${
                     isHovered
-                      ? "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.5)]"
-                      : "bg-amber-500/80 hover:bg-amber-400"
+                      ? "bg-(--color-accent-tertiary) shadow-[0_0_12px_rgba(251,191,36,0.5)]"
+                      : "bg-amber-500/80 hover:bg-(--color-accent-tertiary)"
                   }`}
                 />
               </div>

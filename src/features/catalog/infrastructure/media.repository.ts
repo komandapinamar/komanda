@@ -70,10 +70,9 @@ export class MediaRepository {
     }
     const verified = await this.storage.verifyObject(asset.storageKey, {
       byteSize: asset.byteSize,
-      checksumSha256Base64: Buffer.from(
-        asset.checksumSha256,
-        "hex",
-      ).toString("base64"),
+      checksumSha256Base64: Buffer.from(asset.checksumSha256, "hex").toString(
+        "base64",
+      ),
     });
     if (!verified) {
       await this.transaction
@@ -87,7 +86,7 @@ export class MediaRepository {
         );
       throw new MediaVerificationError("Uploaded object failed verification.");
     }
-    const publicUrl = await this.storage.createReadUrl(asset.storageKey, 3600);
+    const publicUrl = await resolvePublicUrl(this.storage, asset.storageKey);
     const [ready] = await this.transaction
       .update(mediaAssets)
       .set({ status: "ready", publicUrl, updatedAt: new Date() })
@@ -102,6 +101,22 @@ export class MediaRepository {
     if (!ready) throw new MediaVerificationError("Media asset state changed.");
     return ready;
   }
+}
+
+/**
+ * URLs públicas estables: si OBJECT_STORAGE_PUBLIC_BASE_URL está configurado
+ * (bucket con lectura anónima o CDN), la URL guardada no expira. Si no, se
+ * mantiene el comportamiento anterior (URL firmada con vencimiento de 1 hora).
+ */
+async function resolvePublicUrl(storage: ObjectStorage, storageKey: string) {
+  const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL?.replace(
+    /\/+$/,
+    "",
+  );
+  if (publicBaseUrl) {
+    return `${publicBaseUrl}/${storageKey}`;
+  }
+  return storage.createReadUrl(storageKey, 3600);
 }
 
 export function objectStorageFromEnvironment(): ObjectStorage {

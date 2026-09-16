@@ -65,7 +65,7 @@ export default async function TenantAdminLayout({
                 Miembros
               </TenantAdminNavLink>
             )}
-            <Link href="/admin/select-business" className="text-amber-400">Cambiar negocio</Link>
+            <Link href="/admin/select-business" className="text-(--color-accent-tertiary)">Cambiar negocio</Link>
           </nav>
         </div>
       </header>

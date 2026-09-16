@@ -82,7 +82,7 @@ export function PrintingIntegrationPanel({
       <button
         type="button"
         onClick={createPairing}
-        className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950"
+        className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
       >
         Generate pairing code
       </button>

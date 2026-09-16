@@ -37,7 +37,7 @@ export function TenantActivationPanel({
         type="button"
         disabled={!ready || activated}
         onClick={activate}
-        className="rounded-md bg-amber-400 px-5 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-md bg-(--color-accent-tertiary) px-5 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {activated ? "Ventas activadas" : "Activar ventas"}
       </button>

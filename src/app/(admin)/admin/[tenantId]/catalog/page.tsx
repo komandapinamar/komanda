@@ -36,29 +36,23 @@ export default async function CatalogPage({
     },
   });
   const service = new CatalogService();
-  const [categories, items] = await Promise.all([
+  const [categories, items, addonGroups, combos] = await Promise.all([
     service.listCategories(context),
-    service.listItems(context),
+    service.listItemsWithMedia(context),
+    service.listAddonGroups(context),
+    service.listCombos(context),
   ]);
 
   const isReadOnly = !canWriteCatalog(authority.membership.role);
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-      <header>
-        <p className="text-sm uppercase text-amber-400">
-          Catálogo del negocio
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">Menú, adicionales y combos</h1>
-        <p className="mt-2 text-zinc-400">
-          Cada cambio usa control de versión; un conflicto nunca sobrescribe el
-          trabajo de otro operador.
-        </p>
-      </header>
       <CatalogEditor
         tenantId={tenantId}
         initialCategories={categories}
         initialItems={items}
+        initialAddonGroups={addonGroups}
+        initialCombos={combos}
         isReadOnly={isReadOnly}
         preset={authority.membership.tenantPreset ?? "gastronomy"}
       />

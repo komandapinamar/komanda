@@ -124,14 +124,36 @@ export const comboPatchSchema = comboInputSchema
   })
   .strict();
 
+export const MEDIA_IMAGE_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MEDIA_VIDEO_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
+
+export const mediaImageMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+export const mediaVideoMimeTypes = ["video/mp4", "video/webm"] as const;
+
 export const mediaUploadInputSchema = z
   .object({
     fileName: z.string().trim().min(1).max(255),
-    mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-    byteSize: z.number().int().positive().max(10 * 1024 * 1024),
+    mimeType: z.enum([...mediaImageMimeTypes, ...mediaVideoMimeTypes]),
+    byteSize: z.number().int().positive().max(MEDIA_VIDEO_MAX_BYTES),
     checksumSha256: z.string().regex(/^[a-f0-9]{64}$/),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const isImage = (mediaImageMimeTypes as readonly string[]).includes(
+      value.mimeType,
+    );
+    if (isImage && value.byteSize > MEDIA_IMAGE_MAX_BYTES) {
+      context.addIssue({
+        code: "custom",
+        path: ["byteSize"],
+        message: "Image uploads cannot exceed 10 MB.",
+      });
+    }
+  });
 
 export function normalizeCatalogName(value: string) {
   return value.normalize("NFKC").trim().toLocaleLowerCase("es-AR");
@@ -148,7 +170,9 @@ export function assertAddonSelectionBounds(input: {
     input.selected < input.minSelected ||
     input.selected > input.maxSelected
   ) {
-    throw new CatalogRuleViolationError("Add-on selection is outside allowed bounds.");
+    throw new CatalogRuleViolationError(
+      "Add-on selection is outside allowed bounds.",
+    );
   }
 }
 
@@ -180,7 +204,9 @@ export function assertPublishableCombo(input: {
     input.items.length === 0 ||
     input.items.some((item) => item.status !== "active" || item.quantity <= 0)
   ) {
-    throw new CatalogRuleViolationError("Combo requires active items and quantities.");
+    throw new CatalogRuleViolationError(
+      "Combo requires active items and quantities.",
+    );
   }
 }
 

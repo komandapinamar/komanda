@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { withTenantTransaction, type TenantTransaction } from "@/db/tenant-transaction";
+import {
+  withTenantTransaction,
+  type TenantTransaction,
+} from "@/db/tenant-transaction";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
@@ -26,7 +29,9 @@ export class CatalogEntitlementDeniedError extends Error {}
 
 async function requireCatalogManagement(repository: CatalogRepository) {
   if (!(await repository.hasCatalogEntitlement())) {
-    throw new CatalogEntitlementDeniedError("Catalog management is unavailable.");
+    throw new CatalogEntitlementDeniedError(
+      "Catalog management is unavailable.",
+    );
   }
 }
 
@@ -49,7 +54,10 @@ async function recordMutation(
 }
 
 function versionedArchiveInput(value: unknown) {
-  return z.object({ version: z.number().int().positive() }).strict().parse(value);
+  return z
+    .object({ version: z.number().int().positive() })
+    .strict()
+    .parse(value);
 }
 
 export class CatalogService {
@@ -93,7 +101,8 @@ export class CatalogService {
           ? { normalizedName: normalizeCatalogName(input.name) }
           : {}),
       });
-      if (!category) throw new CatalogConflictError("Category version conflict.");
+      if (!category)
+        throw new CatalogConflictError("Category version conflict.");
       await recordMutation(transaction, context, {
         action: "catalog.category.updated",
         resourceType: "catalog_category",
@@ -117,7 +126,8 @@ export class CatalogService {
         status: "archived",
         archivedAt: new Date(),
       });
-      if (!archived) throw new CatalogConflictError("Category version conflict.");
+      if (!archived)
+        throw new CatalogConflictError("Category version conflict.");
       await recordMutation(transaction, context, {
         action: "catalog.category.archived",
         resourceType: "catalog_category",
@@ -134,6 +144,30 @@ export class CatalogService {
     });
   }
 
+  listItemsWithMedia(context: TenantContext) {
+    return withTenantTransaction(context, async (transaction) => {
+      const repository = new CatalogRepository(transaction, context.tenantId);
+      await requireCatalogManagement(repository);
+      return repository.listItemsWithMedia();
+    });
+  }
+
+  listAddonGroups(context: TenantContext) {
+    return withTenantTransaction(context, async (transaction) => {
+      const repository = new CatalogRepository(transaction, context.tenantId);
+      await requireCatalogManagement(repository);
+      return repository.listAddonGroupsWithOptions();
+    });
+  }
+
+  listCombos(context: TenantContext) {
+    return withTenantTransaction(context, async (transaction) => {
+      const repository = new CatalogRepository(transaction, context.tenantId);
+      await requireCatalogManagement(repository);
+      return repository.listCombosWithItems();
+    });
+  }
+
   createItem(context: TenantContext, value: unknown) {
     const input = catalogItemInputSchema.parse(value);
     return withTenantTransaction(context, async (transaction) => {
@@ -141,6 +175,7 @@ export class CatalogService {
       await requireCatalogManagement(repository);
       const category = await repository.findCategory(input.categoryId);
       const media = await repository.findMedia(input.imageAssetId);
+      const video = await repository.findMedia(input.videoAssetId);
       const groups = await repository.findAddonGroups(input.addonGroupIds);
       if (!category || groups.length !== new Set(input.addonGroupIds).size) {
         throw new CatalogNotFoundError("Catalog relationship not found.");
@@ -148,11 +183,20 @@ export class CatalogService {
       if (input.imageAssetId && !media) {
         throw new CatalogNotFoundError("Catalog media not found.");
       }
+      if (input.videoAssetId && !video) {
+        throw new CatalogNotFoundError("Catalog video not found.");
+      }
       if (input.status === "active") {
         assertPublishableItem({
           categoryStatus: category.status,
           mediaStatus: media?.status,
         });
+        if (video) {
+          assertPublishableItem({
+            categoryStatus: category.status,
+            mediaStatus: video.status,
+          });
+        }
       }
       const { addonGroupIds, ...values } = input;
       const item = await repository.createItem(
@@ -169,7 +213,8 @@ export class CatalogService {
   }
 
   updateItem(context: TenantContext, itemId: string, value: unknown) {
-    const { version, addonGroupIds, ...input } = catalogItemPatchSchema.parse(value);
+    const { version, addonGroupIds, ...input } =
+      catalogItemPatchSchema.parse(value);
     return withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
       await requireCatalogManagement(repository);
@@ -179,10 +224,20 @@ export class CatalogService {
         input.categoryId ?? current.categoryId,
       );
       const imageAssetId =
-        input.imageAssetId === undefined ? current.imageAssetId : input.imageAssetId;
+        input.imageAssetId === undefined
+          ? current.imageAssetId
+          : input.imageAssetId;
       const media = await repository.findMedia(imageAssetId);
+      const videoAssetId =
+        input.videoAssetId === undefined
+          ? current.videoAssetId
+          : input.videoAssetId;
+      const video = await repository.findMedia(videoAssetId);
       if (!category || (imageAssetId && !media)) {
         throw new CatalogNotFoundError("Catalog relationship not found.");
+      }
+      if (videoAssetId && !video) {
+        throw new CatalogNotFoundError("Catalog video not found.");
       }
       if (addonGroupIds) {
         const groups = await repository.findAddonGroups(addonGroupIds);
@@ -195,6 +250,12 @@ export class CatalogService {
           categoryStatus: category.status,
           mediaStatus: media?.status,
         });
+        if (video) {
+          assertPublishableItem({
+            categoryStatus: category.status,
+            mediaStatus: video.status,
+          });
+        }
       }
       const item = await repository.updateItem(
         itemId,
@@ -252,7 +313,8 @@ export class CatalogService {
         input,
         options,
       );
-      if (!updated) throw new CatalogConflictError("Add-on group version conflict.");
+      if (!updated)
+        throw new CatalogConflictError("Add-on group version conflict.");
       await recordMutation(transaction, context, {
         action: "catalog.addon_group.updated",
         resourceType: "addon_group",
@@ -277,7 +339,9 @@ export class CatalogService {
       await requireCatalogManagement(repository);
       const category = await repository.findCategory(input.categoryId);
       const media = await repository.findMedia(input.imageAssetId);
-      const items = await repository.findItems(input.items.map(({ itemId }) => itemId));
+      const items = await repository.findItems(
+        input.items.map(({ itemId }) => itemId),
+      );
       if (
         !category ||
         (input.imageAssetId && !media) ||
@@ -324,12 +388,19 @@ export class CatalogService {
           : {}),
       };
       if (items) {
-        const found = await repository.findItems(items.map(({ itemId }) => itemId));
+        const found = await repository.findItems(
+          items.map(({ itemId }) => itemId),
+        );
         if (found.length !== new Set(items.map(({ itemId }) => itemId)).size) {
           throw new CatalogNotFoundError("Combo item not found.");
         }
       }
-      const combo = await repository.updateCombo(comboId, version, values, items);
+      const combo = await repository.updateCombo(
+        comboId,
+        version,
+        values,
+        items,
+      );
       if (!combo) throw new CatalogConflictError("Combo version conflict.");
       await recordMutation(transaction, context, {
         action: "catalog.combo.updated",

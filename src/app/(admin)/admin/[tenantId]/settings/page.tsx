@@ -59,16 +59,6 @@ export default async function TenantSettingsPage({
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
-      <header>
-        <p className="text-sm uppercase text-amber-400">
-          Configuración
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">Operación del negocio</h1>
-        <p className="mt-2 text-zinc-400">
-          Estado de preparación, datos operativos, cobros con Mercado Pago e impresión.
-        </p>
-      </header>
-
       {readiness ? (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Preparación operativa</h2>
@@ -82,7 +72,7 @@ export default async function TenantSettingsPage({
                   <span>{readinessLabels[check.code] ?? check.code}</span>
                   <span
                     className={
-                      check.complete ? "text-emerald-400" : "text-amber-400"
+                      check.complete ? "text-emerald-400" : "text-(--color-accent-tertiary)"
                     }
                   >
                     {check.complete ? "Listo" : "Pendiente"}
