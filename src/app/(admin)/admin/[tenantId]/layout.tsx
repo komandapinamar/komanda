@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { canAccess } from "@/lib/authorization/permissions";
+import { TenantAdminNavLink } from "./TenantAdminNavLink";
 
 export default async function TenantAdminLayout({
   children,
@@ -34,19 +35,35 @@ export default async function TenantAdminLayout({
           <nav className="flex items-center gap-4 text-sm">
             {authority.membership.tenantPreset !== "express_retail" &&
               canAccess(authority.membership.role, "pedidos") && (
-                <Link href={`/admin/${tenantId}/orders`}>Pedidos</Link>
+                <TenantAdminNavLink href={`/admin/${tenantId}/orders`}>
+                  Pedidos
+                </TenantAdminNavLink>
               )}
             {canAccess(authority.membership.role, "analytics") && (
-              <Link href={`/admin/${tenantId}/analytics`}>Analítica</Link>
+              <TenantAdminNavLink href={`/admin/${tenantId}/analytics`}>
+                Analítica
+              </TenantAdminNavLink>
             )}
             {canAccess(authority.membership.role, "catalog") && (
-              <Link href={`/admin/${tenantId}/catalog`}>Catálogo</Link>
+              <TenantAdminNavLink href={`/admin/${tenantId}/catalog`}>
+                Catálogo
+              </TenantAdminNavLink>
             )}
             {canAccess(authority.membership.role, "configuracion") && (
-              <Link href={`/admin/${tenantId}/settings`}>Configuración</Link>
+              <TenantAdminNavLink
+                href={`/admin/${tenantId}/settings`}
+                activePaths={[
+                  `/admin/${tenantId}/settings`,
+                  `/admin/${tenantId}/integrations`,
+                ]}
+              >
+                Configuración
+              </TenantAdminNavLink>
             )}
             {canAccess(authority.membership.role, "members") && (
-              <Link href={`/admin/${tenantId}/members`}>Miembros</Link>
+              <TenantAdminNavLink href={`/admin/${tenantId}/members`}>
+                Miembros
+              </TenantAdminNavLink>
             )}
             <Link href="/admin/select-business" className="text-amber-400">Cambiar negocio</Link>
           </nav>
