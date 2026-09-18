@@ -97,7 +97,7 @@ export default function BusinessRegistrationWizard({
           href="/"
           className="inline-block text-2xl font-bold tracking-tight text-[var(--color-accent-tertiary)] hover:opacity-80 transition-opacity"
         >
-          KOMANDA
+          Komanda
         </Link>
         <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-accent-tertiary)] sm:text-4xl">
           Creá tu nuevo negocio

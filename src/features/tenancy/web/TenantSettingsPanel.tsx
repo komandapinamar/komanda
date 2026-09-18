@@ -43,6 +43,7 @@ export function TenantSettingsPanel({
   const [menuTheme, setMenuTheme] = useState<"classic" | "reels">(
     initialSettings.menuTheme ?? "classic",
   );
+  const isExpressRetail = settings.preset === "express_retail";
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +65,14 @@ export function TenantSettingsPanel({
             contactPhone: form.get("contactPhone"),
             timezone: form.get("timezone"),
             printingEnabled: form.get("printingEnabled") === "on",
-            slackCashAlertWebhookUrl: typeof slackWebhook === "string" && slackWebhook.trim().length > 0 ? slackWebhook.trim() : null,
+            ...(isExpressRetail
+              ? {
+                  slackCashAlertWebhookUrl:
+                    typeof slackWebhook === "string" && slackWebhook.trim().length > 0
+                      ? slackWebhook.trim()
+                      : null,
+                }
+              : {}),
             ...(menuTheme === "classic" || menuTheme === "reels"
               ? { menuTheme }
               : {}),
@@ -137,7 +145,7 @@ export function TenantSettingsPanel({
         </span>
       </div>
 
-      {settings.preset !== "express_retail" ? (
+      {!isExpressRetail ? (
         <div className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
           <div>
             <span className="block text-sm font-medium text-zinc-200">
@@ -183,23 +191,26 @@ export function TenantSettingsPanel({
           </div>
         </div>
       ) : null}
-      <div className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
-        <label className="grid gap-1">
-          <span className="text-sm font-medium text-zinc-200">
-            Webhook de Slack para cobros en efectivo (Komanda Kiosk)
-          </span>
-          <span className="text-xs text-zinc-400">
-            URL de Incoming Webhook para notificar al mostrador cada vez que un cliente elija pagar en efectivo.
-          </span>
-          <input
-            name="slackCashAlertWebhookUrl"
-            type="url"
-            defaultValue={settings.slackCashAlertWebhookUrl ?? ""}
-            placeholder="https://hooks.slack.com/services/..."
-            className={inputClass}
-          />
-        </label>
-      </div>
+
+      {isExpressRetail ? (
+        <div className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+          <label className="grid gap-1">
+            <span className="text-sm font-medium text-zinc-200">
+              Webhook de Slack para cobros en efectivo (Komanda Kiosk)
+            </span>
+            <span className="text-xs text-zinc-400">
+              URL de Incoming Webhook para notificar al mostrador cada vez que un cliente elija pagar en efectivo.
+            </span>
+            <input
+              name="slackCashAlertWebhookUrl"
+              type="url"
+              defaultValue={settings.slackCashAlertWebhookUrl ?? ""}
+              placeholder="https://hooks.slack.com/services/..."
+              className={inputClass}
+            />
+          </label>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm">
         <span>Moneda: {settings.currency}</span>
         <span>Ventas: {settings.salesEnabled ? "activas" : "deshabilitadas"}</span>
