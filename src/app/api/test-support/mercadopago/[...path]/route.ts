@@ -84,7 +84,9 @@ export async function POST(request: Request, route: RouteContext) {
 export async function DELETE(_request: Request, route: RouteContext) {
   if (!enabled()) return unavailable();
   const { path } = await route.params;
-  return path.join("/") === "oauth/token"
+  const resource = path.join("/");
+  return resource === "oauth/token" ||
+    (path[0] === "users" && path[2] === "applications")
     ? new Response(null, { status: 204 })
     : unavailable();
 }

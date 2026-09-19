@@ -59,8 +59,10 @@ function createMockCatalog(overrides?: {
       slug,
       currency: "ARS",
       menuTheme: theme,
+      orderingAvailable: true,
     },
     menuTheme: theme,
+    orderingAvailable: true,
     revision: 1,
     categories: overrides?.categories ?? [],
   };

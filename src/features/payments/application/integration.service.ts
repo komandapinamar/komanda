@@ -9,6 +9,7 @@ import {
 import { tenantMemberships } from "@/db/schema";
 import {
   IntegrationRepository,
+  MercadoPagoIntegrationConflictError,
   type MercadoPagoIntegrationAccount,
 } from "@/features/payments/infrastructure/integration.repository";
 import {
@@ -27,7 +28,7 @@ import {
 } from "@/lib/tenant-context/types";
 
 export class MercadoPagoIntegrationNotFoundError extends Error {}
-export class MercadoPagoIntegrationConflictError extends Error {}
+export { MercadoPagoIntegrationConflictError } from "@/features/payments/infrastructure/integration.repository";
 export class MercadoPagoOAuthStateError extends Error {}
 export class MercadoPagoIntegrationDependencyError extends Error {}
 
@@ -205,7 +206,7 @@ export class MercadoPagoIntegrationService {
   }
 
   async revoke(context: TenantContext, version: number) {
-    await withTenantTransaction(context, async (transaction) => {
+    return withTenantTransaction(context, async (transaction) => {
       const repository = new IntegrationRepository(transaction, context.tenantId);
       const account = await repository.currentMercadoPago();
       if (!account || account.version !== version) {
@@ -214,14 +215,34 @@ export class MercadoPagoIntegrationService {
         );
       }
 
+      let remoteConfirmed = false;
       const tokens = repository.decryptTokens(account);
-      await this.withDependencyMapping(() => this.oauth().revoke(tokens.accessToken));
+      try {
+        const remoteResult = await this.withDependencyMapping(() =>
+          this.oauth().revoke({
+            userId: account.providerAccountId,
+            accessToken: tokens.accessToken,
+          }),
+        );
+        remoteConfirmed = Boolean(remoteResult?.confirmed);
+      } catch (error) {
+        console.warn(
+          "[MercadoPagoIntegrationService] Remote revocation failed, continuing with local revocation:",
+          error instanceof Error ? error.message : error,
+        );
+      }
       const revoked = await repository.revokeMercadoPago(version);
       if (!revoked) {
         throw new MercadoPagoIntegrationConflictError(
           "Mercado Pago integration version conflict.",
         );
       }
+
+      return {
+        localRevoked: true,
+        remoteConfirmed,
+        version: revoked.version,
+      };
     });
   }
 

@@ -29,6 +29,8 @@ export default async function Order() {
   const items = categories.flatMap((category) => category.menu_items ?? []);
   const rawTheme = catalog.menuTheme ?? catalog.tenant?.menuTheme;
   const menuTheme = rawTheme === "reels" ? "reels" : "classic";
+  const orderingAvailable =
+    catalog.orderingAvailable ?? catalog.tenant?.orderingAvailable ?? true;
 
   if (menuTheme === "reels") {
     return (
@@ -36,6 +38,7 @@ export default async function Order() {
         categories={categories}
         items={items}
         tenantSlug={tenantSlug}
+        orderingAvailable={orderingAvailable}
       />
     );
   }
@@ -45,6 +48,7 @@ export default async function Order() {
       categories={categories}
       items={items}
       tenantSlug={tenantSlug}
+      orderingAvailable={orderingAvailable}
     />
   );
 }

@@ -42,9 +42,15 @@ export default async function Home() {
           {catalog.tenant.name}
         </h1>
         <p className="mb-12 max-w-2xl text-xl font-bold">
-          {catalog.categories.length > 0
-            ? `${catalog.categories.length} categorías disponibles para pedir.`
-            : "El menú todavía se está preparando."}
+          {catalog.orderingAvailable === false ? (
+            <span className="inline-block rounded-lg bg-black/10 px-4 py-2 text-sm font-semibold text-black">
+              Pedidos online no disponibles temporalmente. Consultá nuestra carta.
+            </span>
+          ) : catalog.categories.length > 0 ? (
+            `${catalog.categories.length} categorías disponibles para pedir.`
+          ) : (
+            "El menú todavía se está preparando."
+          )}
         </p>
         <Link
           href="/order"

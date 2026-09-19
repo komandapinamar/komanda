@@ -18,6 +18,7 @@ export type MercadoPagoIntegrationAccount =
   typeof integrationAccounts.$inferSelect;
 
 export class PaymentAttemptIdempotencyConflictError extends Error {}
+export class MercadoPagoIntegrationConflictError extends Error {}
 
 function encryptionConfig() {
   const encoded = process.env.APP_ENCRYPTION_KEY_BASE64;
@@ -66,10 +67,32 @@ export class IntegrationRepository {
         ),
       )
       .limit(1);
-    if (existing) {
-      const [updated] = await this.transaction
-        .update(integrationAccounts)
-        .set({
+    try {
+      if (existing) {
+        const [updated] = await this.transaction
+          .update(integrationAccounts)
+          .set({
+            providerAccountId: tokens.userId,
+            status: "active",
+            encryptedPayload: envelope.ciphertext,
+            encryptionIv: envelope.iv,
+            authTag: envelope.authTag,
+            keyVersion: envelope.keyVersion,
+            scopes: tokens.scopes,
+            expiresAt,
+            lastVerifiedAt: new Date(),
+            version: sql`${integrationAccounts.version} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(integrationAccounts.id, existing.id))
+          .returning();
+        return updated!;
+      }
+      const [created] = await this.transaction
+        .insert(integrationAccounts)
+        .values({
+          tenantId: this.tenantId,
+          provider: "mercadopago",
           providerAccountId: tokens.userId,
           status: "active",
           encryptedPayload: envelope.ciphertext,
@@ -79,30 +102,22 @@ export class IntegrationRepository {
           scopes: tokens.scopes,
           expiresAt,
           lastVerifiedAt: new Date(),
-          version: sql`${integrationAccounts.version} + 1`,
-          updatedAt: new Date(),
         })
-        .where(eq(integrationAccounts.id, existing.id))
         .returning();
-      return updated!;
+      return created!;
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code: string }).code === "23505"
+      ) {
+        throw new MercadoPagoIntegrationConflictError(
+          "Esta cuenta de Mercado Pago ya se encuentra vinculada a otro restaurante.",
+        );
+      }
+      throw error;
     }
-    const [created] = await this.transaction
-      .insert(integrationAccounts)
-      .values({
-        tenantId: this.tenantId,
-        provider: "mercadopago",
-        providerAccountId: tokens.userId,
-        status: "active",
-        encryptedPayload: envelope.ciphertext,
-        encryptionIv: envelope.iv,
-        authTag: envelope.authTag,
-        keyVersion: envelope.keyVersion,
-        scopes: tokens.scopes,
-        expiresAt,
-        lastVerifiedAt: new Date(),
-      })
-      .returning();
-    return created!;
   }
 
   async currentMercadoPago() {

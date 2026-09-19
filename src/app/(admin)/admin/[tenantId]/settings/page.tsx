@@ -52,46 +52,54 @@ export default async function TenantSettingsPage({
   const [settings, mpStatus, readiness] = await Promise.all([
     new TenantSettingsService().get(context),
     new MercadoPagoIntegrationService().getStatus(context),
-    authority.membership.tenantStatus === "onboarding"
-      ? new TenantReadinessService().get(authority.session, authority.membership)
-      : Promise.resolve(null),
+    new TenantReadinessService().get(authority.session, authority.membership),
   ]);
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
-      {readiness ? (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Preparación operativa</h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {readiness.checks.map((check) => (
-              <li
-                key={check.code}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 p-5"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <span>{readinessLabels[check.code] ?? check.code}</span>
-                  <span
-                    className={
-                      check.complete ? "text-emerald-400" : "text-(--color-accent-tertiary)"
-                    }
-                  >
-                    {check.complete ? "Listo" : "Pendiente"}
-                  </span>
-                </div>
-                {!check.requiredForActivation ? (
-                  <p className="mt-2 text-xs text-zinc-500">Opcional</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Preparación operativa</h2>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {readiness.checks.map((check) => (
+            <li
+              key={check.code}
+              className="rounded-lg border border-zinc-800 bg-zinc-900 p-5"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span>{readinessLabels[check.code] ?? check.code}</span>
+                <span
+                  className={
+                    check.complete ? "text-emerald-400" : "text-(--color-accent-tertiary)"
+                  }
+                >
+                  {check.complete ? "Listo" : "Pendiente"}
+                </span>
+              </div>
+              {!check.requiredForActivation ? (
+                <p className="mt-2 text-xs text-zinc-500">Opcional</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        {authority.membership.tenantStatus === "onboarding" ? (
+          <>
+            <p className="text-sm text-zinc-400">
+              {readiness.ready
+                ? "Todos los requisitos obligatorios están completos."
+                : "Las ventas permanecen deshabilitadas hasta completar todos los requisitos obligatorios."}
+            </p>
+            <TenantActivationPanel tenantId={tenantId} ready={readiness.ready} />
+          </>
+        ) : readiness.ready ? (
           <p className="text-sm text-zinc-400">
-            {readiness.ready
-              ? "Todos los requisitos obligatorios están completos."
-              : "Las ventas permanecen deshabilitadas hasta completar todos los requisitos obligatorios."}
+            El negocio está operativo y listo para recibir pedidos online.
           </p>
-          <TenantActivationPanel tenantId={tenantId} ready={readiness.ready} />
-        </section>
-      ) : null}
+        ) : (
+          <p className="rounded-md border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-300">
+            Pedidos online no disponibles: completá los requisitos pendientes (ej. conectar Mercado Pago) para figurar en el directorio público y habilitar el checkout.
+          </p>
+        )}
+      </section>
 
       <TenantSettingsPanel initialSettings={settings} />
 

@@ -16,12 +16,14 @@ export interface ReelsMenuViewProps {
   categories: Category[];
   items: MenuItem[];
   tenantSlug?: string;
+  orderingAvailable?: boolean;
 }
 
 export default function ReelsMenuView({
   categories,
   items,
   tenantSlug,
+  orderingAvailable = true,
 }: ReelsMenuViewProps) {
   const cartContext = useOptionalCart();
   const itemCount = cartContext?.itemCount ?? 0;

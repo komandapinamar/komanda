@@ -21,6 +21,7 @@ import {
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { parseLocationAddress } from "@/features/directory/utils/directory-maps";
+import { fetchTenantReadiness } from "./tenant-readiness.service";
 
 export class PublicTenantNotFoundError extends Error {}
 
@@ -66,24 +67,14 @@ export class PublicTenantService {
             sql`select set_config('app.tenant_id', ${tenant.id}, true)`,
           );
 
-          const [primaryLocation] = await transaction
-            .select({
-              name: tenantLocations.name,
-              address: tenantLocations.address,
-            })
-            .from(tenantLocations)
-            .where(
-              and(
-                eq(tenantLocations.tenantId, tenant.id),
-                eq(tenantLocations.isPrimary, true),
-                eq(tenantLocations.status, "active"),
-              ),
-            )
-            .limit(1);
+          const eligibility = await fetchTenantReadiness(transaction, tenant.id);
+          if (!eligibility.orderingAvailable) {
+            continue;
+          }
 
           const { displayAddress, mapQuery } = parseLocationAddress(
-            primaryLocation?.address,
-            primaryLocation?.name ?? null,
+            eligibility.primaryLocation?.address,
+            eligibility.primaryLocation?.name ?? null,
             tenant.name,
           );
 
@@ -102,7 +93,7 @@ export class PublicTenantService {
             name: tenant.name,
             slug: tenant.slug,
             currency: tenant.currency,
-            locationName: primaryLocation?.name ?? null,
+            locationName: eligibility.primaryLocation?.name ?? null,
             locationAddress: displayAddress,
             mapQuery,
             categoriesCount: categories.length,
@@ -171,6 +162,7 @@ export class PublicTenantService {
 
       const [
         settingsResult,
+        eligibility,
         categories,
         items,
         combos,
@@ -184,6 +176,7 @@ export class PublicTenantService {
           .from(tenantSettings)
           .where(eq(tenantSettings.tenantId, tenant.id))
           .limit(1),
+        fetchTenantReadiness(transaction, tenant.id),
         transaction
           .select()
           .from(catalogCategories)
@@ -268,8 +261,10 @@ export class PublicTenantService {
           slug: tenant.slug,
           currency: tenant.currency,
           menuTheme,
+          orderingAvailable: eligibility.orderingAvailable,
         },
         menuTheme,
+        orderingAvailable: eligibility.orderingAvailable,
         revision: Math.max(
           1,
           ...categories.map(({ version }) => version),
