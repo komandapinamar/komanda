@@ -158,3 +158,22 @@ END $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "cash_register_movements", "mp_financial_records", "storefront_item_events" TO komanda_runtime;
 --> statement-breakpoint
 GRANT ALL ON TABLE "cash_register_movements", "mp_financial_records", "storefront_item_events" TO komanda_migration;
+--> statement-breakpoint
+INSERT INTO "plan_definitions" (
+  "plan_id",
+  "version",
+  "status",
+  "entitlements",
+  "effective_from"
+)
+VALUES (
+  'development',
+  1,
+  'active',
+  '{"catalog_management": true, "online_payments": true, "printing": true}'::jsonb,
+  now()
+)
+ON CONFLICT ("plan_id", "version") DO UPDATE
+SET
+  "status" = EXCLUDED."status",
+  "entitlements" = EXCLUDED."entitlements";
