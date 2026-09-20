@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fetchTenantReadiness } from "@/features/tenancy/application/tenant-readiness.service";
 import type { TenantTransaction } from "@/db/tenant-transaction";
-import { CartService, CartRevalidationError } from "@/features/cart/application/cart.service";
 
 describe("live payment readiness and ordering availability", () => {
   it("evaluates orderingAvailable: true when tenant is active, sales enabled and MP connected", async () => {

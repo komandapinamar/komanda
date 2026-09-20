@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { PublicDirectoryTenant } from "@/features/tenancy/application/public-tenant.service";
 import {
@@ -16,19 +16,20 @@ type Props = {
   tenants: DirectoryTenantItem[];
 };
 
+function checkIsMobile(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+  return mobileRegex.test(ua) || window.innerWidth < 768;
+}
+
+const emptySubscribe = () => () => {};
+
 export function PublicDirectoryView({ tenants }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useSyncExternalStore(emptySubscribe, checkIsMobile, () => false);
   const [showAppBanner, setShowAppBanner] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-    if (mobileRegex.test(ua) || (typeof window !== "undefined" && window.innerWidth < 768)) {
-      setIsMobile(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (videoRef.current) {

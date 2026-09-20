@@ -106,6 +106,12 @@ export default function ReelsMenuView({
           onSelectCategory={setActiveCategoryId}
         />
 
+        {!orderingAvailable ? (
+          <div className="absolute top-16 left-4 right-4 z-30 rounded-md bg-amber-500/90 px-3 py-1.5 text-center text-xs font-bold text-black shadow">
+            Pedidos online no disponibles temporalmente.
+          </div>
+        ) : null}
+
         {/* Reels vertical feed */}
         {items.length > 0 ? (
           items.map((item, index) => {

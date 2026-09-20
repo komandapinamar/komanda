@@ -16,6 +16,8 @@ import {
   PaymentSessionService,
   PaymentSessionProviderUnavailableError,
 } from "@/features/payments/application/payment-session.service";
+import type { PublicTenantService } from "@/features/tenancy/application/public-tenant.service";
+import type { MercadoPagoOAuthClient } from "@/features/payments/infrastructure/mercadopago-oauth.client";
 
 describe("ordering and payment gating lifecycle", () => {
   beforeEach(() => {
@@ -91,7 +93,7 @@ describe("ordering and payment gating lifecycle", () => {
         }),
       });
 
-    const cartService = new CartService(mockTenants as any);
+    const cartService = new CartService(mockTenants as unknown as PublicTenantService);
 
     await expect(
       cartService.create(
@@ -142,7 +144,7 @@ describe("ordering and payment gating lifecycle", () => {
       });
 
     const paymentService = new PaymentSessionService(
-      mockPublicTenants as any,
+      mockPublicTenants as unknown as PublicTenantService,
       undefined,
       () => new Date(),
     );
@@ -227,7 +229,9 @@ describe("ordering and payment gating lifecycle", () => {
       scopes: [],
     });
 
-    const service = new MercadoPagoIntegrationService(mockOAuthClient as any);
+    const service = new MercadoPagoIntegrationService(
+      mockOAuthClient as unknown as MercadoPagoOAuthClient,
+    );
     const result1 = await service.revoke(mockContext, 1);
     expect(result1).toEqual({
       localRevoked: true,
