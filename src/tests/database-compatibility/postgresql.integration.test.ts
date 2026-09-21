@@ -18,15 +18,12 @@ describe("PostgreSQL 17 provider compatibility", () => {
   });
 
   it("keeps the orders tender baseline aligned with the runtime contract", async () => {
-    const source = await readFile("drizzle/0000_initial_schema.sql", "utf8");
-    const orders = source.slice(
-      source.indexOf('CREATE TABLE "orders"'),
-      source.indexOf("--> statement-breakpoint", source.indexOf('CREATE TABLE "orders"')),
+    const source = await readFile("drizzle/0009_add_analytics_records_and_tender.sql", "utf8");
+    expect(source).toContain(
+      'ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "tender" text DEFAULT \'cash\' NOT NULL;',
     );
-
-    expect(orders).toContain('"tender" text DEFAULT \'cash\' NOT NULL');
-    expect(orders).toContain(
-      'CONSTRAINT "orders_tender_check" CHECK ("orders"."tender" in (\'cash\', \'posnet\'))',
+    expect(source).toContain(
+      'ALTER TABLE "orders" ADD CONSTRAINT "orders_tender_check" CHECK ("orders"."tender" in (\'cash\', \'posnet\'));',
     );
   });
 
