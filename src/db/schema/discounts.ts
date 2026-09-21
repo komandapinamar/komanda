@@ -8,6 +8,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -15,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { tenants } from "./platform";
 import { tenantOrders } from "./commerce";
+import { catalogCategories, catalogItems } from "./catalog";
 
 export type DiscountType = "percentage" | "fixed_amount";
 export type DiscountScope = "global" | "category" | "item";
@@ -133,5 +135,67 @@ export const discountRedemptions = pgTable(
     }).onDelete("restrict"),
     unique("discount_redemptions_order_key").on(table.tenantId, table.orderId),
     index("discount_redemptions_discount_idx").on(table.tenantId, table.discountId),
+  ],
+);
+
+export const discountCategories = pgTable(
+  "discount_categories",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    discountId: uuid("discount_id").notNull(),
+    categoryId: uuid("category_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.discountId, table.categoryId] }),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "discount_categories_tenant_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.discountId],
+      foreignColumns: [discounts.tenantId, discounts.id],
+      name: "discount_categories_discount_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.categoryId],
+      foreignColumns: [catalogCategories.tenantId, catalogCategories.id],
+      name: "discount_categories_category_fk",
+    }).onDelete("cascade"),
+    index("discount_categories_category_idx").on(table.tenantId, table.categoryId),
+  ],
+);
+
+export const discountItems = pgTable(
+  "discount_items",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    discountId: uuid("discount_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.discountId, table.itemId] }),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "discount_items_tenant_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.discountId],
+      foreignColumns: [discounts.tenantId, discounts.id],
+      name: "discount_items_discount_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.itemId],
+      foreignColumns: [catalogItems.tenantId, catalogItems.id],
+      name: "discount_items_item_fk",
+    }).onDelete("cascade"),
+    index("discount_items_item_idx").on(table.tenantId, table.itemId),
   ],
 );

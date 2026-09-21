@@ -137,6 +137,11 @@ export const billingDocuments = pgTable(
       table.tenantId,
       table.issuedAt,
     ),
+    index("billing_documents_tenant_location_issued_idx").on(
+      table.tenantId,
+      table.locationId,
+      table.issuedAt,
+    ),
     index("billing_documents_tenant_order_idx").on(
       table.tenantId,
       table.orderId,

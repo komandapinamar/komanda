@@ -14,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { tenants } from "./platform";
+import { tenants, tenantLocations } from "./platform";
 import { cashShifts, tenantOrders } from "./commerce";
 
 const timestamps = {
@@ -102,13 +102,10 @@ export const cashRegisterMovements = pgTable(
   "cash_register_movements",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id")
-      .notNull()
-      .references(() => tenants.id),
+    tenantId: uuid("tenant_id").notNull(),
     locationId: uuid("location_id").notNull(),
-    shiftId: uuid("shift_id").references(() => cashShifts.id),
-    orderId: uuid("order_id")
-      .references(() => tenantOrders.id),
+    shiftId: uuid("shift_id"),
+    orderId: uuid("order_id"),
     type: text("type")
       .$type<CashMovementType>()
       .notNull(),
@@ -118,12 +115,34 @@ export const cashRegisterMovements = pgTable(
       .notNull(),
     recordedByUserId: text("recorded_by_user_id"),
     reason: text("reason"),
-    idempotencyKey: text("idempotency_key").unique(),
+    idempotencyKey: text("idempotency_key"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .defaultNow()
       .notNull(),
   },
   (t) => [
+    foreignKey({
+      columns: [t.tenantId],
+      foreignColumns: [tenants.id],
+      name: "cash_register_movements_tenant_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.tenantId, t.locationId],
+      foreignColumns: [tenantLocations.tenantId, tenantLocations.id],
+      name: "cash_register_movements_location_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.tenantId, t.shiftId],
+      foreignColumns: [cashShifts.tenantId, cashShifts.id],
+      name: "cash_register_movements_shift_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.tenantId, t.orderId],
+      foreignColumns: [tenantOrders.tenantId, tenantOrders.id],
+      name: "cash_register_movements_order_fk",
+    }).onDelete("restrict"),
+    unique("cash_register_movements_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("cash_movements_tenant_idempotency_key").on(t.tenantId, t.idempotencyKey),
     index("cash_movements_tenant_location_idx").on(
       t.tenantId,
       t.locationId,

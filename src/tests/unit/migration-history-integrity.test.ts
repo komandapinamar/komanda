@@ -70,4 +70,26 @@ describe("migration history integrity", () => {
       'CREATE POLICY "discount_redemptions_runtime_isolation"',
     );
   });
+
+  it("configures normalized discount junction tables and composite FKs in migration 0014", () => {
+    const optimizationMigration = readMigration(
+      "0014_schema_optimizations_and_normalization.sql",
+    );
+
+    expect(optimizationMigration).toContain(
+      'CREATE TABLE IF NOT EXISTS "discount_categories"',
+    );
+    expect(optimizationMigration).toContain(
+      'CREATE TABLE IF NOT EXISTS "discount_items"',
+    );
+    expect(optimizationMigration).toContain(
+      'ALTER TABLE "tenant_locations"',
+    );
+    expect(optimizationMigration).toContain(
+      'CREATE INDEX IF NOT EXISTS "tenant_locations_coords_idx"',
+    );
+    expect(optimizationMigration).toContain(
+      'CONSTRAINT "cash_register_movements_location_fk"',
+    );
+  });
 });

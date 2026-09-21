@@ -70,6 +70,9 @@ export type OrderView = {
     amountDeducted: string;
   } | null;
   currency: string;
+  pickupPin?: string | null;
+  estimatedWaitMinutes?: number | null;
+  estimatedReadyAt?: string | null;
   version: number;
   approvedAt: string | null;
   deliveredAt: string | null;
@@ -140,6 +143,9 @@ function serializeOrder(
     total: order.total,
     discountSnapshot: order.discountSnapshot ?? null,
     currency: order.currency,
+    pickupPin: order.pickupPin ?? null,
+    estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
+    estimatedReadyAt: dateToIso(order.estimatedReadyAt),
     version: order.version,
     approvedAt: dateToIso(order.approvedAt),
     deliveredAt: dateToIso(order.deliveredAt),
@@ -277,6 +283,9 @@ export class OrderRepository {
     idempotencyKey: string;
     paymentAttemptId?: string | null;
     approvedAt?: Date | null;
+    pickupPin?: string | null;
+    estimatedWaitMinutes?: number | null;
+    estimatedReadyAt?: Date | null;
   }) {
     const existing = await this.findByIdempotencyKey(input.idempotencyKey);
     if (existing) {
@@ -296,6 +305,33 @@ export class OrderRepository {
 
     const now = new Date();
     const purchaseNumber = await this.nextCounter("purchase_number");
+
+    const [activeOrdersRow] = await this.transaction
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tenantOrders)
+      .where(
+        and(
+          eq(tenantOrders.tenantId, this.tenantId),
+          eq(tenantOrders.locationId, input.cart.locationId),
+          sql`${tenantOrders.fulfillmentStatus} in ('approved', 'preparing')`,
+        ),
+      );
+    const activeCount = Number(activeOrdersRow?.count ?? 0);
+    const basePrepMinutes = 15;
+    const queueBufferMinutes = activeCount * 3;
+    const estimatedWaitMinutes =
+      input.estimatedWaitMinutes !== undefined
+        ? input.estimatedWaitMinutes
+        : basePrepMinutes + queueBufferMinutes;
+    const estimatedReadyAt =
+      input.estimatedReadyAt !== undefined
+        ? input.estimatedReadyAt
+        : new Date(now.getTime() + (estimatedWaitMinutes ?? 15) * 60 * 1000);
+    const pickupPin =
+      input.pickupPin !== undefined
+        ? input.pickupPin
+        : Math.floor(1000 + Math.random() * 9000).toString();
+
     const [order] = await this.transaction
       .insert(tenantOrders)
       .values({
@@ -324,6 +360,9 @@ export class OrderRepository {
                 amountDeducted: input.cart.discountTotal,
               }
             : null,
+        pickupPin,
+        estimatedWaitMinutes,
+        estimatedReadyAt,
         currency: input.cart.currency,
         idempotencyKey: input.idempotencyKey,
         approvedAt: input.approvedAt ?? now,

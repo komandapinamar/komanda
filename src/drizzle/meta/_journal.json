@@ -92,6 +92,20 @@
       "when": 1790001000000,
       "tag": "0012_add_discount_redemptions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790002000000,
+      "tag": "0013_add_order_pickup_pin_and_eta",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790003000000,
+      "tag": "0014_schema_optimizations_and_normalization",
+      "breakpoints": true
     }
   ]
 }

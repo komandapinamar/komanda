@@ -10,6 +10,7 @@ vi.mock("@/db", () => ({
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
   billingDocuments,
+  carts,
   cashRegisterMovements,
   cashShifts,
   catalogCategories,
@@ -17,6 +18,7 @@ import {
   inventoryLevels,
   inventoryMovements,
   printerDestinations,
+  tenantLocations,
   tenantPrintJobs,
 } from "@/db/schema";
 import {
@@ -148,12 +150,69 @@ describe("Schema Architecture Enhancements", () => {
       expect(EXPECTED_PROTECTED_TABLES).toContain("printer_destinations");
       expect(EXPECTED_PROTECTED_TABLES).toContain("cash_shifts");
       expect(EXPECTED_PROTECTED_TABLES).toContain("discounts");
+      expect(EXPECTED_PROTECTED_TABLES).toContain("discount_categories");
+      expect(EXPECTED_PROTECTED_TABLES).toContain("discount_items");
 
       expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("inventory_levels");
       expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("inventory_movements");
       expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("printer_destinations");
       expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("cash_shifts");
       expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("discounts");
+      expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("discount_categories");
+      expect(REQUIRED_TENANT_NOT_NULL_TABLES).toContain("discount_items");
+    });
+  });
+
+  describe("Mejora 6: Index Coverage & Composite FK Consistency", () => {
+    it("configures location latitude, longitude and coords index on tenant_locations", () => {
+      const config = getTableConfig(tenantLocations);
+      const cols = config.columns.map((c) => c.name);
+      expect(cols).toContain("latitude");
+      expect(cols).toContain("longitude");
+
+      const coordsIdx = config.indexes.find(
+        (i) => (i as { config?: { name?: string } }).config?.name === "tenant_locations_coords_idx" ||
+               (i as { name?: string }).name === "tenant_locations_coords_idx",
+      );
+      expect(coordsIdx).toBeDefined();
+    });
+
+    it("configures foreign key indexes for carts, inventory movements, and billing documents", () => {
+      const cartsConfig = getTableConfig(carts);
+      const discountIdx = cartsConfig.indexes.find(
+        (i) => (i as { config?: { name?: string } }).config?.name === "carts_tenant_discount_idx" ||
+               (i as { name?: string }).name === "carts_tenant_discount_idx",
+      );
+      expect(discountIdx).toBeDefined();
+
+      const invConfig = getTableConfig(inventoryMovements);
+      const orderIdx = invConfig.indexes.find(
+        (i) => (i as { config?: { name?: string } }).config?.name === "inventory_movements_tenant_order_idx" ||
+               (i as { name?: string }).name === "inventory_movements_tenant_order_idx",
+      );
+      expect(orderIdx).toBeDefined();
+
+      const billConfig = getTableConfig(billingDocuments);
+      const locIssuedIdx = billConfig.indexes.find(
+        (i) => (i as { config?: { name?: string } }).config?.name === "billing_documents_tenant_location_issued_idx" ||
+               (i as { name?: string }).name === "billing_documents_tenant_location_issued_idx",
+      );
+      expect(locIssuedIdx).toBeDefined();
+    });
+
+    it("configures composite tenant foreign keys on cash_register_movements", () => {
+      const config = getTableConfig(cashRegisterMovements);
+      const fks = config.foreignKeys.map((fk) => fk.getName());
+
+      expect(fks).toContain("cash_register_movements_tenant_fk");
+      expect(fks).toContain("cash_register_movements_location_fk");
+      expect(fks).toContain("cash_register_movements_shift_fk");
+      expect(fks).toContain("cash_register_movements_order_fk");
+
+      const uidx = config.uniqueConstraints.find(
+        (u) => u.name === "cash_register_movements_tenant_id_id_key",
+      );
+      expect(uidx).toBeDefined();
     });
   });
 });

@@ -200,6 +200,8 @@ export class PublicRegistrationService {
           timezone: "America/Argentina/Buenos_Aires",
           status: "active",
           isPrimary: true,
+          latitude: input.location?.lat != null ? String(input.location.lat) : null,
+          longitude: input.location?.lng != null ? String(input.location.lng) : null,
           address: {
             ...input.location,
             geocoderProvider: input.location.geocoderProvider ?? "photon",

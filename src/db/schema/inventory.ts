@@ -119,6 +119,10 @@ export const inventoryMovements = pgTable(
       table.itemId,
       table.occurredAt,
     ),
+    index("inventory_movements_tenant_order_idx").on(
+      table.tenantId,
+      table.referenceOrderId,
+    ),
     check(
       "inventory_movements_reason_check",
       sql`${table.reason} in ('sale', 'cancellation_restock', 'manual_adjustment', 'waste_spoilage', 'initial_intake', 'transfer')`,

@@ -7,6 +7,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -66,6 +67,8 @@ export const tenantLocations = pgTable(
     timezone: text("timezone").notNull(),
     status: text("status").$type<"active" | "inactive">().default("active").notNull(),
     isPrimary: boolean("is_primary").default(false).notNull(),
+    latitude: numeric("latitude", { precision: 9, scale: 6 }),
+    longitude: numeric("longitude", { precision: 9, scale: 6 }),
     address: jsonb("address").$type<Record<string, unknown> | null>(),
     ...timestamps,
   },
@@ -80,6 +83,7 @@ export const tenantLocations = pgTable(
       .on(table.tenantId)
       .where(sql`${table.isPrimary} = true`),
     index("tenant_locations_tenant_status_idx").on(table.tenantId, table.status),
+    index("tenant_locations_coords_idx").on(table.latitude, table.longitude),
   ],
 );
 

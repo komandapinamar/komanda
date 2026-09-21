@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { getTableConfig } from "drizzle-orm/pg-core";
-import { discounts } from "@/db/schema/discounts";
+import {
+  discountCategories,
+  discountItems,
+  discounts,
+} from "@/db/schema/discounts";
 import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 
@@ -69,6 +73,34 @@ describe("Story 1.1: Discounts Schema & Repository", () => {
                (i as { name?: string }).name === "discounts_tenant_active_idx",
       );
       expect(idx).toBeDefined();
+    });
+
+    it("configures normalized discount_categories junction table with cascade FKs", () => {
+      const config = getTableConfig(discountCategories);
+      const colNames = config.columns.map((c) => c.name);
+
+      expect(colNames).toContain("tenant_id");
+      expect(colNames).toContain("discount_id");
+      expect(colNames).toContain("category_id");
+
+      const fks = config.foreignKeys.map((fk) => fk.getName());
+      expect(fks).toContain("discount_categories_tenant_fk");
+      expect(fks).toContain("discount_categories_discount_fk");
+      expect(fks).toContain("discount_categories_category_fk");
+    });
+
+    it("configures normalized discount_items junction table with cascade FKs", () => {
+      const config = getTableConfig(discountItems);
+      const colNames = config.columns.map((c) => c.name);
+
+      expect(colNames).toContain("tenant_id");
+      expect(colNames).toContain("discount_id");
+      expect(colNames).toContain("item_id");
+
+      const fks = config.foreignKeys.map((fk) => fk.getName());
+      expect(fks).toContain("discount_items_tenant_fk");
+      expect(fks).toContain("discount_items_discount_fk");
+      expect(fks).toContain("discount_items_item_fk");
     });
   });
 

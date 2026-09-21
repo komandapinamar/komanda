@@ -158,6 +158,8 @@ export class TenantSettingsService {
         const [location] = await transaction
           .update(tenantLocations)
           .set({
+            latitude: patch.location.lat != null ? String(patch.location.lat) : null,
+            longitude: patch.location.lng != null ? String(patch.location.lng) : null,
             address: {
               ...patch.location,
               geocoderProvider: patch.location.geocoderProvider ?? "photon",

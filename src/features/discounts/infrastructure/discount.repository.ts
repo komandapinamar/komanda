@@ -2,6 +2,8 @@ import "server-only";
 
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import {
+  discountCategories,
+  discountItems,
   discountRedemptions,
   discounts,
   type DiscountScope,
@@ -77,6 +79,40 @@ export class DiscountRepository {
         version: 1,
       })
       .returning();
+
+    if (input.targetCategoryIds && input.targetCategoryIds.length > 0) {
+      const q = this.transaction
+        .insert(discountCategories)
+        .values(
+          input.targetCategoryIds.map((categoryId) => ({
+            tenantId: this.tenantId,
+            discountId: created.id,
+            categoryId,
+          })),
+        );
+      if ("onConflictDoNothing" in q && typeof q.onConflictDoNothing === "function") {
+        await q.onConflictDoNothing();
+      } else {
+        await q;
+      }
+    }
+
+    if (input.targetItemIds && input.targetItemIds.length > 0) {
+      const q = this.transaction
+        .insert(discountItems)
+        .values(
+          input.targetItemIds.map((itemId) => ({
+            tenantId: this.tenantId,
+            discountId: created.id,
+            itemId,
+          })),
+        );
+      if ("onConflictDoNothing" in q && typeof q.onConflictDoNothing === "function") {
+        await q.onConflictDoNothing();
+      } else {
+        await q;
+      }
+    }
 
     return created;
   }
@@ -202,6 +238,60 @@ export class DiscountRepository {
       .set(setValues)
       .where(and(...whereConditions))
       .returning();
+
+    if (updated && input.targetCategoryIds !== undefined) {
+      await this.transaction
+        .delete(discountCategories)
+        .where(
+          and(
+            eq(discountCategories.tenantId, this.tenantId),
+            eq(discountCategories.discountId, updated.id),
+          ),
+        );
+      if (input.targetCategoryIds.length > 0) {
+        const q = this.transaction
+          .insert(discountCategories)
+          .values(
+            input.targetCategoryIds.map((categoryId) => ({
+              tenantId: this.tenantId,
+              discountId: updated.id,
+              categoryId,
+            })),
+          );
+        if ("onConflictDoNothing" in q && typeof q.onConflictDoNothing === "function") {
+          await q.onConflictDoNothing();
+        } else {
+          await q;
+        }
+      }
+    }
+
+    if (updated && input.targetItemIds !== undefined) {
+      await this.transaction
+        .delete(discountItems)
+        .where(
+          and(
+            eq(discountItems.tenantId, this.tenantId),
+            eq(discountItems.discountId, updated.id),
+          ),
+        );
+      if (input.targetItemIds.length > 0) {
+        const q = this.transaction
+          .insert(discountItems)
+          .values(
+            input.targetItemIds.map((itemId) => ({
+              tenantId: this.tenantId,
+              discountId: updated.id,
+              itemId,
+            })),
+          );
+        if ("onConflictDoNothing" in q && typeof q.onConflictDoNothing === "function") {
+          await q.onConflictDoNothing();
+        } else {
+          await q;
+        }
+      }
+    }
 
     return updated ?? null;
   }

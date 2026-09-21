@@ -80,6 +80,10 @@ export const carts = pgTable(
       table.status,
       table.updatedAt,
     ),
+    index("carts_tenant_discount_idx").on(
+      table.tenantId,
+      table.appliedDiscountCodeId,
+    ),
     check("carts_currency_check", sql`char_length(${table.currency}) = 3`),
     check("carts_amounts_check", sql`${table.subtotal} >= 0 and ${table.discountTotal} >= 0 and ${table.total} >= 0`),
     check("carts_version_check", sql`${table.version} > 0`),
@@ -266,6 +270,9 @@ export const tenantOrders = pgTable(
       discountValue: string;
       amountDeducted: string;
     }>(),
+    pickupPin: text("pickup_pin"),
+    estimatedWaitMinutes: integer("estimated_wait_minutes"),
+    estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true, mode: "date" }),
     currency: text("currency").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     approvedAt: timestamp("approved_at", { withTimezone: true, mode: "date" }),

@@ -10,11 +10,16 @@ import { DiscountRepository } from "@/features/discounts/infrastructure/discount
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
-import { OrderConflictError, OrderNotFoundError } from "./order-errors";
+import {
+  InvalidPickupPinError,
+  OrderConflictError,
+  OrderNotFoundError,
+} from "./order-errors";
 
 export const transitionOrderSchema = z
   .object({
     fulfillmentStatus: z.enum(["preparing", "ready", "delivered", "cancelled"]),
+    pickupPin: z.string().trim().optional(),
   })
   .strict();
 
@@ -39,6 +44,12 @@ export class TransitionOrderService {
         nextStatus,
         current.source,
       );
+
+      if (nextStatus === "delivered" && current.pickupPin) {
+        if (!request.pickupPin || request.pickupPin !== current.pickupPin) {
+          throw new InvalidPickupPinError("El código PIN de retiro es inválido.");
+        }
+      }
 
       if (current.fulfillmentStatus === nextStatus) {
         return current;
