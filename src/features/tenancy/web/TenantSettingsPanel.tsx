@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LocationPicker } from "@/features/location/web/LocationPicker";
+import type { LocationAddress } from "@/features/location/application/location.schemas";
 
 export type TenantSettingsView = {
   tenantId: string;
@@ -15,6 +18,7 @@ export type TenantSettingsView = {
   currency: string;
   timezone: string;
   version: number;
+  location?: LocationAddress | null;
 };
 
 const presetLabels: Record<
@@ -38,11 +42,13 @@ export function TenantSettingsPanel({
 }: {
   initialSettings: TenantSettingsView;
 }) {
+  const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
   const [message, setMessage] = useState<string | null>(null);
   const [menuTheme, setMenuTheme] = useState<"classic" | "reels">(
     initialSettings.menuTheme ?? "classic",
   );
+  const [location, setLocation] = useState<LocationAddress | null>(initialSettings.location ?? null);
   const isExpressRetail = settings.preset === "express_retail";
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -76,19 +82,21 @@ export function TenantSettingsPanel({
             ...(menuTheme === "classic" || menuTheme === "reels"
               ? { menuTheme }
               : {}),
+            ...(location ? { location } : {}),
           }),
         }),
       )) as TenantSettingsView;
       setSettings(updated);
       setMenuTheme(updated.menuTheme ?? "classic");
       setMessage("Configuración guardada.");
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error inesperado.");
     }
   }
 
   const inputClass =
-    "rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm";
+    "rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/20";
 
   return (
     <form onSubmit={save} className="grid gap-5">
@@ -133,7 +141,7 @@ export function TenantSettingsPanel({
           />
         </label>
       </div>
-      <div className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+      <div className="grid gap-2 border-t border-zinc-800/80 pt-5">
         <span className="block text-sm font-medium text-zinc-200">
           Perfil operativo del negocio
         </span>
@@ -144,9 +152,16 @@ export function TenantSettingsPanel({
           El perfil se define al registrar el negocio y no puede modificarse.
         </span>
       </div>
+      <section className="grid gap-3 border-t border-zinc-800/80 pt-5">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-200">Ubicación del local primario</h2>
+          <p className="text-xs text-zinc-400">La ubicación exacta se publica en el directorio.</p>
+        </div>
+        <LocationPicker initialValue={location} onConfirm={setLocation} />
+      </section>
 
       {!isExpressRetail ? (
-        <div className="grid gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+        <div className="grid gap-3 border-t border-zinc-800/80 pt-5">
           <div>
             <span className="block text-sm font-medium text-zinc-200">
               Tema del menú digital (QR)
@@ -156,7 +171,7 @@ export function TenantSettingsPanel({
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 p-3.5 transition hover:border-zinc-500">
               <input
                 type="radio"
                 name="menuTheme"
@@ -172,7 +187,7 @@ export function TenantSettingsPanel({
                 </span>
               </div>
             </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 bg-zinc-950 p-3.5 transition hover:border-zinc-500">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 p-3.5 transition hover:border-zinc-500">
               <input
                 type="radio"
                 name="menuTheme"
@@ -193,7 +208,7 @@ export function TenantSettingsPanel({
       ) : null}
 
       {isExpressRetail ? (
-        <div className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+        <div className="grid gap-2 border-t border-zinc-800/80 pt-5">
           <label className="grid gap-1">
             <span className="text-sm font-medium text-zinc-200">
               Webhook de Slack para cobros en efectivo (Komanda Kiosk)
@@ -211,9 +226,9 @@ export function TenantSettingsPanel({
           </label>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm">
-        <span>Moneda: {settings.currency}</span>
-        <span>Ventas: {settings.salesEnabled ? "activas" : "deshabilitadas"}</span>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-zinc-800/80 pt-5 text-sm text-zinc-400">
+        <span>Moneda: <strong className="font-medium text-zinc-200">{settings.currency}</strong></span>
+        <span>Ventas: <strong className="font-medium text-zinc-200">{settings.salesEnabled ? "activas" : "deshabilitadas"}</strong></span>
         <label className="flex items-center gap-2">
           <input
             name="printingEnabled"

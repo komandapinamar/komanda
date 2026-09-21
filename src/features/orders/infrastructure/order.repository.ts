@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { OrderConflictError } from "@/features/orders/application/order-errors";
 import type {
   FulfillmentStatus,
@@ -60,6 +61,14 @@ export type OrderView = {
   subtotal: string;
   discountTotal: string;
   total: string;
+  discountSnapshot?: {
+    discountId: string;
+    code: string;
+    name: string;
+    discountType: string;
+    discountValue: string;
+    amountDeducted: string;
+  } | null;
   currency: string;
   version: number;
   approvedAt: string | null;
@@ -129,6 +138,7 @@ function serializeOrder(
     subtotal: order.subtotal,
     discountTotal: order.discountTotal,
     total: order.total,
+    discountSnapshot: order.discountSnapshot ?? null,
     currency: order.currency,
     version: order.version,
     approvedAt: dateToIso(order.approvedAt),
@@ -303,6 +313,17 @@ export class OrderRepository {
         subtotal: input.cart.subtotal,
         discountTotal: input.cart.discountTotal,
         total: input.cart.total,
+        discountSnapshot:
+          input.cart.appliedDiscountCodeId && input.cart.discountMetadata
+            ? {
+                discountId: input.cart.appliedDiscountCodeId,
+                code: input.cart.discountMetadata.code,
+                name: input.cart.discountMetadata.name,
+                discountType: input.cart.discountMetadata.discountType,
+                discountValue: input.cart.discountMetadata.discountValue,
+                amountDeducted: input.cart.discountTotal,
+              }
+            : null,
         currency: input.cart.currency,
         idempotencyKey: input.idempotencyKey,
         approvedAt: input.approvedAt ?? now,
@@ -382,6 +403,20 @@ export class OrderRepository {
       .update(carts)
       .set({ status: "converted", updatedAt: now })
       .where(and(eq(carts.tenantId, this.tenantId), eq(carts.id, input.cart.id)));
+
+    if (
+      input.cart.appliedDiscountCodeId &&
+      Number(input.cart.discountTotal) > 0
+    ) {
+      const discountRepo = new DiscountRepository(this.transaction, this.tenantId);
+      await discountRepo.recordRedemption({
+        orderId: order.id,
+        cartId: input.cart.id,
+        discountId: input.cart.appliedDiscountCodeId,
+        amountDeducted: input.cart.discountTotal,
+        codeSnapshot: input.cart.discountMetadata?.code ?? "DISCOUNT",
+      });
+    }
 
     const hydrated = await this.hydrate(order);
     await this.appendEvent({

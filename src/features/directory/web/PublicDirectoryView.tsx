@@ -5,8 +5,8 @@ import Link from "next/link";
 import type { PublicDirectoryTenant } from "@/features/tenancy/application/public-tenant.service";
 import {
   buildGoogleMapsDirectUrl,
-  buildGoogleMapsEmbedUrl,
 } from "@/features/directory/utils/directory-maps";
+import { LocationMapPreview } from "@/features/location/web/LocationMapPreview";
 
 export type DirectoryTenantItem = PublicDirectoryTenant & {
   storefrontUrl: string;
@@ -139,7 +139,7 @@ export function PublicDirectoryView({ tenants }: Props) {
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre de negocio o ubicación..."
+              placeholder="Buscá productos, negocios o ubicaciones..."
               className="w-full rounded-2xl bg-white/95 px-6 py-4 text-base font-normal text-zinc-900 placeholder:text-zinc-500 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-[var(--color-accent-secondary)]"
             />
           </div>
@@ -176,7 +176,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                   </div>
 
                   <div className="mt-5 space-y-3">
-                    {/* Mapa de Google Maps del local */}
+                     {/* Mapa abierto del local confirmado */}
                     <div className="pt-1">
                       <div className="overflow-hidden rounded-xl border-3 border-black bg-zinc-100 shadow-[3px_3px_0_0_black]">
                         <div className="flex items-center justify-between border-b-2 border-black bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-800">
@@ -194,13 +194,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                           </a>
                         </div>
                         <div className="relative h-44 w-full bg-zinc-200">
-                          <iframe
-                            title={`Mapa de ubicación de ${tenant.name}`}
-                            src={buildGoogleMapsEmbedUrl(tenant.mapQuery)}
-                            className="h-full w-full border-0"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                          />
+                          <LocationMapPreview lat={tenant.lat} lng={tenant.lng} name={tenant.name} />
                         </div>
                       </div>
                     </div>

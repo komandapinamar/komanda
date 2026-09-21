@@ -5,7 +5,8 @@ export type Section =
   | "catalog"
   | "configuracion"
   | "members"
-  | "analytics";
+  | "analytics"
+  | "promociones";
 
 const SECTION_PERMISSIONS: Record<Section, Role[]> = {
   pedidos: ["owner", "admin", "employee"],
@@ -13,6 +14,7 @@ const SECTION_PERMISSIONS: Record<Section, Role[]> = {
   configuracion: ["owner"],
   members: ["owner"],
   analytics: ["owner"],
+  promociones: ["owner", "admin"],
 };
 
 export function canAccess(role: Role, section: Section): boolean {

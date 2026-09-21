@@ -20,6 +20,37 @@ export type ResolvedLocationInfo = {
   mapQuery: string;
 };
 
+export type ConfirmedLocation = {
+  lat: number;
+  lng: number;
+  formattedAddress: string | null;
+};
+
+export function parseConfirmedLocation(rawAddress: unknown): ConfirmedLocation | null {
+  if (!rawAddress || typeof rawAddress !== "object" || Array.isArray(rawAddress)) return null;
+  const value = rawAddress as LocationAddressPayload;
+  const lat = value.lat;
+  const lng = value.lng;
+  if (
+    typeof lat !== "number" ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 || lat > 90 ||
+    lng < -180 || lng > 180 ||
+    Math.abs(lat - Number(lat.toFixed(6))) >= Number.EPSILON ||
+    Math.abs(lng - Number(lng.toFixed(6))) >= Number.EPSILON
+  ) return null;
+  return {
+    lat,
+    lng,
+    formattedAddress:
+      typeof value.formattedAddress === "string" && value.formattedAddress.trim()
+        ? value.formattedAddress.trim()
+        : null,
+  };
+}
+
 export function parseLocationAddress(
   rawAddress: unknown,
   locationName: string | null,
@@ -98,14 +129,6 @@ export function parseLocationAddress(
     displayAddress: meaningfulLocationName,
     mapQuery: fallbackQuery,
   };
-}
-
-export function buildGoogleMapsEmbedUrl(query: string): string {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (apiKey) {
-    return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}`;
-  }
-  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
 export function buildGoogleMapsDirectUrl(query: string): string {

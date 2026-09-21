@@ -14,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./platform";
+import { tenantOrders } from "./commerce";
 
 export type DiscountType = "percentage" | "fixed_amount";
 export type DiscountScope = "global" | "category" | "item";
@@ -60,6 +61,7 @@ export const discounts = pgTable(
       foreignColumns: [tenants.id],
       name: "discounts_tenant_fk",
     }).onDelete("restrict"),
+    unique("discounts_tenant_id_id_key").on(table.tenantId, table.id),
     unique("discounts_tenant_code_key").on(table.tenantId, table.code),
     index("discounts_tenant_active_idx").on(
       table.tenantId,
@@ -92,5 +94,44 @@ export const discounts = pgTable(
       sql`${table.redemptionsCount} >= 0 and (${table.maxRedemptions} is null or ${table.maxRedemptions} >= ${table.redemptionsCount})`,
     ),
     check("discounts_version_positive_check", sql`${table.version} > 0`),
+  ],
+);
+
+export const discountRedemptions = pgTable(
+  "discount_redemptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    discountId: uuid("discount_id").notNull(),
+    orderId: uuid("order_id").notNull(),
+    cartId: uuid("cart_id").notNull(),
+    amountDeducted: numeric("amount_deducted", { precision: 12, scale: 2 }).notNull(),
+    codeSnapshot: text("code_snapshot").notNull(),
+    status: text("status")
+      .$type<"redeemed" | "order_cancelled">()
+      .default("redeemed")
+      .notNull(),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "discount_redemptions_tenant_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.discountId],
+      foreignColumns: [discounts.tenantId, discounts.id],
+      name: "discount_redemptions_discount_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.orderId],
+      foreignColumns: [tenantOrders.tenantId, tenantOrders.id],
+      name: "discount_redemptions_order_fk",
+    }).onDelete("restrict"),
+    unique("discount_redemptions_order_key").on(table.tenantId, table.orderId),
+    index("discount_redemptions_discount_idx").on(table.tenantId, table.discountId),
   ],
 );

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   addonGroups,
   addonOptions,
@@ -157,6 +157,15 @@ export class CartRepository {
     currency: string;
     subtotal: string;
     total: string;
+    discountTotal?: string;
+    appliedDiscountCodeId?: string | null;
+    discountMetadata?: {
+      code: string;
+      name: string;
+      discountType: string;
+      discountValue: string;
+      savingsAmount: string;
+    } | null;
     expiresAt: Date;
     lines: Array<{
       kind: "item" | "combo";
@@ -183,7 +192,10 @@ export class CartRepository {
         status: "validated",
         currency: input.currency,
         subtotal: input.subtotal,
+        discountTotal: input.discountTotal ?? "0",
         total: input.total,
+        appliedDiscountCodeId: input.appliedDiscountCodeId ?? null,
+        discountMetadata: input.discountMetadata ?? null,
         verifiedAt: new Date(),
         expiresAt: input.expiresAt,
       })
@@ -253,5 +265,55 @@ export class CartRepository {
         options: options.filter(({ cartLineId }) => cartLineId === line.id),
       })),
     };
+  }
+
+  async applyDiscount(
+    cartId: string,
+    data: {
+      discountTotal: string;
+      total: string;
+      appliedDiscountCodeId: string;
+      discountMetadata: {
+        code: string;
+        name: string;
+        discountType: string;
+        discountValue: string;
+        savingsAmount: string;
+      };
+    },
+  ) {
+    const [updated] = await this.transaction
+      .update(carts)
+      .set({
+        discountTotal: data.discountTotal,
+        total: data.total,
+        appliedDiscountCodeId: data.appliedDiscountCodeId,
+        discountMetadata: data.discountMetadata,
+        updatedAt: new Date(),
+        version: sql`${carts.version} + 1`,
+      })
+      .where(and(eq(carts.tenantId, this.tenantId), eq(carts.id, cartId)))
+      .returning();
+
+    if (!updated) return null;
+    return this.find(cartId);
+  }
+
+  async removeDiscount(cartId: string, restoredTotal: string) {
+    const [updated] = await this.transaction
+      .update(carts)
+      .set({
+        discountTotal: "0",
+        total: restoredTotal,
+        appliedDiscountCodeId: null,
+        discountMetadata: null,
+        updatedAt: new Date(),
+        version: sql`${carts.version} + 1`,
+      })
+      .where(and(eq(carts.tenantId, this.tenantId), eq(carts.id, cartId)))
+      .returning();
+
+    if (!updated) return null;
+    return this.find(cartId);
   }
 }

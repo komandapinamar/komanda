@@ -18,6 +18,7 @@ import {
 } from "@/db/schema";
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { digestSessionToken } from "@/features/identity/application/session.service";
+import { locationSchema } from "@/features/location/application/location.schemas";
 
 export class SlugAlreadyTakenError extends Error {
   constructor(message = "El enlace público del negocio ya está registrado. Probá con otro.") {
@@ -52,6 +53,7 @@ export const businessRegistrationSchema = z
         "El identificador solo puede contener letras minúsculas, números y guiones",
       ),
     preset: z.enum(["gastronomy", "express_retail"]).default("gastronomy"),
+    location: locationSchema,
   })
   .strict();
 
@@ -198,6 +200,10 @@ export class PublicRegistrationService {
           timezone: "America/Argentina/Buenos_Aires",
           status: "active",
           isPrimary: true,
+          address: {
+            ...input.location,
+            geocoderProvider: input.location.geocoderProvider ?? "photon",
+          },
         });
 
         // 4. Create Owner Membership

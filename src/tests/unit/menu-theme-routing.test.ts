@@ -22,6 +22,10 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
+  useRouter: vi.fn(() => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+  })),
 }));
 
 import { tenantSettings } from "@/db/schema/platform";

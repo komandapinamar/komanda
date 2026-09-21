@@ -26,7 +26,11 @@ describe("live payment readiness and ordering availability", () => {
           from: vi.fn().mockReturnValueOnce({
             where: vi.fn().mockReturnValueOnce({
               limit: vi.fn().mockResolvedValueOnce([
-                { id: "loc1", name: "Main", address: "Calle 1" },
+                {
+                  id: "loc1",
+                  name: "Main",
+                  address: { lat: -37.1075, lng: -56.8614, formattedAddress: "Calle 1" },
+                },
               ]),
             }),
           }),
@@ -83,7 +87,11 @@ describe("live payment readiness and ordering availability", () => {
           from: vi.fn().mockReturnValueOnce({
             where: vi.fn().mockReturnValueOnce({
               limit: vi.fn().mockResolvedValueOnce([
-                { id: "loc1", name: "Main", address: "Calle 1" },
+                {
+                  id: "loc1",
+                  name: "Main",
+                  address: { lat: -37.1075, lng: -56.8614, formattedAddress: "Calle 1" },
+                },
               ]),
             }),
           }),
@@ -140,7 +148,11 @@ describe("live payment readiness and ordering availability", () => {
           from: vi.fn().mockReturnValueOnce({
             where: vi.fn().mockReturnValueOnce({
               limit: vi.fn().mockResolvedValueOnce([
-                { id: "loc1", name: "Main", address: "Calle 1" },
+                {
+                  id: "loc1",
+                  name: "Main",
+                  address: { lat: -37.1075, lng: -56.8614, formattedAddress: "Calle 1" },
+                },
               ]),
             }),
           }),
@@ -196,7 +208,11 @@ describe("live payment readiness and ordering availability", () => {
           from: vi.fn().mockReturnValueOnce({
             where: vi.fn().mockReturnValueOnce({
               limit: vi.fn().mockResolvedValueOnce([
-                { id: "loc1", name: "Main", address: "Calle 1" },
+                {
+                  id: "loc1",
+                  name: "Main",
+                  address: { lat: -37.1075, lng: -56.8614, formattedAddress: "Calle 1" },
+                },
               ]),
             }),
           }),

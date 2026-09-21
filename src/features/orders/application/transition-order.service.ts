@@ -6,6 +6,7 @@ import {
   type FulfillmentStatus,
 } from "@/features/orders/domain/order.rules";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
@@ -87,6 +88,14 @@ export class TransitionOrderService {
           }
           throw error;
         }
+      }
+
+      if (nextStatus === "cancelled" && current.discountSnapshot) {
+        const discountRepo = new DiscountRepository(
+          transaction,
+          input.context.tenantId,
+        );
+        await discountRepo.markRedemptionCancelled(current.id);
       }
 
       await repository.appendTransitionEvent({

@@ -85,7 +85,7 @@ function responseFromAggregate(
 ): ProvisionTenantResponse {
   const checks = [
     { code: "public_slug", complete: true, requiredForActivation: true },
-    { code: "primary_location", complete: true, requiredForActivation: true },
+    { code: "primary_location", complete: false, requiredForActivation: true },
     { code: "currency", complete: true, requiredForActivation: true },
     { code: "published_item", complete: false, requiredForActivation: true },
     { code: "payment_connected", complete: false, requiredForActivation: true },

@@ -1,7 +1,9 @@
 import { ZodError } from "zod";
 import {
+  CartDiscountIneligibleError,
   CartNotFoundError,
   CartRevalidationError,
+  RateLimitExceededError,
 } from "@/features/cart/application/cart.service";
 import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
 import {
@@ -16,6 +18,26 @@ export function cartErrorResponse(error: unknown, correlationId: string) {
     error instanceof PublicTenantNotFoundError
   ) {
     return nonDisclosingNotFound(correlationId);
+  }
+  if (error instanceof RateLimitExceededError) {
+    const res = problemResponse({
+      status: 429,
+      title: "Too Many Requests",
+      code: "RATE_LIMIT_EXCEEDED",
+      correlationId,
+      detail: error.message,
+    });
+    res.headers.set("Retry-After", String(error.retryAfterSeconds));
+    return res;
+  }
+  if (error instanceof CartDiscountIneligibleError) {
+    return problemResponse({
+      status: 422,
+      title: "Discount not applicable",
+      code: error.reason,
+      correlationId,
+      detail: error.message,
+    });
   }
   if (error instanceof ZodError) {
     return problemResponse({

@@ -19,6 +19,7 @@ export const createCartSchema = z
       )
       .min(1)
       .max(100),
+    discountCode: z.string().trim().optional(),
   })
   .strict();
 
@@ -37,8 +38,9 @@ export type RevalidationCatalog = {
 };
 
 export function moneyToCents(value: string) {
-  const [whole, fraction] = value.split(".");
-  return Number(whole) * 100 + Number(fraction);
+  const [whole, fraction = "00"] = value.split(".");
+  const paddedFraction = fraction.padEnd(2, "0").slice(0, 2);
+  return Number(whole) * 100 + Number(paddedFraction);
 }
 
 export function centsToMoney(value: number) {

@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
 import {
   buildGoogleMapsDirectUrl,
-  buildGoogleMapsEmbedUrl,
   parseLocationAddress,
+  parseConfirmedLocation,
 } from "@/features/directory/utils/directory-maps";
 
 describe("buildStorefrontUrl", () => {
@@ -59,13 +59,16 @@ describe("buildStorefrontUrl", () => {
 });
 
 describe("directory-maps", () => {
-  const originalKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-
-  afterEach(() => {
-    process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY = originalKey;
-  });
-
   describe("parseLocationAddress", () => {
+    it("accepts only finite paired coordinates for public maps", () => {
+      expect(parseConfirmedLocation({ lat: -37.1075, lng: -56.8614, formattedAddress: "Pinamar" })).toEqual({
+        lat: -37.1075,
+        lng: -56.8614,
+        formattedAddress: "Pinamar",
+      });
+      expect(parseConfirmedLocation({ lat: -37.1075 })).toBeNull();
+      expect(parseConfirmedLocation({ lat: -37.1075001, lng: -56.8614 })).toBeNull();
+    });
     it("parses string addresses directly", () => {
       const res = parseLocationAddress("Av. Corrientes 1234, CABA", "Sede", "Parrilla");
       expect(res.displayAddress).toBe("Av. Corrientes 1234, CABA");
@@ -120,24 +123,6 @@ describe("directory-maps", () => {
     });
   });
 
-  describe("buildGoogleMapsEmbedUrl", () => {
-    it("builds keyless embed URL by default", () => {
-      delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-      const url = buildGoogleMapsEmbedUrl("Honduras 5500, Buenos Aires");
-      expect(url).toBe(
-        "https://www.google.com/maps?q=Honduras%205500%2C%20Buenos%20Aires&output=embed",
-      );
-    });
-
-    it("builds embed API v1 URL when API key is configured", () => {
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY = "test-api-key";
-      const url = buildGoogleMapsEmbedUrl("-34.5833,-58.4333");
-      expect(url).toBe(
-        "https://www.google.com/maps/embed/v1/place?key=test-api-key&q=-34.5833%2C-58.4333",
-      );
-    });
-  });
-
   describe("buildGoogleMapsDirectUrl", () => {
     it("builds direct Google Maps search link", () => {
       const url = buildGoogleMapsDirectUrl("Komanda Mock");
@@ -145,4 +130,3 @@ describe("directory-maps", () => {
     });
   });
 });
-

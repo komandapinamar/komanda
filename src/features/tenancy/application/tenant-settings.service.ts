@@ -17,6 +17,7 @@ import {
 } from "@/db/tenant-transaction";
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
+import { locationSchema } from "@/features/location/application/location.schemas";
 
 export class TenantSettingsNotFoundError extends Error {}
 export class TenantSettingsConflictError extends Error {}
@@ -47,6 +48,7 @@ const settingsPatchSchema = z
     menuTheme: z.enum(["classic", "reels"]).optional(),
     slackCashAlertWebhookUrl: z.string().trim().url().nullable().optional(),
     timezone: z.string().trim().min(1).optional(),
+    location: locationSchema.optional(),
   })
   .strict();
 
@@ -55,6 +57,7 @@ type SettingsPatch = z.infer<typeof settingsPatchSchema>;
 function serializeSettings(input: {
   settings: typeof tenantSettings.$inferSelect;
   tenant: typeof tenants.$inferSelect;
+  location?: typeof tenantLocations.$inferSelect | null;
 }) {
   return {
     tenantId: input.settings.tenantId,
@@ -68,6 +71,9 @@ function serializeSettings(input: {
     preset: input.tenant.preset,
     currency: input.tenant.defaultCurrency,
     timezone: input.tenant.defaultTimezone,
+    location: locationSchema.safeParse(input.location?.address).success
+      ? locationSchema.parse(input.location?.address)
+      : null,
     version: input.settings.version,
   };
 }
@@ -80,9 +86,14 @@ export class TenantSettingsService {
   get(context: TenantContext) {
     return withTenantTransaction(context, async (transaction) => {
       const [row] = await transaction
-        .select({ settings: tenantSettings, tenant: tenants })
+        .select({ settings: tenantSettings, tenant: tenants, location: tenantLocations })
         .from(tenantSettings)
         .innerJoin(tenants, eq(tenants.id, tenantSettings.tenantId))
+        .leftJoin(tenantLocations, and(
+          eq(tenantLocations.tenantId, context.tenantId),
+          eq(tenantLocations.isPrimary, true),
+          eq(tenantLocations.status, "active"),
+        ))
         .where(eq(tenantSettings.tenantId, context.tenantId))
         .limit(1);
 
@@ -143,6 +154,25 @@ export class TenantSettingsService {
         throw new TenantSettingsConflictError("Tenant settings version conflict.");
       }
 
+      if (patch.location) {
+        const [location] = await transaction
+          .update(tenantLocations)
+          .set({
+            address: {
+              ...patch.location,
+              geocoderProvider: patch.location.geocoderProvider ?? "photon",
+            },
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(tenantLocations.tenantId, context.tenantId),
+            eq(tenantLocations.isPrimary, true),
+            eq(tenantLocations.status, "active"),
+          ))
+          .returning();
+        if (!location) throw new TenantSettingsNotFoundError("Primary location not found.");
+      }
+
       const [tenant] = await transaction
         .select()
         .from(tenants)
@@ -150,7 +180,16 @@ export class TenantSettingsService {
         .limit(1);
 
       if (!tenant) throw new TenantSettingsNotFoundError("Tenant not found.");
-      return serializeSettings({ settings: updated, tenant });
+      const [location] = await transaction
+        .select()
+        .from(tenantLocations)
+        .where(and(
+          eq(tenantLocations.tenantId, context.tenantId),
+          eq(tenantLocations.isPrimary, true),
+          eq(tenantLocations.status, "active"),
+        ))
+        .limit(1);
+      return serializeSettings({ settings: updated, tenant, location });
     });
   }
 

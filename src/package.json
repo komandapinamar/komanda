@@ -39,6 +39,7 @@
     "seed:local": "tsx scripts/seed-local-tenant.ts"
   },
   "dependencies": {
+    "@afipsdk/afip.js": "^1.2.3",
     "@aws-sdk/client-s3": "^3.1079.0",
     "@aws-sdk/s3-request-presigner": "^3.1079.0",
     "@mercadopago/sdk-react": "^1.0.7",
@@ -46,11 +47,13 @@
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.2",
+    "leaflet": "^1.9.4",
     "mercadopago": "^3.2.0",
     "next": "^16.2.10",
     "pg": "^8.22.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-leaflet": "^5.0.0",
     "server-only": "^0.0.1",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
@@ -59,6 +62,7 @@
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcrypt": "^6.0.0",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",

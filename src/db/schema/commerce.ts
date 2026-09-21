@@ -258,6 +258,14 @@ export const tenantOrders = pgTable(
       .default("0")
       .notNull(),
     total: numeric("total", { precision: 12, scale: 2 }).notNull(),
+    discountSnapshot: jsonb("discount_snapshot").$type<{
+      discountId: string;
+      code: string;
+      name: string;
+      discountType: string;
+      discountValue: string;
+      amountDeducted: string;
+    }>(),
     currency: text("currency").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     approvedAt: timestamp("approved_at", { withTimezone: true, mode: "date" }),

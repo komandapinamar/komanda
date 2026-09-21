@@ -90,9 +90,14 @@ async function main() {
       );
       if (existingLoc.rows.length === 0) {
         await client.query(
-          `INSERT INTO tenant_locations (id, tenant_id, name, timezone, status, is_primary, created_at, updated_at)
-           VALUES ($1, $2, 'Local Principal', 'America/Argentina/Buenos_Aires', 'active', true, now(), now())`,
-          [randomUUID(), tenantId],
+          `INSERT INTO tenant_locations (id, tenant_id, name, timezone, status, is_primary, address, created_at, updated_at)
+           VALUES ($1, $2, 'Local Principal', 'America/Argentina/Buenos_Aires', 'active', true, $3, now(), now())`,
+          [randomUUID(), tenantId, JSON.stringify({ lat: -37.1075, lng: -56.8614, formattedAddress: "Pinamar, Buenos Aires, Argentina", geocoderProvider: "photon" })],
+        );
+      } else {
+        await client.query(
+          `UPDATE tenant_locations SET address = COALESCE(address, $2), updated_at = now() WHERE id = $1`,
+          [existingLoc.rows[0].id, JSON.stringify({ lat: -37.1075, lng: -56.8614, formattedAddress: "Pinamar, Buenos Aires, Argentina", geocoderProvider: "photon" })],
         );
       }
 

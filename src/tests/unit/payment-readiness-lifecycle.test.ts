@@ -65,7 +65,7 @@ describe("ordering and payment gating lifecycle", () => {
               {
                 id: "00000000-0000-4000-8000-000000000002",
                 name: "Main",
-                address: "Calle 1",
+                address: { lat: -37.1075, lng: -56.8614, formattedAddress: "Calle 1" },
               },
             ]),
           }),
