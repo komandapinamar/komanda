@@ -15,6 +15,7 @@ import type {
   SessionIdentity,
 } from "@/features/identity/application/session.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
+import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
 
 export type TenantReadinessCheck = {
   code: string;
@@ -114,7 +115,7 @@ export async function fetchTenantReadiness(
     },
     {
       code: "primary_location",
-      complete: Boolean(location),
+      complete: Boolean(location) && parseConfirmedLocation(location?.address) !== null,
       requiredForActivation: true,
     },
     {

@@ -1,14 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import type { DashboardAnalyticsData } from "./analytics-types";
-
-function formatSeconds(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const rem = seconds % 60;
-  return `${mins}m ${rem > 0 ? `${rem}s` : ""}`;
-}
 
 function formatBucketLabel(bucketStr: string, granularity: string): string {
   try {
@@ -22,12 +14,31 @@ function formatBucketLabel(bucketStr: string, granularity: string): string {
   }
 }
 
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const rem = seconds % 60;
+  return rem === 0 ? `${mins}m` : `${mins}m ${rem}s`;
+}
+
+function buildTicks(maxValue: number) {
+  const targetSteps = 4;
+  const safe = Math.max(maxValue, 30);
+  const rawStep = safe / targetSteps;
+  const niceSteps = [5, 10, 15, 20, 30, 60, 120, 300, 600, 900, 1800, 3600];
+  const step =
+    niceSteps.find((candidate) => candidate >= rawStep) ??
+    Math.ceil(rawStep / 3600) * 3600;
+  const max = step * targetSteps;
+  const ticks = Array.from({ length: targetSteps + 1 }, (_, index) => index * step);
+  return { ticks, max };
+}
+
 export default function DwellTimeChart({
   data,
 }: {
   data: DashboardAnalyticsData;
 }) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const items = data.dwellTimeline;
   const granularity = data.dateRange.granularity;
 
@@ -39,74 +50,77 @@ export default function DwellTimeChart({
     );
   }
 
-  const maxAvgDwell = Math.max(...items.map((i) => i.avgDwellSeconds), 30);
+  const maxAvgDwell = Math.max(...items.map((item) => item.avgDwellSeconds));
+  const { ticks, max } = buildTicks(maxAvgDwell);
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-sm">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-zinc-100">
-            Tiempo de Permanencia en Carta vs Compras
-          </h2>
-          <p className="text-xs text-zinc-400">
-            Permanencia promedio por visitante y compras concretadas
-          </p>
-        </div>
-        {hoveredIndex !== null && items[hoveredIndex] && (
-          <div className="text-xs text-(--color-accent-tertiary) font-medium">
-            {formatBucketLabel(items[hoveredIndex].bucket, granularity)}:{" "}
-            <span className="font-bold">
-              {formatSeconds(items[hoveredIndex].avgDwellSeconds)}
-            </span>{" "}
-            ({items[hoveredIndex].sessions} visitas, {items[hoveredIndex].orders} compras)
-          </div>
-        )}
+      <div>
+        <h2 className="text-base font-semibold text-zinc-100">
+          Tiempo de Permanencia en Carta vs Compras
+        </h2>
+        <p className="text-xs text-zinc-400">
+          Permanencia promedio por visitante y compras concretadas
+        </p>
       </div>
 
-      <div className="mt-6 flex h-48 items-end gap-1.5 sm:gap-3 overflow-x-auto pb-2 pt-4">
-        {items.map((item, idx) => {
-          const dwell = item.avgDwellSeconds;
-          const heightPercent = Math.max(8, (dwell / maxAvgDwell) * 100);
-          const isHovered = hoveredIndex === idx;
-
-          return (
-            <div
-              key={item.bucket}
-              className="group relative flex flex-1 flex-col items-center justify-end h-full min-w-[32px] cursor-pointer"
-              onMouseEnter={() => setHoveredIndex(idx)}
-              onMouseLeave={() => setHoveredIndex(null)}
+      <div className="mt-6 flex gap-3">
+        <div className="relative h-48 w-12 shrink-0" aria-hidden>
+          {ticks.map((tick) => (
+            <span
+              key={tick}
+              className="absolute right-0 -translate-y-1/2 text-[10px] tabular-nums text-zinc-500"
+              style={{ bottom: `${(tick / max) * 100}%` }}
             >
-              {/* Tooltip on hover */}
-              {isHovered && (
-                <div className="absolute -top-12 z-20 whitespace-nowrap rounded-md bg-zinc-800 px-2.5 py-1 text-xs text-zinc-100 shadow-lg ring-1 ring-zinc-700">
-                  <div className="font-semibold text-(--color-accent-tertiary)">
-                    {formatSeconds(dwell)} promedio
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    {item.sessions} visitas · {item.orders} compras
-                  </div>
-                </div>
-              )}
+              {formatDuration(tick)}
+            </span>
+          ))}
+        </div>
 
-              {/* Bar container */}
-              <div className="w-full flex flex-col justify-end items-center h-[calc(100%-24px)]">
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <div style={{ minWidth: `${items.length * 44}px` }}>
+            <div className="relative h-48">
+              {ticks.map((tick) => (
                 <div
-                  style={{ height: `${heightPercent}%` }}
-                  className={`w-full max-w-[28px] rounded-t-md transition-all ${
-                    isHovered
-                      ? "bg-(--color-accent-tertiary) shadow-[0_0_12px_rgba(251,191,36,0.5)]"
-                      : "bg-amber-500/80 hover:bg-(--color-accent-tertiary)"
-                  }`}
+                  key={tick}
+                  className="pointer-events-none absolute inset-x-0 border-t border-zinc-800"
+                  style={{ bottom: `${(tick / max) * 100}%` }}
                 />
-              </div>
+              ))}
 
-              {/* Label */}
-              <span className="mt-2 text-[10px] text-zinc-400 truncate max-w-full">
-                {formatBucketLabel(item.bucket, granularity)}
-              </span>
+              <div className="absolute inset-0 flex items-end gap-1.5 sm:gap-3">
+                {items.map((item) => {
+                  const heightPercent =
+                    item.avgDwellSeconds <= 0
+                      ? 0
+                      : Math.max(2, (item.avgDwellSeconds / max) * 100);
+                  return (
+                    <div
+                      key={item.bucket}
+                      className="flex h-full min-w-[32px] flex-1 flex-col items-center justify-end"
+                    >
+                      <div
+                        style={{ height: `${heightPercent}%` }}
+                        className="w-full max-w-[28px] rounded-t-md bg-amber-500/80 transition-colors hover:bg-(--color-accent-tertiary)"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          );
-        })}
+
+            <div className="mt-2 flex gap-1.5 sm:gap-3">
+              {items.map((item) => (
+                <span
+                  key={item.bucket}
+                  className="min-w-[32px] flex-1 truncate text-center text-[10px] text-zinc-400"
+                >
+                  {formatBucketLabel(item.bucket, granularity)}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

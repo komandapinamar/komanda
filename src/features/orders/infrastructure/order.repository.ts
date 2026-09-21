@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { OrderConflictError } from "@/features/orders/application/order-errors";
 import type {
   FulfillmentStatus,
@@ -60,7 +61,18 @@ export type OrderView = {
   subtotal: string;
   discountTotal: string;
   total: string;
+  discountSnapshot?: {
+    discountId: string;
+    code: string;
+    name: string;
+    discountType: string;
+    discountValue: string;
+    amountDeducted: string;
+  } | null;
   currency: string;
+  pickupPin?: string | null;
+  estimatedWaitMinutes?: number | null;
+  estimatedReadyAt?: string | null;
   version: number;
   approvedAt: string | null;
   deliveredAt: string | null;
@@ -129,7 +141,11 @@ function serializeOrder(
     subtotal: order.subtotal,
     discountTotal: order.discountTotal,
     total: order.total,
+    discountSnapshot: order.discountSnapshot ?? null,
     currency: order.currency,
+    pickupPin: order.pickupPin ?? null,
+    estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
+    estimatedReadyAt: dateToIso(order.estimatedReadyAt),
     version: order.version,
     approvedAt: dateToIso(order.approvedAt),
     deliveredAt: dateToIso(order.deliveredAt),
@@ -267,6 +283,9 @@ export class OrderRepository {
     idempotencyKey: string;
     paymentAttemptId?: string | null;
     approvedAt?: Date | null;
+    pickupPin?: string | null;
+    estimatedWaitMinutes?: number | null;
+    estimatedReadyAt?: Date | null;
   }) {
     const existing = await this.findByIdempotencyKey(input.idempotencyKey);
     if (existing) {
@@ -286,6 +305,33 @@ export class OrderRepository {
 
     const now = new Date();
     const purchaseNumber = await this.nextCounter("purchase_number");
+
+    const [activeOrdersRow] = await this.transaction
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tenantOrders)
+      .where(
+        and(
+          eq(tenantOrders.tenantId, this.tenantId),
+          eq(tenantOrders.locationId, input.cart.locationId),
+          sql`${tenantOrders.fulfillmentStatus} in ('approved', 'preparing')`,
+        ),
+      );
+    const activeCount = Number(activeOrdersRow?.count ?? 0);
+    const basePrepMinutes = 15;
+    const queueBufferMinutes = activeCount * 3;
+    const estimatedWaitMinutes =
+      input.estimatedWaitMinutes !== undefined
+        ? input.estimatedWaitMinutes
+        : basePrepMinutes + queueBufferMinutes;
+    const estimatedReadyAt =
+      input.estimatedReadyAt !== undefined
+        ? input.estimatedReadyAt
+        : new Date(now.getTime() + (estimatedWaitMinutes ?? 15) * 60 * 1000);
+    const pickupPin =
+      input.pickupPin !== undefined
+        ? input.pickupPin
+        : Math.floor(1000 + Math.random() * 9000).toString();
+
     const [order] = await this.transaction
       .insert(tenantOrders)
       .values({
@@ -303,6 +349,20 @@ export class OrderRepository {
         subtotal: input.cart.subtotal,
         discountTotal: input.cart.discountTotal,
         total: input.cart.total,
+        discountSnapshot:
+          input.cart.appliedDiscountCodeId && input.cart.discountMetadata
+            ? {
+                discountId: input.cart.appliedDiscountCodeId,
+                code: input.cart.discountMetadata.code,
+                name: input.cart.discountMetadata.name,
+                discountType: input.cart.discountMetadata.discountType,
+                discountValue: input.cart.discountMetadata.discountValue,
+                amountDeducted: input.cart.discountTotal,
+              }
+            : null,
+        pickupPin,
+        estimatedWaitMinutes,
+        estimatedReadyAt,
         currency: input.cart.currency,
         idempotencyKey: input.idempotencyKey,
         approvedAt: input.approvedAt ?? now,
@@ -382,6 +442,20 @@ export class OrderRepository {
       .update(carts)
       .set({ status: "converted", updatedAt: now })
       .where(and(eq(carts.tenantId, this.tenantId), eq(carts.id, input.cart.id)));
+
+    if (
+      input.cart.appliedDiscountCodeId &&
+      Number(input.cart.discountTotal) > 0
+    ) {
+      const discountRepo = new DiscountRepository(this.transaction, this.tenantId);
+      await discountRepo.recordRedemption({
+        orderId: order.id,
+        cartId: input.cart.id,
+        discountId: input.cart.appliedDiscountCodeId,
+        amountDeducted: input.cart.discountTotal,
+        codeSnapshot: input.cart.discountMetadata?.code ?? "DISCOUNT",
+      });
+    }
 
     const hydrated = await this.hydrate(order);
     await this.appendEvent({

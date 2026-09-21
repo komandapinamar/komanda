@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { OrderTransitionError } from "@/features/orders/domain/order.rules";
 import {
+  InvalidPickupPinError,
   OrderConflictError,
   OrderNotFoundError,
   OrderValidationError,
@@ -39,6 +40,16 @@ export function orderErrorResponse(error: unknown, correlationId: string) {
       title: "Forbidden",
       code: "FORBIDDEN_ROLE",
       detail: error.message || "Access is restricted to the required role.",
+      correlationId,
+    });
+  }
+
+  if (error instanceof InvalidPickupPinError) {
+    return problemResponse({
+      status: 422,
+      title: "Invalid pickup PIN",
+      code: "INVALID_PICKUP_PIN",
+      detail: error.message,
       correlationId,
     });
   }

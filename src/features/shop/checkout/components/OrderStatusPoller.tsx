@@ -9,6 +9,9 @@ type OrderData = {
   purchaseNumber: string;
   fulfillmentStatus: string;
   paymentStatus: string;
+  pickupPin?: string | null;
+  estimatedWaitMinutes?: number | null;
+  estimatedReadyAt?: string | null;
 };
 
 export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
@@ -20,7 +23,7 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
   useEffect(() => {
     mountedRef.current = true;
     let attempts = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 100;
 
     const poll = async () => {
       if (!mountedRef.current) return;
@@ -36,17 +39,36 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
           purchaseNumber: string | null;
           fulfillmentStatus: string | null;
           paymentStatus: string | null;
+          pickupPin?: string | null;
+          estimatedWaitMinutes?: number | null;
+          estimatedReadyAt?: string | null;
         };
         if (!mountedRef.current) return;
         if (data.status === "completed" && data.orderId) {
-          setOrder({
-            orderId: data.orderId,
-            purchaseNumber: data.purchaseNumber ?? "",
-            fulfillmentStatus: data.fulfillmentStatus ?? "",
-            paymentStatus: data.paymentStatus ?? "",
+          setOrder((prev) => {
+            if (data.fulfillmentStatus === "ready" && prev?.fulfillmentStatus !== "ready") {
+              if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+                try {
+                  navigator.vibrate([200, 100, 200]);
+                } catch {
+                  // Ignore vibration errors if unsupported
+                }
+              }
+            }
+            return {
+              orderId: data.orderId!,
+              purchaseNumber: data.purchaseNumber ?? "",
+              fulfillmentStatus: data.fulfillmentStatus ?? "",
+              paymentStatus: data.paymentStatus ?? "",
+              pickupPin: data.pickupPin ?? null,
+              estimatedWaitMinutes: data.estimatedWaitMinutes ?? null,
+              estimatedReadyAt: data.estimatedReadyAt ?? null,
+            };
           });
           setStatus("completed");
-          if (intervalRef.current) clearInterval(intervalRef.current);
+          if (data.fulfillmentStatus === "delivered" || data.fulfillmentStatus === "cancelled") {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+          }
         } else if (attempts >= maxAttempts) {
           setStatus("timeout");
           if (intervalRef.current) clearInterval(intervalRef.current);
@@ -61,7 +83,7 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
     };
 
     void poll();
-    intervalRef.current = setInterval(poll, 2000);
+    intervalRef.current = setInterval(poll, 3000);
 
     return () => {
       mountedRef.current = false;
@@ -127,20 +149,58 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
   return (
     <div className="mx-auto max-w-3xl rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
       <ClearCartOnSuccess />
-      <h1 className="text-3xl font-bold">Pago confirmado</h1>
-      <p className="mt-3">Gracias por tu compra, {order.purchaseNumber ? `Compra #${order.purchaseNumber}` : ""}</p>
+
+      {order.fulfillmentStatus === "ready" ? (
+        <div className="mb-6 rounded-sm bg-emerald-600/20 border border-emerald-500 p-4 text-emerald-300">
+          <p className="font-bold text-xl uppercase tracking-wide">¡Tu pedido está listo para retirar!</p>
+          <p className="mt-1 text-sm">Acercate al mostrador e indicá tu número de compra y código PIN.</p>
+        </div>
+      ) : order.fulfillmentStatus === "preparing" ? (
+        <div className="mb-6 rounded-sm bg-amber-500/10 border border-amber-500/50 p-4 text-amber-300">
+          <p className="font-semibold text-lg">Cocina está preparando tu pedido</p>
+          {order.estimatedWaitMinutes ? (
+            <p className="mt-1 text-sm opacity-90">Tiempo restante estimado: aprox. {order.estimatedWaitMinutes} minutos.</p>
+          ) : null}
+        </div>
+      ) : order.fulfillmentStatus === "delivered" ? (
+        <div className="mb-6 rounded-sm bg-zinc-800 border border-zinc-700 p-4 text-zinc-300">
+          <p className="font-semibold text-lg">Pedido entregado. ¡Muchas gracias por tu compra!</p>
+        </div>
+      ) : (
+        <h1 className="text-3xl font-bold">Pago confirmado</h1>
+      )}
+
+      <p className="mt-3">
+        {order.purchaseNumber ? `Compra #${order.purchaseNumber}` : "Pedido confirmado"}
+      </p>
+
       {order.purchaseNumber ? (
-        <p className="mt-4 inline-flex rounded-full border border-[var(--color-accent-secondary)] px-4 py-2 text-sm font-semibold">
-          Numero de compra #{order.purchaseNumber}
+        <p className="mt-2 inline-flex rounded-full border border-[var(--color-accent-secondary)] px-4 py-2 text-sm font-semibold">
+          Número de compra #{order.purchaseNumber}
         </p>
       ) : null}
+
+      {order.pickupPin ? (
+        <div className="mt-5 rounded-sm border-2 border-dashed border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)]/10 p-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-accent-secondary)]">
+            Código PIN de Retiro
+          </p>
+          <div className="mt-2 text-4xl font-extrabold tracking-widest font-mono">
+            {order.pickupPin}
+          </div>
+          <p className="mt-2 text-xs opacity-80">
+            Mostrá o decí este código en la caja para retirar tu pedido.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-5 rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)]/10 p-4">
         <p className="font-bold uppercase tracking-wide">Importante para retirar</p>
         <p className="mt-2 text-sm">
-          Para retirar tu pedido, vas a tener que mostrar esta pantalla en la caja.
+          Para retirar tu pedido, vas a tener que indicar tu número de compra y código PIN en el mostrador.
         </p>
         <p className="mt-2 text-sm opacity-90">
-          Recomendacion: sacale screenshot ahora para tenerla a mano.
+          Recomendación: sacale screenshot a esta pantalla para tenerla a mano.
         </p>
       </div>
       <div className="mt-6 flex gap-3">

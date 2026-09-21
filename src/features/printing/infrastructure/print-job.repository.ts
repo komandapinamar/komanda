@@ -121,6 +121,8 @@ export class PrintJobRepository {
       tenant_id: string;
       location_id: string;
       order_id: string;
+      destination_station_id?: string | null;
+      station_type?: PrintJobRecord["stationType"];
       status: PrintJobRecord["status"];
       idempotency_key: string;
       payload: Record<string, unknown>;
@@ -165,6 +167,8 @@ export class PrintJobRepository {
       tenantId: row.tenant_id,
       locationId: row.location_id,
       orderId: row.order_id,
+      destinationStationId: row.destination_station_id ?? null,
+      stationType: row.station_type ?? "all",
       status: row.status,
       idempotencyKey: row.idempotency_key,
       payload: row.payload,

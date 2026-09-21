@@ -51,6 +51,29 @@ describe("analytics & billing domain schemas", () => {
     expect(valid.customerDocType).toBe("DNI");
   });
 
+  it("validates credit note issuance with relatedDocumentId and vatBreakdown", () => {
+    const valid = issueBillingDocumentSchema.parse({
+      orderId: "a0000000-0000-4000-8000-000000000001",
+      relatedDocumentId: "b0000000-0000-4000-8000-000000000002",
+      documentType: "nota_credito_b",
+      pointOfSale: 1,
+      customerDocType: "DNI",
+      customerDocNumber: "35123456",
+      vatBreakdown: [
+        {
+          aliquotId: 5,
+          baseAmount: "1000.00",
+          vatAmount: "210.00",
+        },
+      ],
+    });
+
+    expect(valid.documentType).toBe("nota_credito_b");
+    expect(valid.relatedDocumentId).toBe("b0000000-0000-4000-8000-000000000002");
+    expect(valid.vatBreakdown).toHaveLength(1);
+    expect(valid.vatBreakdown[0].vatAmount).toBe("210.00");
+  });
+
   it("validates top products filter defaults", () => {
     const filter = topProductsFilterSchema.parse({});
     expect(filter.source).toBe("all");

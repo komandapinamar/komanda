@@ -69,6 +69,14 @@ export type OfficialCartLine = {
   note?: string;
 };
 
+export type AppliedDiscountInfo = {
+  code: string;
+  name: string;
+  discountType: "percentage" | "fixed_amount";
+  discountValue: string;
+  savingsAmount?: string | number;
+};
+
 export type OfficialCart = {
   id: string;
   currency: string;
@@ -76,6 +84,7 @@ export type OfficialCart = {
   subtotal: number;
   discountTotal: number;
   total: number;
+  appliedDiscount?: AppliedDiscountInfo | null;
   version?: number;
   updatedAt?: string;
   expiresAt?: string;

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { LocationPicker } from "@/features/location/web/LocationPicker";
+import type { LocationAddress } from "@/features/location/application/location.schemas";
 
 type Preset = "gastronomy" | "express_retail";
 
@@ -20,13 +22,14 @@ export default function BusinessRegistrationWizard({
 }: {
   authenticatedEmail?: string;
 }) {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [preset, setPreset] = useState<Preset>("gastronomy");
   const [businessName, setBusinessName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugManual, setSlugManual] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [location, setLocation] = useState<LocationAddress | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -56,6 +59,10 @@ export default function BusinessRegistrationWizard({
       setErrorMessage("Por favor ingresá un enlace identificador (slug).");
       return;
     }
+    if (!location) {
+      setErrorMessage("Confirmá la ubicación exacta del local antes de continuar.");
+      return;
+    }
     if (!authenticatedEmail && (!email.trim() || !password.trim())) {
       setErrorMessage("Completá tu email y una contraseña de al menos 8 caracteres.");
       return;
@@ -71,6 +78,7 @@ export default function BusinessRegistrationWizard({
           businessName: businessName.trim(),
           slug: slug.trim(),
           preset,
+          location,
           ...(authenticatedEmail ? {} : { email: email.trim(), password }),
         }),
       });
@@ -154,7 +162,13 @@ export default function BusinessRegistrationWizard({
             >
               2
             </span>
-            <span>Datos & Cuenta</span>
+            <span>Ubicación</span>
+          </button>
+
+          <div className="h-0.5 flex-1 mx-4 bg-[var(--color-accent-tertiary)]/15" />
+          <button type="button" onClick={() => location && setStep(3)} className={`flex items-center gap-2 font-semibold ${step === 3 ? "text-[var(--color-accent-tertiary)]" : "text-[var(--color-accent-tertiary)]/40"}`}>
+            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${step === 3 ? "bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)] font-bold" : "bg-[var(--color-accent-tertiary)]/10 text-[var(--color-accent-tertiary)]/40"}`}>3</span>
+            <span>Datos &amp; Cuenta</span>
           </button>
         </div>
 
@@ -301,12 +315,26 @@ export default function BusinessRegistrationWizard({
                 onClick={() => setStep(2)}
                 className="w-full rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Continuar a Datos de Cuenta →
+                Continuar a Ubicación →
               </button>
             </div>
           )}
 
           {step === 2 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--color-accent-tertiary)]">¿Dónde funciona tu local?</h2>
+                <p className="mt-1 text-xs text-[var(--color-accent-tertiary)]/70">Confirmá el pin exacto. Esta ubicación será pública para tus clientes.</p>
+              </div>
+              <LocationPicker initialValue={location} onConfirm={(value) => { setLocation(value); setErrorMessage(null); }} error={errorMessage} />
+              <div className="flex items-center gap-3 pt-2">
+                <button type="button" onClick={() => setStep(1)} className="rounded-xl border border-[var(--color-accent-tertiary)]/20 px-4 py-3 text-sm font-semibold text-[var(--color-accent-tertiary)]">← Volver</button>
+                <button type="button" disabled={!location} onClick={() => setStep(3)} className="flex-1 rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40">Continuar a Datos de Cuenta →</button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-semibold text-[var(--color-accent-tertiary)]">

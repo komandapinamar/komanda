@@ -22,6 +22,10 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
+  useRouter: vi.fn(() => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+  })),
 }));
 
 import { tenantSettings } from "@/db/schema/platform";
@@ -128,6 +132,7 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
                   barcode: null,
                   isGeneric: false,
                   genericIcon: null,
+                  destinationStation: null,
                   trackStock: false,
                   stockQuantity: 0,
                   imageAssetId: "img-1",
@@ -178,6 +183,7 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
                   barcode: null,
                   isGeneric: false,
                   genericIcon: null,
+                  destinationStation: null,
                   trackStock: false,
                   stockQuantity: 0,
                   imageAssetId: "img-2",

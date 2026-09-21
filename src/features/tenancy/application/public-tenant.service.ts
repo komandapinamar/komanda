@@ -20,7 +20,7 @@ import {
 } from "@/db/tenant-transaction";
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
-import { parseLocationAddress } from "@/features/directory/utils/directory-maps";
+import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
 import { fetchTenantReadiness } from "./tenant-readiness.service";
 
 export class PublicTenantNotFoundError extends Error {}
@@ -40,6 +40,8 @@ export type PublicDirectoryTenant = {
   currency: string;
   locationName: string | null;
   locationAddress: string | null;
+  lat: number;
+  lng: number;
   mapQuery: string;
   categoriesCount: number;
 };
@@ -72,11 +74,8 @@ export class PublicTenantService {
             continue;
           }
 
-          const { displayAddress, mapQuery } = parseLocationAddress(
-            eligibility.primaryLocation?.address,
-            eligibility.primaryLocation?.name ?? null,
-            tenant.name,
-          );
+          const confirmedLocation = parseConfirmedLocation(eligibility.primaryLocation?.address);
+          if (!confirmedLocation) continue;
 
           const categories = await transaction
             .select({ id: catalogCategories.id })
@@ -94,8 +93,10 @@ export class PublicTenantService {
             slug: tenant.slug,
             currency: tenant.currency,
             locationName: eligibility.primaryLocation?.name ?? null,
-            locationAddress: displayAddress,
-            mapQuery,
+            locationAddress: confirmedLocation.formattedAddress,
+            mapQuery: `${confirmedLocation.lat},${confirmedLocation.lng}`,
+            lat: confirmedLocation.lat,
+            lng: confirmedLocation.lng,
             categoriesCount: categories.length,
           });
         }

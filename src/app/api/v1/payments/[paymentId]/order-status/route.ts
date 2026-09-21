@@ -13,6 +13,9 @@ export type PaymentOrderStatusResponse = {
   purchaseNumber: string | null;
   fulfillmentStatus: string | null;
   paymentStatus: string | null;
+  pickupPin: string | null;
+  estimatedWaitMinutes: number | null;
+  estimatedReadyAt: string | null;
 };
 
 export async function GET(_request: Request, route: RouteContext) {
@@ -41,6 +44,9 @@ export async function GET(_request: Request, route: RouteContext) {
           purchaseNumber: null,
           fulfillmentStatus: null,
           paymentStatus: null,
+          pickupPin: null,
+          estimatedWaitMinutes: null,
+          estimatedReadyAt: null,
         };
       }
 
@@ -62,6 +68,9 @@ export async function GET(_request: Request, route: RouteContext) {
           purchaseNumber: null,
           fulfillmentStatus: null,
           paymentStatus: attempt?.status ?? null,
+          pickupPin: null,
+          estimatedWaitMinutes: null,
+          estimatedReadyAt: null,
         };
       }
 
@@ -71,6 +80,9 @@ export async function GET(_request: Request, route: RouteContext) {
           purchaseNumber: tenantOrders.purchaseNumber,
           fulfillmentStatus: tenantOrders.fulfillmentStatus,
           paymentStatus: tenantOrders.paymentStatus,
+          pickupPin: tenantOrders.pickupPin,
+          estimatedWaitMinutes: tenantOrders.estimatedWaitMinutes,
+          estimatedReadyAt: tenantOrders.estimatedReadyAt,
         })
         .from(tenantOrders)
         .where(
@@ -88,6 +100,9 @@ export async function GET(_request: Request, route: RouteContext) {
           purchaseNumber: null,
           fulfillmentStatus: null,
           paymentStatus: attempt.status,
+          pickupPin: null,
+          estimatedWaitMinutes: null,
+          estimatedReadyAt: null,
         };
       }
 
@@ -97,6 +112,9 @@ export async function GET(_request: Request, route: RouteContext) {
         purchaseNumber: order.purchaseNumber.toString(),
         fulfillmentStatus: order.fulfillmentStatus,
         paymentStatus: order.paymentStatus,
+        pickupPin: order.pickupPin ?? null,
+        estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
+        estimatedReadyAt: order.estimatedReadyAt ? order.estimatedReadyAt.toISOString() : null,
       };
     },
   );

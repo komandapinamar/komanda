@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/shop/cart/context/cart.context";
-import { getCart } from "@/features/shop/cart/services/cart.service";
+import {
+  applyCartDiscount,
+  getCart,
+  removeCartDiscount,
+} from "@/features/shop/cart/services/cart.service";
+import DiscountCouponInput from "@/features/shop/cart/components/DiscountCouponInput";
 import { createPaymentSession } from "@/features/shop/payments/payment-session.client";
 import type {
   CartLine,
@@ -54,8 +59,14 @@ function doesGlobalCartMatchOfficialCart(
 
 function OfficialCartSummary({
   officialCart,
+  onApplyDiscount,
+  onRemoveDiscount,
+  disabled = false,
 }: {
   officialCart: OfficialCart;
+  onApplyDiscount?: (code: string) => Promise<{ success: boolean; error?: string }>;
+  onRemoveDiscount?: () => Promise<void>;
+  disabled?: boolean;
 }) {
   return (
     <section className="rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-4">
@@ -97,19 +108,58 @@ function OfficialCartSummary({
       </div>
 
       <div className="mt-4 space-y-2 border-t border-[var(--color-accent-secondary)] pt-4">
-        <div className="flex items-center justify-between">
-          <span>Subtotal</span>
-          <span>{formatCurrency(officialCart.subtotal, officialCart.currency)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Descuentos</span>
-          <span>
-            {formatCurrency(officialCart.discountTotal, officialCart.currency)}
+        {onApplyDiscount && onRemoveDiscount ? (
+          <div className="border-b border-[var(--color-accent-secondary)]/30 pb-3">
+            <DiscountCouponInput
+              appliedDiscount={officialCart.appliedDiscount}
+              discountTotal={officialCart.discountTotal}
+              onApply={onApplyDiscount}
+              onRemove={onRemoveDiscount}
+              disabled={disabled}
+            />
+          </div>
+        ) : null}
+
+        <div className="flex items-center justify-between text-sm">
+          <span className={officialCart.discountTotal > 0 ? "opacity-75" : ""}>
+            Subtotal {officialCart.discountTotal > 0 ? "original" : ""}
+          </span>
+          <span
+            className={
+              officialCart.discountTotal > 0
+                ? "line-through opacity-60 text-sm"
+                : ""
+            }
+          >
+            {formatCurrency(officialCart.subtotal, officialCart.currency)}
           </span>
         </div>
+
+        {officialCart.discountTotal > 0 ? (
+          <div className="flex items-center justify-between text-sm font-semibold text-emerald-400">
+            <span>
+              Descuento{" "}
+              {officialCart.appliedDiscount?.code
+                ? `(${officialCart.appliedDiscount.code})`
+                : ""}
+            </span>
+            <span>
+              -{formatCurrency(officialCart.discountTotal, officialCart.currency)}
+            </span>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between text-lg font-bold">
           <span>Total final</span>
-          <span>{formatCurrency(officialCart.total, officialCart.currency)}</span>
+          <span
+            className={
+              officialCart.discountTotal > 0
+                ? "text-xl font-extrabold text-emerald-400"
+                : ""
+            }
+          >
+            {formatCurrency(officialCart.total, officialCart.currency)}
+          </span>
         </div>
       </div>
     </section>
@@ -212,6 +262,42 @@ export default function CheckoutPayPage() {
     await resolveOfficialCart();
   }, [resolveOfficialCart]);
 
+  const handleApplyDiscountInCheckout = useCallback(
+    async (code: string) => {
+      if (!officialCart?.id) {
+        return { success: false, error: "Carrito no validado." };
+      }
+      try {
+        const nextCart = await applyCartDiscount(
+          tenantSlug,
+          officialCart.id,
+          code,
+        );
+        setOfficialCart(nextCart);
+        applyOfficialCart(nextCart);
+        return { success: true };
+      } catch (err) {
+        return {
+          success: false,
+          error:
+            err instanceof Error ? err.message : "Error al aplicar cupón.",
+        };
+      }
+    },
+    [applyOfficialCart, officialCart?.id, tenantSlug],
+  );
+
+  const handleRemoveDiscountInCheckout = useCallback(async () => {
+    if (!officialCart?.id) return;
+    try {
+      const nextCart = await removeCartDiscount(tenantSlug, officialCart.id);
+      setOfficialCart(nextCart);
+      applyOfficialCart(nextCart);
+    } catch (err) {
+      console.error("Error al remover cupón:", err);
+    }
+  }, [applyOfficialCart, officialCart?.id, tenantSlug]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError(null);
@@ -300,7 +386,12 @@ export default function CheckoutPayPage() {
         {isLoadingCart ? <OfficialCartSkeleton /> : null}
 
         {!isLoadingCart && officialCart ? (
-          <OfficialCartSummary officialCart={officialCart} />
+          <OfficialCartSummary
+            officialCart={officialCart}
+            onApplyDiscount={handleApplyDiscountInCheckout}
+            onRemoveDiscount={handleRemoveDiscountInCheckout}
+            disabled={isSubmitting}
+          />
         ) : null}
 
         {!isLoadingCart && !officialCart && cartError ? (

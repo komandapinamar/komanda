@@ -39,7 +39,7 @@ export const outboxEvents = pgTable(
   (table) => [
     unique("outbox_events_tenant_id_id_key").on(table.tenantId, table.id),
     unique("outbox_events_tenant_sequence_key").on(table.tenantId, table.sequence),
-    index("outbox_events_delivery_idx").on(table.publishedAt, table.availableAt),
+    index("outbox_events_delivery_idx").on(table.publishedAt, table.availableAt, table.sequence),
     check("outbox_events_attempts_check", sql`${table.attempts} >= 0`),
   ],
 );

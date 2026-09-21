@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { canAccess } from "@/lib/authorization/permissions";
-import { TenantAdminNavLink } from "./TenantAdminNavLink";
+import { TenantAdminNav } from "./TenantAdminNav";
 
 export default async function TenantAdminLayout({
   children,
@@ -32,41 +32,37 @@ export default async function TenantAdminLayout({
                 Komanda Business
             </p>
           </div>
-          <nav className="flex items-center gap-4 text-sm">
-            {authority.membership.tenantPreset !== "express_retail" &&
-              canAccess(authority.membership.role, "pedidos") && (
-                <TenantAdminNavLink href={`/admin/${tenantId}/orders`}>
-                  Pedidos
-                </TenantAdminNavLink>
-              )}
-            {canAccess(authority.membership.role, "analytics") && (
-              <TenantAdminNavLink href={`/admin/${tenantId}/analytics`}>
-                Analítica
-              </TenantAdminNavLink>
-            )}
-            {canAccess(authority.membership.role, "catalog") && (
-              <TenantAdminNavLink href={`/admin/${tenantId}/catalog`}>
-                Catálogo
-              </TenantAdminNavLink>
-            )}
-            {canAccess(authority.membership.role, "configuracion") && (
-              <TenantAdminNavLink
-                href={`/admin/${tenantId}/settings`}
-                activePaths={[
-                  `/admin/${tenantId}/settings`,
-                  `/admin/${tenantId}/integrations`,
-                ]}
-              >
-                Configuración
-              </TenantAdminNavLink>
-            )}
-            {canAccess(authority.membership.role, "members") && (
-              <TenantAdminNavLink href={`/admin/${tenantId}/members`}>
-                Miembros
-              </TenantAdminNavLink>
-            )}
-            <Link href="/admin/select-business" className="text-(--color-accent-tertiary)">Cambiar negocio</Link>
-          </nav>
+          <TenantAdminNav
+            items={[
+              ...(authority.membership.tenantPreset !== "express_retail" && canAccess(authority.membership.role, "pedidos")
+                ? [{ href: `/admin/${tenantId}/orders`, label: "Pedidos" }]
+                : []),
+              ...(canAccess(authority.membership.role, "analytics")
+                ? [{ href: `/admin/${tenantId}/analytics`, label: "Analítica" }]
+                : []),
+              ...(canAccess(authority.membership.role, "catalog")
+                ? [{ href: `/admin/${tenantId}/catalog`, label: "Catálogo" }]
+                : []),
+              ...(canAccess(authority.membership.role, "promociones")
+                ? [{ href: `/admin/${tenantId}/discounts`, label: "Promociones" }]
+                : []),
+              ...(canAccess(authority.membership.role, "configuracion")
+                ? [{
+                    href: `/admin/${tenantId}/settings`,
+                    label: "Configuración",
+                    activePaths: [`/admin/${tenantId}/settings`, `/admin/${tenantId}/integrations`],
+                  }]
+                : []),
+              ...(canAccess(authority.membership.role, "members")
+                ? [{ href: `/admin/${tenantId}/members`, label: "Miembros" }]
+                : []),
+            ]}
+            switchBusiness={
+              <Link href="/admin/select-business" className="rounded-md px-3 py-2 text-(--color-accent-tertiary)">
+                Cambiar negocio
+              </Link>
+            }
+          />
         </div>
       </header>
       {children}

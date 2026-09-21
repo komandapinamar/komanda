@@ -3,10 +3,22 @@
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import { useRouter } from "next/navigation";
 import CartItem from "./item/CartItem";
+import DiscountCouponInput from "./DiscountCouponInput";
 
 export default function CartPanel() {
-  const { beginCheckout, items, itemCount, subtotal, syncError, syncStatus } =
-    useCart();
+  const {
+    beginCheckout,
+    items,
+    itemCount,
+    subtotal,
+    discountTotal,
+    total,
+    appliedDiscount,
+    applyDiscount,
+    removeDiscount,
+    syncError,
+    syncStatus,
+  } = useCart();
   const router = useRouter();
 
   const handleCheckout = async () => {
@@ -47,10 +59,41 @@ export default function CartPanel() {
       </div>
 
       <div className="space-y-4 border-t border-[var(--color-accent-secondary)] px-4 py-4">
-        <div className="flex items-center justify-between text-lg font-semibold">
-          <span>Subtotal</span>
-          <span>${subtotal}</span>
-        </div>
+        {items.length > 0 ? (
+          <div className="border-b border-[var(--color-accent-secondary)]/30 pb-3">
+            <DiscountCouponInput
+              appliedDiscount={appliedDiscount}
+              discountTotal={discountTotal}
+              onApply={applyDiscount}
+              onRemove={removeDiscount}
+              disabled={syncStatus === "syncing"}
+            />
+          </div>
+        ) : null}
+
+        {discountTotal > 0 ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm opacity-80">
+              <span>Subtotal original</span>
+              <span className="line-through opacity-60">${subtotal}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm font-medium text-emerald-400">
+              <span>Descuento aplicado</span>
+              <span>-${discountTotal}</span>
+            </div>
+            <div className="flex items-center justify-between text-lg font-bold">
+              <span>Total final</span>
+              <span className="text-xl font-extrabold text-emerald-400">
+                ${total}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between text-lg font-semibold">
+            <span>Total</span>
+            <span>${total}</span>
+          </div>
+        )}
 
         {syncError ? (
           <p className="text-sm text-red-700">

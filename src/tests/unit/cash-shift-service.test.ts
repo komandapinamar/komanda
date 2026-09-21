@@ -43,7 +43,10 @@ describe("Epic 4: Cash Shifts & Arqueo Architecture", () => {
         (idx) =>
           (idx as { config?: { name?: string } }).config?.name ===
             "cash_shifts_one_open_per_tenant_uidx" ||
-          (idx as { name?: string }).name === "cash_shifts_one_open_per_tenant_uidx",
+          (idx as { name?: string }).name === "cash_shifts_one_open_per_tenant_uidx" ||
+          (idx as { config?: { name?: string } }).config?.name ===
+            "cash_shifts_one_open_per_register_uidx" ||
+          (idx as { name?: string }).name === "cash_shifts_one_open_per_register_uidx",
       );
       expect(singleOpenUidx).toBeDefined();
     });

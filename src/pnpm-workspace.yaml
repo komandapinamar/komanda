@@ -1,4 +1,4 @@
 allowBuilds:
-  bcrypt: set this to true or false
-  esbuild: set this to true or false
-  unrs-resolver: set this to true or false
+  bcrypt: true
+  esbuild: true
+  unrs-resolver: true

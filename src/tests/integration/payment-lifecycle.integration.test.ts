@@ -15,6 +15,8 @@ const cart = {
   discountTotal: "0.00",
   total: "1000.00",
   catalogRevision: 1,
+  appliedDiscountCodeId: null,
+  discountMetadata: null,
   verifiedAt: new Date("2026-07-05T12:00:00.000Z"),
   expiresAt: new Date("2026-07-05T12:15:00.000Z"),
   version: 1,

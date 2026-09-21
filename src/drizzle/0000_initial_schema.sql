@@ -442,7 +442,6 @@ CREATE TABLE "orders" (
 	"source" text NOT NULL,
 	"fulfillment_status" text DEFAULT 'approved' NOT NULL,
 	"payment_status" text NOT NULL,
-	"tender" text DEFAULT 'cash' NOT NULL,
 	"customer_snapshot" jsonb NOT NULL,
 	"notes" text,
 	"subtotal" numeric(12, 2) NOT NULL,
@@ -461,7 +460,6 @@ CREATE TABLE "orders" (
 	CONSTRAINT "orders_source_check" CHECK ("orders"."source" in ('mercadopago_webhook', 'admin_direct')),
 	CONSTRAINT "orders_fulfillment_status_check" CHECK ("orders"."fulfillment_status" in ('approved', 'preparing', 'ready', 'delivered', 'cancelled')),
 	CONSTRAINT "orders_payment_status_check" CHECK ("orders"."payment_status" in ('pending', 'paid', 'failed', 'refunded')),
-	CONSTRAINT "orders_tender_check" CHECK ("orders"."tender" in ('cash', 'posnet')),
 	CONSTRAINT "orders_currency_check" CHECK (char_length("orders"."currency") = 3),
 	CONSTRAINT "orders_amounts_check" CHECK ("orders"."subtotal" >= 0 and "orders"."discount_total" >= 0 and "orders"."total" >= 0),
 	CONSTRAINT "orders_version_check" CHECK ("orders"."version" > 0)

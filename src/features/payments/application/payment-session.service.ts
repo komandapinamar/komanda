@@ -7,6 +7,7 @@ import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
 import {
   CartRevalidationError,
   centsToMoney,
+  moneyToCents,
   revalidateCartSelection,
 } from "@/features/cart/domain/cart.rules";
 import {
@@ -149,6 +150,107 @@ function lineResourceId(line: StoredCart["lines"][number]) {
   return line.itemId ?? line.comboId ?? line.id;
 }
 
+export function buildMercadoPagoPreferenceItems(cart: StoredCart): Array<{
+  id: string;
+  title: string;
+  description?: string;
+  picture_url?: string;
+  quantity: number;
+  currency_id: string;
+  unit_price: number;
+}> {
+  const discountTotalCents = Number(cart.discountTotal) > 0 ? moneyToCents(cart.discountTotal) : 0;
+
+  if (discountTotalCents <= 0) {
+    return cart.lines.map((line) => ({
+      id: lineResourceId(line),
+      title: line.nameSnapshot,
+      description: line.note ?? undefined,
+      picture_url: line.imageUrlSnapshot ?? undefined,
+      quantity: line.quantity,
+      currency_id: cart.currency,
+      unit_price: Number(Number(line.unitPriceSnapshot).toFixed(2)),
+    }));
+  }
+
+  const lineTotalCentsList = cart.lines.map((line) =>
+    moneyToCents(line.lineTotal),
+  );
+  const applicableSubtotalCents = lineTotalCentsList.reduce(
+    (a, b) => a + b,
+    0,
+  );
+
+  let allocatedDiscountCents = 0;
+  const proratedLines = cart.lines.map((line, idx) => {
+    const isLast = idx === cart.lines.length - 1;
+    const lineTotalCents = moneyToCents(line.lineTotal);
+
+    let lineDiscountCents: number;
+    if (isLast) {
+      lineDiscountCents = discountTotalCents - allocatedDiscountCents;
+    } else {
+      lineDiscountCents = Math.round(
+        (lineTotalCents / (applicableSubtotalCents || 1)) * discountTotalCents,
+      );
+    }
+    lineDiscountCents = Math.min(
+      lineTotalCents,
+      Math.max(0, lineDiscountCents),
+    );
+    allocatedDiscountCents += lineDiscountCents;
+
+    const discountedLineTotalCents = lineTotalCents - lineDiscountCents;
+    return {
+      line,
+      discountedLineTotalCents,
+    };
+  });
+
+  const items: Array<{
+    id: string;
+    title: string;
+    description?: string;
+    picture_url?: string;
+    quantity: number;
+    currency_id: string;
+    unit_price: number;
+  }> = [];
+
+  for (const { line, discountedLineTotalCents } of proratedLines) {
+    const qty = line.quantity;
+    if (qty === 1) {
+      items.push({
+        id: lineResourceId(line),
+        title: line.nameSnapshot,
+        description: line.note ?? undefined,
+        picture_url: line.imageUrlSnapshot ?? undefined,
+        quantity: 1,
+        currency_id: cart.currency,
+        unit_price: Number((discountedLineTotalCents / 100).toFixed(2)),
+      });
+    } else {
+      const baseUnitCents = Math.floor(discountedLineTotalCents / qty);
+      const remainderCents = discountedLineTotalCents % qty;
+
+      for (let q = 0; q < qty; q++) {
+        const unitCents = baseUnitCents + (q < remainderCents ? 1 : 0);
+        items.push({
+          id: lineResourceId(line),
+          title: line.nameSnapshot,
+          description: line.note ?? undefined,
+          picture_url: line.imageUrlSnapshot ?? undefined,
+          quantity: 1,
+          currency_id: cart.currency,
+          unit_price: Number((unitCents / 100).toFixed(2)),
+        });
+      }
+    }
+  }
+
+  return items;
+}
+
 export class MercadoPagoCheckoutClient {
   constructor(private readonly timeoutMs = 5_000) {}
 
@@ -188,16 +290,10 @@ export class MercadoPagoCheckoutClient {
           cartId: input.cart.id,
           notes: input.notes ?? null,
           customerName: input.customer.name,
+          discountCode: input.cart.discountMetadata?.code ?? null,
+          discountAmount: input.cart.discountTotal,
         },
-        items: input.cart.lines.map((line) => ({
-          id: lineResourceId(line),
-          title: line.nameSnapshot,
-          description: line.note ?? undefined,
-          picture_url: line.imageUrlSnapshot ?? undefined,
-          quantity: line.quantity,
-          currency_id: input.cart.currency,
-          unit_price: Number(Number(line.unitPriceSnapshot).toFixed(2)),
-        })),
+        items: buildMercadoPagoPreferenceItems(input.cart),
       }),
       signal: AbortSignal.timeout(this.timeoutMs),
       cache: "no-store",

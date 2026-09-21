@@ -71,6 +71,41 @@
       "when": 1789908833366,
       "tag": "0009_add_analytics_records_and_tender",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789990228913,
+      "tag": "0010_schema_architecture_enhancements",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790000000000,
+      "tag": "0011_add_order_discount_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790001000000,
+      "tag": "0012_add_discount_redemptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790002000000,
+      "tag": "0013_add_order_pickup_pin_and_eta",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790003000000,
+      "tag": "0014_schema_optimizations_and_normalization",
+      "breakpoints": true
     }
   ]
 }

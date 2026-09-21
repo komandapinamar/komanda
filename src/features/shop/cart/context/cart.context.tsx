@@ -10,8 +10,13 @@ import {
   type ReactNode,
 } from "react";
 
-import { createCart } from "@/features/shop/cart/services/cart.service";
+import {
+  applyCartDiscount,
+  createCart,
+  removeCartDiscount,
+} from "@/features/shop/cart/services/cart.service";
 import type {
+  AppliedDiscountInfo,
   CartLine,
   CartSnapshotLine,
   CartSyncStatus,
@@ -22,6 +27,8 @@ import type {
 type PersistedCartState = {
   cartId: string | null;
   items: CartLine[];
+  appliedDiscount?: AppliedDiscountInfo | null;
+  discountTotal?: number;
 };
 
 type CartContextValue = {
@@ -31,6 +38,9 @@ type CartContextValue = {
   snapshot: CartSnapshotLine[];
   itemCount: number;
   subtotal: number;
+  discountTotal: number;
+  total: number;
+  appliedDiscount: AppliedDiscountInfo | null;
   cartId: string | null;
   syncStatus: CartSyncStatus;
   syncError: string | null;
@@ -42,6 +52,8 @@ type CartContextValue = {
   syncCart: () => Promise<OfficialCart | null>;
   beginCheckout: () => Promise<OfficialCart | null>;
   applyOfficialCart: (cart: OfficialCart) => void;
+  applyDiscount: (code: string) => Promise<{ success: boolean; error?: string }>;
+  removeDiscount: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -91,6 +103,8 @@ export function CartProvider({
 }) {
   const [items, setItems] = useState<CartLine[]>([]);
   const [cartId, setCartId] = useState<string | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscountInfo | null>(null);
+  const [discountTotal, setDiscountTotal] = useState<number>(0);
   const [syncStatus, setSyncStatus] = useState<CartSyncStatus>("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -100,6 +114,8 @@ export function CartProvider({
     try {
       setItems([]);
       setCartId(null);
+      setAppliedDiscount(null);
+      setDiscountTotal(0);
       const storedCart = window.localStorage.getItem(storageKey);
 
       if (!storedCart) {
@@ -123,6 +139,12 @@ export function CartProvider({
       }
 
       setCartId(parsedCart.cartId ?? null);
+      if (parsedCart.appliedDiscount) {
+        setAppliedDiscount(parsedCart.appliedDiscount);
+      }
+      if (typeof parsedCart.discountTotal === "number") {
+        setDiscountTotal(parsedCart.discountTotal);
+      }
     } catch {
       window.localStorage.removeItem(storageKey);
     } finally {
@@ -138,10 +160,12 @@ export function CartProvider({
     const persistedState: PersistedCartState = {
       cartId,
       items,
+      appliedDiscount,
+      discountTotal,
     };
 
     window.localStorage.setItem(storageKey, JSON.stringify(persistedState));
-  }, [cartId, isHydrated, items, storageKey]);
+  }, [appliedDiscount, cartId, discountTotal, isHydrated, items, storageKey]);
 
   const addItem = useCallback((item: MenuItem) => {
     setCartId(null);
@@ -202,6 +226,8 @@ export function CartProvider({
   const clearCart = useCallback(() => {
     setItems([]);
     setCartId(null);
+    setAppliedDiscount(null);
+    setDiscountTotal(0);
     setSyncStatus("idle");
     setSyncError(null);
   }, []);
@@ -214,6 +240,8 @@ export function CartProvider({
   const applyOfficialCart = useCallback((cart: OfficialCart) => {
     setItems(officialCartToLines(cart));
     setCartId(cart.id);
+    setDiscountTotal(cart.discountTotal ?? 0);
+    setAppliedDiscount(cart.appliedDiscount ?? null);
     setSyncStatus("ready");
     setSyncError(null);
   }, []);
@@ -237,9 +265,16 @@ export function CartProvider({
     [items],
   );
 
+  const total = useMemo(
+    () => Math.max(0, subtotal - discountTotal),
+    [subtotal, discountTotal],
+  );
+
   const syncCart = useCallback(async () => {
     if (items.length === 0) {
       setCartId(null);
+      setAppliedDiscount(null);
+      setDiscountTotal(0);
       setSyncStatus("idle");
       setSyncError(null);
       return null;
@@ -252,6 +287,7 @@ export function CartProvider({
       const syncedCart = await createCart(
         tenantSlug,
         items.map(cartLineToSnapshot),
+        appliedDiscount?.code,
       );
       applyOfficialCart(syncedCart);
       return syncedCart;
@@ -262,7 +298,51 @@ export function CartProvider({
       );
       return null;
     }
-  }, [applyOfficialCart, items, tenantSlug]);
+  }, [appliedDiscount?.code, applyOfficialCart, items, tenantSlug]);
+
+  const applyDiscount = useCallback(
+    async (code: string) => {
+      let activeCartId = cartId;
+      if (!activeCartId) {
+        const synced = await syncCart();
+        activeCartId = synced?.id ?? null;
+      }
+      if (!activeCartId) {
+        return { success: false, error: "No se pudo sincronizar el carrito." };
+      }
+      try {
+        const updatedCart = await applyCartDiscount(
+          tenantSlug,
+          activeCartId,
+          code,
+        );
+        applyOfficialCart(updatedCart);
+        return { success: true };
+      } catch (err) {
+        return {
+          success: false,
+          error:
+            err instanceof Error ? err.message : "Error al aplicar cupón.",
+        };
+      }
+    },
+    [applyOfficialCart, cartId, syncCart, tenantSlug],
+  );
+
+  const removeDiscount = useCallback(async () => {
+    if (cartId) {
+      try {
+        const updatedCart = await removeCartDiscount(tenantSlug, cartId);
+        applyOfficialCart(updatedCart);
+      } catch {
+        setAppliedDiscount(null);
+        setDiscountTotal(0);
+      }
+    } else {
+      setAppliedDiscount(null);
+      setDiscountTotal(0);
+    }
+  }, [applyOfficialCart, cartId, tenantSlug]);
 
   const beginCheckout = useCallback(async () => syncCart(), [syncCart]);
 
@@ -273,6 +353,9 @@ export function CartProvider({
       snapshot,
       itemCount,
       subtotal,
+      discountTotal,
+      total,
+      appliedDiscount,
       cartId,
       syncStatus,
       syncError,
@@ -284,17 +367,23 @@ export function CartProvider({
       syncCart,
       beginCheckout,
       applyOfficialCart,
+      applyDiscount,
+      removeDiscount,
     }),
     [
       addItem,
+      applyDiscount,
       applyOfficialCart,
+      appliedDiscount,
       beginCheckout,
       cartId,
       clearCart,
       decrementItem,
+      discountTotal,
       isHydrated,
       itemCount,
       items,
+      removeDiscount,
       removeItem,
       snapshot,
       subtotal,
@@ -302,6 +391,7 @@ export function CartProvider({
       syncError,
       syncStatus,
       tenantSlug,
+      total,
     ],
   );
 

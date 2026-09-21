@@ -16,6 +16,20 @@ type CartApiResponse = {
   discountTotal?: number | string;
   total?: number | string;
   version?: number | string;
+  appliedDiscount?: {
+    code?: string;
+    name?: string;
+    discountType?: string;
+    discountValue?: string | number;
+    savingsAmount?: string | number;
+  } | null;
+  discountMetadata?: {
+    code?: string;
+    name?: string;
+    discountType?: string;
+    discountValue?: string | number;
+    savingsAmount?: string | number;
+  } | null;
   updatedAt?: string;
   expiresAt?: string;
 };
@@ -66,6 +80,23 @@ export function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
   const subtotal = toNumber(payload.subtotal, items.reduce((sum, item) => sum + item.lineTotal, 0));
   const discountTotal = toNumber(payload.discountTotal, 0);
 
+  const rawDiscount = payload.appliedDiscount ?? payload.discountMetadata;
+  const appliedDiscount =
+    rawDiscount && rawDiscount.code
+      ? {
+          code: String(rawDiscount.code),
+          name: String(rawDiscount.name ?? rawDiscount.code),
+          discountType: (rawDiscount.discountType === "fixed_amount"
+            ? "fixed_amount"
+            : "percentage") as "percentage" | "fixed_amount",
+          discountValue: String(rawDiscount.discountValue ?? ""),
+          savingsAmount:
+            rawDiscount.savingsAmount !== undefined
+              ? String(rawDiscount.savingsAmount)
+              : undefined,
+        }
+      : null;
+
   return {
     id: String(payload.id ?? payload.cartId ?? ""),
     currency: String(payload.currency ?? "ARS"),
@@ -73,6 +104,7 @@ export function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
     subtotal,
     discountTotal,
     total: toNumber(payload.total, subtotal - discountTotal),
+    appliedDiscount,
     version: toOptionalNumber(payload.version),
     updatedAt: payload.updatedAt,
     expiresAt: payload.expiresAt,
@@ -116,8 +148,15 @@ export function buildCartSnapshot(lines: CartSnapshotLine[]) {
   }));
 }
 
-export async function createCart(tenantSlug: string, lines: CartSnapshotLine[]) {
-  const payload = { lines: buildCartSnapshot(lines) };
+export async function createCart(
+  tenantSlug: string,
+  lines: CartSnapshotLine[],
+  discountCode?: string,
+) {
+  const payload = {
+    lines: buildCartSnapshot(lines),
+    ...(discountCode ? { discountCode } : {}),
+  };
 
   return requestCart(tenantSlug, "", {
     method: "POST",
@@ -143,5 +182,25 @@ export async function getCart(
   return requestCart(tenantSlug, `/${cartId}`, {
     method: "GET",
     cache: "no-store",
+  });
+}
+
+export async function applyCartDiscount(
+  tenantSlug: string,
+  cartId: string,
+  code: string,
+): Promise<OfficialCart> {
+  return requestCart(tenantSlug, `/${cartId}/discount`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function removeCartDiscount(
+  tenantSlug: string,
+  cartId: string,
+): Promise<OfficialCart> {
+  return requestCart(tenantSlug, `/${cartId}/discount`, {
+    method: "DELETE",
   });
 }
