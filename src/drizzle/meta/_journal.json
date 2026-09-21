@@ -71,6 +71,13 @@
       "when": 1789908833366,
       "tag": "0009_add_analytics_records_and_tender",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789990228913,
+      "tag": "0010_schema_architecture_enhancements",
+      "breakpoints": true
     }
   ]
 }

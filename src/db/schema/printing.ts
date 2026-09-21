@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -23,6 +24,67 @@ const timestamps = {
     .defaultNow()
     .notNull(),
 };
+
+export type PrinterStationType = "kitchen" | "bar" | "cashier" | "runner" | "custom";
+export type PrinterConnectionType = "network_tcp" | "usb" | "bluetooth" | "agent";
+
+export const printerDestinations = pgTable(
+  "printer_destinations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    locationId: uuid("location_id").notNull(),
+    name: text("name").notNull(),
+    stationType: text("station_type")
+      .$type<PrinterStationType>()
+      .default("kitchen")
+      .notNull(),
+    connectionType: text("connection_type")
+      .$type<PrinterConnectionType>()
+      .default("network_tcp")
+      .notNull(),
+    ipAddress: text("ip_address"),
+    port: integer("port").default(9100).notNull(),
+    assignedAgentId: uuid("assigned_agent_id"),
+    isActive: boolean("is_active").default(true).notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+      name: "printer_destinations_tenant_fk",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.locationId],
+      foreignColumns: [tenantLocations.tenantId, tenantLocations.id],
+      name: "printer_destinations_location_fk",
+    }).onDelete("restrict"),
+    unique("printer_destinations_tenant_id_id_key").on(table.tenantId, table.id),
+    index("printer_destinations_tenant_loc_idx").on(
+      table.tenantId,
+      table.locationId,
+      table.isActive,
+    ),
+    check(
+      "printer_destinations_station_type_check",
+      sql`${table.stationType} in ('kitchen', 'bar', 'cashier', 'runner', 'custom')`,
+    ),
+    check(
+      "printer_destinations_connection_type_check",
+      sql`${table.connectionType} in ('network_tcp', 'usb', 'bluetooth', 'agent')`,
+    ),
+    check(
+      "printer_destinations_port_check",
+      sql`${table.port} > 0 and ${table.port} <= 65535`,
+    ),
+    check(
+      "printer_destinations_sort_order_check",
+      sql`${table.sortOrder} >= 0`,
+    ),
+  ],
+);
 
 export const printAgents = pgTable(
   "print_agents",
@@ -90,6 +152,11 @@ export const tenantPrintJobs = pgTable(
     tenantId: uuid("tenant_id").notNull(),
     locationId: uuid("location_id").notNull(),
     orderId: uuid("order_id").notNull(),
+    destinationStationId: uuid("destination_station_id"),
+    stationType: text("station_type")
+      .$type<PrinterStationType | "all">()
+      .default("all")
+      .notNull(),
     status: text("status")
       .$type<"pending" | "processing" | "printed" | "failed" | "cancelled">()
       .default("pending")
@@ -132,6 +199,11 @@ export const tenantPrintJobs = pgTable(
       foreignColumns: [printAgents.tenantId, printAgents.id],
       name: "print_jobs_agent_fk",
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.destinationStationId],
+      foreignColumns: [printerDestinations.tenantId, printerDestinations.id],
+      name: "print_jobs_station_fk",
+    }).onDelete("set null"),
     unique("print_jobs_tenant_id_id_key").on(table.tenantId, table.id),
     unique("print_jobs_tenant_idempotency_key").on(
       table.tenantId,
@@ -144,6 +216,10 @@ export const tenantPrintJobs = pgTable(
       table.nextAttemptAt,
     ),
     check("print_jobs_attempt_count_check", sql`${table.attemptCount} >= 0`),
+    check(
+      "print_jobs_station_type_check",
+      sql`${table.stationType} in ('kitchen', 'bar', 'cashier', 'runner', 'custom', 'all')`,
+    ),
   ],
 );
 

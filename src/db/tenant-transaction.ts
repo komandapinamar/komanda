@@ -96,3 +96,15 @@ export async function withTenantTransaction<T>(
     return callback(transaction);
   });
 }
+
+export async function withTenantIdTransaction<T>(
+  tenantId: string,
+  callback: (transaction: TenantTransaction) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (transaction) => {
+    await transaction.execute(
+      sql`select set_config('app.tenant_id', ${tenantId}, true)`,
+    );
+    return callback(transaction);
+  });
+}

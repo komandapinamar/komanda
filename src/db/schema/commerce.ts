@@ -48,6 +48,14 @@ export const carts = pgTable(
       .default("0")
       .notNull(),
     total: numeric("total", { precision: 12, scale: 2 }).notNull(),
+    appliedDiscountCodeId: uuid("applied_discount_code_id"),
+    discountMetadata: jsonb("discount_metadata").$type<{
+      code: string;
+      name: string;
+      discountType: string;
+      discountValue: string;
+      savingsAmount: string;
+    }>(),
     catalogRevision: integer("catalog_revision").default(1).notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true, mode: "date" }),
     expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
@@ -404,6 +412,7 @@ export const cashShifts = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: uuid("tenant_id").notNull(),
     locationId: uuid("location_id"),
+    registerIdentifier: text("register_identifier").default("default").notNull(),
     openedByUserId: text("opened_by_user_id").notNull(),
     openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).default("0.00").notNull(),
     closingBalance: numeric("closing_balance", { precision: 12, scale: 2 }),
@@ -427,8 +436,14 @@ export const cashShifts = pgTable(
       foreignColumns: [tenants.id],
       name: "cash_shifts_tenant_fk",
     }).onDelete("restrict"),
-    uniqueIndex("cash_shifts_one_open_per_tenant_uidx")
-      .on(table.tenantId)
+    foreignKey({
+      columns: [table.tenantId, table.locationId],
+      foreignColumns: [tenantLocations.tenantId, tenantLocations.id],
+      name: "cash_shifts_location_fk",
+    }).onDelete("restrict"),
+    unique("cash_shifts_tenant_id_id_key").on(table.tenantId, table.id),
+    uniqueIndex("cash_shifts_one_open_per_register_uidx")
+      .on(table.tenantId, table.locationId, table.registerIdentifier)
       .where(sql`${table.status} = 'open'`),
     index("cash_shifts_tenant_status_idx").on(table.tenantId, table.status, table.openedAt),
     check("cash_shifts_status_check", sql`${table.status} in ('open', 'closed')`),

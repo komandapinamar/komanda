@@ -8,3 +8,5 @@ export * from "./integrations";
 export * from "./printing";
 export * from "./analytics";
 export * from "./billing";
+export * from "./discounts";
+export * from "./inventory";

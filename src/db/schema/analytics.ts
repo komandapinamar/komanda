@@ -11,10 +11,11 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./platform";
-import { tenantOrders } from "./commerce";
+import { cashShifts, tenantOrders } from "./commerce";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
@@ -89,6 +90,14 @@ export const storefrontSessions = pgTable(
   ],
 );
 
+export type CashMovementType =
+  | "sale_deposit"
+  | "cancellation_withdrawal"
+  | "opening_float"
+  | "manual_cash_in"
+  | "cash_drop"
+  | "expense_payout";
+
 export const cashRegisterMovements = pgTable(
   "cash_register_movements",
   {
@@ -97,17 +106,18 @@ export const cashRegisterMovements = pgTable(
       .notNull()
       .references(() => tenants.id),
     locationId: uuid("location_id").notNull(),
+    shiftId: uuid("shift_id").references(() => cashShifts.id),
     orderId: uuid("order_id")
-      .notNull()
       .references(() => tenantOrders.id),
     type: text("type")
-      .$type<"sale_deposit" | "cancellation_withdrawal">()
+      .$type<CashMovementType>()
       .notNull(),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
       .defaultNow()
       .notNull(),
     recordedByUserId: text("recorded_by_user_id"),
+    reason: text("reason"),
     idempotencyKey: text("idempotency_key").unique(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .defaultNow()
@@ -119,10 +129,13 @@ export const cashRegisterMovements = pgTable(
       t.locationId,
       t.occurredAt,
     ),
-    unique("cash_movements_order_type_uniq").on(t.tenantId, t.orderId, t.type),
+    index("cash_movements_shift_idx").on(t.tenantId, t.shiftId),
+    uniqueIndex("cash_movements_order_type_uniq")
+      .on(t.tenantId, t.orderId, t.type)
+      .where(sql`${t.orderId} is not null`),
     check(
       "cash_movements_type_check",
-      sql`${t.type} in ('sale_deposit', 'cancellation_withdrawal')`,
+      sql`${t.type} in ('sale_deposit', 'cancellation_withdrawal', 'opening_float', 'manual_cash_in', 'cash_drop', 'expense_payout')`,
     ),
     check("cash_movements_amount_check", sql`${t.amount} >= 0`),
   ],
@@ -224,6 +237,7 @@ export const storefrontItemEvents = pgTable(
   },
   (t) => [
     index("item_events_tenant_item_idx").on(t.tenantId, t.itemId, t.occurredAt),
+    index("item_events_tenant_occurred_idx").on(t.tenantId, t.occurredAt),
     index("item_events_purge_idx").on(t.occurredAt),
     check(
       "item_events_surface_check",

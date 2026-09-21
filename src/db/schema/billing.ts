@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -28,6 +29,11 @@ export type FiscalDocumentType =
   | "factura_a"
   | "factura_b"
   | "factura_c"
+  | "nota_credito_a"
+  | "nota_credito_b"
+  | "nota_credito_c"
+  | "nota_debito_a"
+  | "nota_debito_b"
   | "recibo_x"
   | "ticket_interno";
 
@@ -52,6 +58,7 @@ export const billingDocuments = pgTable(
     tenantId: uuid("tenant_id").notNull(),
     locationId: uuid("location_id"),
     orderId: uuid("order_id").notNull(),
+    relatedDocumentId: uuid("related_document_id"),
     documentType: text("document_type")
       .$type<FiscalDocumentType>()
       .default("ticket_interno")
@@ -62,6 +69,16 @@ export const billingDocuments = pgTable(
     netAmount: numeric("net_amount", { precision: 12, scale: 2 }).notNull(),
     vatAmount: numeric("vat_amount", { precision: 12, scale: 2 })
       .default("0")
+      .notNull(),
+    vatBreakdown: jsonb("vat_breakdown")
+      .$type<
+        Array<{
+          aliquotId: number;
+          baseAmount: string;
+          vatAmount: string;
+        }>
+      >()
+      .default([])
       .notNull(),
     discountAmount: numeric("discount_amount", { precision: 12, scale: 2 })
       .default("0")
@@ -104,6 +121,11 @@ export const billingDocuments = pgTable(
       foreignColumns: [tenantOrders.tenantId, tenantOrders.id],
       name: "billing_documents_order_fk",
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.tenantId, table.relatedDocumentId],
+      foreignColumns: [table.tenantId, table.id],
+      name: "billing_documents_related_fk",
+    }).onDelete("restrict"),
     unique("billing_documents_tenant_id_id_key").on(table.tenantId, table.id),
     unique("billing_documents_tenant_pos_type_number_key").on(
       table.tenantId,
@@ -119,13 +141,17 @@ export const billingDocuments = pgTable(
       table.tenantId,
       table.orderId,
     ),
+    index("billing_documents_tenant_related_idx").on(
+      table.tenantId,
+      table.relatedDocumentId,
+    ),
     index("billing_documents_tenant_fiscal_status_idx").on(
       table.tenantId,
       table.fiscalStatus,
     ),
     check(
       "billing_documents_document_type_check",
-      sql`${table.documentType} in ('factura_a', 'factura_b', 'factura_c', 'recibo_x', 'ticket_interno')`,
+      sql`${table.documentType} in ('factura_a', 'factura_b', 'factura_c', 'nota_credito_a', 'nota_credito_b', 'nota_credito_c', 'nota_debito_a', 'nota_debito_b', 'recibo_x', 'ticket_interno')`,
     ),
     check(
       "billing_documents_fiscal_status_check",

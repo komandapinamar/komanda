@@ -64,6 +64,7 @@ export const catalogCategories = pgTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     description: text("description"),
+    destinationStation: text("destination_station").default("kitchen").notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
     status: text("status")
       .$type<"draft" | "active" | "archived">()
@@ -90,6 +91,10 @@ export const catalogCategories = pgTable(
     ),
     check("catalog_categories_sort_check", sql`${table.sortOrder} >= 0`),
     check("catalog_categories_version_check", sql`${table.version} > 0`),
+    check(
+      "catalog_categories_destination_station_check",
+      sql`${table.destinationStation} in ('kitchen', 'bar', 'cashier', 'runner', 'custom')`,
+    ),
   ],
 );
 
@@ -107,6 +112,7 @@ export const catalogItems = pgTable(
     barcode: text("barcode"),
     isGeneric: boolean("is_generic").default(false).notNull(),
     genericIcon: text("generic_icon"),
+    destinationStation: text("destination_station"),
     trackStock: boolean("track_stock").default(false).notNull(),
     stockQuantity: integer("stock_quantity").default(0).notNull(),
     imageAssetId: uuid("image_asset_id"),
@@ -156,6 +162,10 @@ export const catalogItems = pgTable(
     check("catalog_items_sort_check", sql`${table.sortOrder} >= 0`),
     check("catalog_items_stock_quantity_check", sql`${table.stockQuantity} >= 0`),
     check("catalog_items_version_check", sql`${table.version} > 0`),
+    check(
+      "catalog_items_destination_station_check",
+      sql`${table.destinationStation} is null or ${table.destinationStation} in ('kitchen', 'bar', 'cashier', 'runner', 'custom')`,
+    ),
   ],
 );
 
