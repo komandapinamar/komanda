@@ -38,12 +38,12 @@ export async function DELETE(request: Request, route: RouteContext) {
       correlationId,
     );
     requireOwner(context);
-    await new MercadoPagoIntegrationService().revoke(
+    const result = await new MercadoPagoIntegrationService().revoke(
       context,
       integrationVersionFromRequest(request),
     );
-    return new Response(null, {
-      status: 204,
+    return Response.json(result, {
+      status: 200,
       headers: { "X-Correlation-Id": correlationId },
     });
   } catch (error) {

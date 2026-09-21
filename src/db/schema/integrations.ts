@@ -55,10 +55,9 @@ export const integrationAccounts = pgTable(
   },
   (table) => [
     unique("integration_accounts_tenant_id_id_key").on(table.tenantId, table.id),
-    uniqueIndex("integration_accounts_provider_account_uidx").on(
-      table.provider,
-      table.providerAccountId,
-    ),
+    uniqueIndex("integration_accounts_provider_account_uidx")
+      .on(table.provider, table.providerAccountId)
+      .where(sql`${table.status} in ('pending', 'active', 'expired', 'error')`),
     uniqueIndex("integration_accounts_routing_key_uidx").on(table.webhookRoutingKey),
     uniqueIndex("integration_accounts_one_active_provider_uidx")
       .on(table.tenantId, table.provider)

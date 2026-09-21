@@ -339,6 +339,24 @@ export class PaymentSessionService {
     return withTenantTransaction(
       publicContext(input.tenant, input.correlationId),
       async (transaction) => {
+        const integrations = new IntegrationRepository(
+          transaction,
+          input.tenant.id,
+        );
+
+        if (!(await integrations.hasOnlinePaymentsEntitlement())) {
+          throw new PaymentSessionConflictError(
+            "Online payments are not enabled for this tenant.",
+          );
+        }
+
+        const account = await integrations.currentMercadoPago();
+        if (!account || account.status !== "active") {
+          throw new PaymentSessionProviderUnavailableError(
+            "Mercado Pago is not connected for this tenant.",
+          );
+        }
+
         const idempotency = new IdempotencyService(transaction);
         const claim = await idempotency.claim({
           tenantId: input.tenant.id,
@@ -420,28 +438,10 @@ export class PaymentSessionService {
           }
         }
 
-        const integrations = new IntegrationRepository(
-          transaction,
-          input.tenant.id,
-        );
-
-        if (!(await integrations.hasOnlinePaymentsEntitlement())) {
-          throw new PaymentSessionConflictError(
-            "Online payments are not enabled for this tenant.",
-          );
-        }
-
         const existingAttempt = await integrations.findActiveByCartId(cart.id);
         if (existingAttempt) {
           throw new PaymentSessionConflictError(
             "A payment session already exists for this cart.",
-          );
-        }
-
-        const account = await integrations.currentMercadoPago();
-        if (!account || account.status !== "active") {
-          throw new PaymentSessionProviderUnavailableError(
-            "Mercado Pago is not connected for this tenant.",
           );
         }
 

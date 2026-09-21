@@ -23,7 +23,7 @@ export default async function TenantPrintingIntegrationPage({
   } catch {
     notFound();
   }
-  if (!canAccess(authority.membership.role, "integraciones")) {
+  if (!canAccess(authority.membership.role, "configuracion")) {
     notFound();
   }
   const context = createVerifiedTenantContext({
@@ -55,7 +55,7 @@ export default async function TenantPrintingIntegrationPage({
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header>
-        <p className="text-sm uppercase text-amber-400">
+        <p className="text-sm uppercase text-(--color-accent-tertiary)">
           Integraciones
         </p>
         <h1 className="mt-2 text-3xl font-semibold">Impresión</h1>

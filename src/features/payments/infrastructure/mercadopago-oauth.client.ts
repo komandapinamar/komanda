@@ -60,16 +60,36 @@ export class MercadoPagoOAuthClient {
     });
   }
 
-  async revoke(accessToken: string) {
-    const response = await this.request(
-      `${this.apiBaseUrl()}/oauth/token`,
-      {
+  async revoke(
+    input: string | { userId: string; accessToken: string },
+  ): Promise<{ confirmed: boolean }> {
+    const accessToken = typeof input === "string" ? input : input.accessToken;
+    const url =
+      typeof input === "object" && input.userId
+        ? `${this.apiBaseUrl()}/users/${encodeURIComponent(input.userId)}/applications/${encodeURIComponent(this.config.clientId)}`
+        : `${this.apiBaseUrl()}/oauth/token`;
+
+    try {
+      const response = await this.request(url, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-    if (!response.ok && response.status !== 404) {
-      throw new MercadoPagoDependencyError("Mercado Pago revoke failed.");
+      });
+      if (response.ok) {
+        return { confirmed: true };
+      }
+      if (
+        response.status === 404 ||
+        response.status === 401 ||
+        response.status === 403
+      ) {
+        return { confirmed: false };
+      }
+      throw new MercadoPagoDependencyError(
+        `Mercado Pago revoke failed with status ${response.status}.`,
+      );
+    } catch (error) {
+      if (error instanceof MercadoPagoDependencyError) throw error;
+      throw new MercadoPagoDependencyError("Mercado Pago revoke request failed.");
     }
   }
 

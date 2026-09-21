@@ -21,10 +21,10 @@ export default async function TenantAdminIndexPage({
   }
 
   if (
-    canAccess(authority.membership.role, "estado") &&
+    canAccess(authority.membership.role, "configuracion") &&
     authority.membership.tenantStatus === "onboarding"
   ) {
-    redirect(`/admin/${tenantId}/onboarding`);
+    redirect(`/admin/${tenantId}/settings`);
   }
 
   const isExpressRetail = authority.membership.tenantPreset === "express_retail";

@@ -39,13 +39,6 @@ export default async function MembersPage({
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
-      <header>
-        <p className="text-sm uppercase text-amber-400">Miembros</p>
-        <h1 className="mt-2 text-3xl font-semibold">Gestión de miembros</h1>
-        <p className="mt-2 text-zinc-400">
-          Agregá, cambiá roles y revocá miembros de tu negocio.
-        </p>
-      </header>
       <MemberManager tenantId={tenantId} initialMembers={members} />
     </main>
   );

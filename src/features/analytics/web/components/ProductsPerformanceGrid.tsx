@@ -64,7 +64,7 @@ export default function ProductsPerformanceGrid({
               onClick={() => setTopMetric("quantity")}
               className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                 topMetric === "quantity"
-                  ? "bg-amber-400 text-zinc-950 shadow-sm"
+                  ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
@@ -75,7 +75,7 @@ export default function ProductsPerformanceGrid({
               onClick={() => setTopMetric("revenue")}
               className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                 topMetric === "revenue"
-                  ? "bg-amber-400 text-zinc-950 shadow-sm"
+                  ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
@@ -143,9 +143,6 @@ export default function ProductsPerformanceGrid({
             <h2 className="text-base font-semibold text-zinc-100">
               Platos que Miran Mucho pero No Piden
             </h2>
-            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-400 border border-zinc-700/60">
-              M-32
-            </span>
           </div>
           <p className="text-xs text-zinc-400">
             Alta atención en menú QR pero conversión menor al 5%
@@ -201,7 +198,7 @@ export default function ProductsPerformanceGrid({
                             className={
                               item.conversionRate === 0
                                 ? "text-red-400 font-semibold"
-                                : "text-amber-400 font-semibold"
+                                : "text-(--color-accent-tertiary) font-semibold"
                             }
                           >
                             {item.conversionRate.toFixed(1)}%

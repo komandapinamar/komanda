@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
-import { randomBytes, randomUUID, createHash } from "crypto";
-import { eq, sql } from "drizzle-orm";
+import { randomBytes, randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   setTenantTransactionContext,
@@ -35,7 +35,7 @@ export class EmailAlreadyTakenError extends Error {
   }
 }
 
-export const publicRegistrationSchema = z
+export const businessRegistrationSchema = z
   .object({
     businessName: z
       .string()
@@ -52,19 +52,23 @@ export const publicRegistrationSchema = z
         "El identificador solo puede contener letras minúsculas, números y guiones",
       ),
     preset: z.enum(["gastronomy", "express_retail"]).default("gastronomy"),
-    email: z
+  })
+  .strict();
+
+export const publicRegistrationSchema = businessRegistrationSchema.extend({
+  email: z
       .string()
       .trim()
       .email("Ingresá un correo electrónico válido")
       .max(320),
-    password: z
+  password: z
       .string()
       .min(8, "La contraseña debe tener al menos 8 caracteres")
       .max(128, "La contraseña no puede exceder 128 caracteres"),
-  })
-  .strict();
+});
 
 export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema>;
+type BusinessRegistrationInput = z.infer<typeof businessRegistrationSchema>;
 
 export type PublicRegistrationResult = {
   tenantId: string;
@@ -89,11 +93,28 @@ export class PublicRegistrationService {
 
   async register(
     rawInput: unknown,
-    options?: { userAgent?: string | null; correlationId?: string },
+    options?: {
+      userAgent?: string | null;
+      correlationId?: string;
+      authenticatedUser?: { id: string; email: string };
+    },
   ): Promise<PublicRegistrationResult> {
-    const input = publicRegistrationSchema.parse(rawInput);
+    const authenticatedUser = options?.authenticatedUser;
+    let input: BusinessRegistrationInput;
+    let registrationEmail: string;
+    let registrationPassword: string | null = null;
+
+    if (authenticatedUser) {
+      input = businessRegistrationSchema.parse(rawInput);
+      registrationEmail = authenticatedUser.email;
+    } else {
+      const guestInput = publicRegistrationSchema.parse(rawInput);
+      input = guestInput;
+      registrationEmail = guestInput.email;
+      registrationPassword = guestInput.password;
+    }
     const normalizedSlug = normalizeTenantSlug(input.slug);
-    const normalizedEmail = input.email.trim().toLowerCase();
+    const normalizedEmail = registrationEmail.trim().toLowerCase();
     const now = this.now();
     const correlationId = options?.correlationId ?? randomUUID();
 
@@ -120,9 +141,17 @@ export class PublicRegistrationService {
 
         let userId: string;
 
-        if (existingUser) {
+        if (authenticatedUser) {
+          if (!existingUser || existingUser.id !== authenticatedUser.id) {
+            throw new Error("La sesión no corresponde a una cuenta activa.");
+          }
+          if (existingUser.status === "disabled") {
+            throw new Error("La cuenta se encuentra deshabilitada.");
+          }
+          userId = existingUser.id;
+        } else if (existingUser) {
           const passwordMatches = await this.verifyPassword(
-            input.password,
+            registrationPassword!,
             existingUser.passwordHash,
           );
           if (!passwordMatches) {
@@ -134,10 +163,10 @@ export class PublicRegistrationService {
           userId = existingUser.id;
         } else {
           userId = randomUUID();
-          const passwordHash = await this.hashPassword(input.password);
+          const passwordHash = await this.hashPassword(registrationPassword!);
           await transaction.insert(users).values({
             id: userId,
-            email: input.email.trim(),
+            email: registrationEmail.trim(),
             normalizedEmail,
             passwordHash,
             status: "active",
@@ -189,7 +218,7 @@ export class PublicRegistrationService {
         await transaction.insert(tenantSettings).values({
           tenantId,
           contactName: input.businessName,
-          contactEmail: input.email.trim(),
+          contactEmail: registrationEmail.trim(),
           salesEnabled: false,
           printingEnabled: false,
           orderPrefix,

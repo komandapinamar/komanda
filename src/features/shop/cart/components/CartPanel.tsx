@@ -10,7 +10,8 @@ export default function CartPanel() {
   const router = useRouter();
 
   const handleCheckout = async () => {
-    await beginCheckout();
+    const cart = await beginCheckout();
+    if (!cart) return;
     router.push("/checkout/pay");
   };
 

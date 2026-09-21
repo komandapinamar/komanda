@@ -135,7 +135,7 @@ export function AdminDirectOrderForm({
               if (catItems.length === 0) return null;
               return (
                 <div key={category.id}>
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-amber-400">
+                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-(--color-accent-tertiary)">
                     {category.name}
                   </h3>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -209,7 +209,7 @@ export function AdminDirectOrderForm({
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Ej: Juan Pérez"
-              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-amber-400 focus:outline-none"
+              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-(--color-accent-tertiary) focus:outline-none"
             />
           </div>
           <div>
@@ -225,7 +225,7 @@ export function AdminDirectOrderForm({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ej: sin sal, bien cocido..."
               rows={3}
-              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-amber-400 focus:outline-none"
+              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-(--color-accent-tertiary) focus:outline-none"
             />
           </div>
         </div>
@@ -241,7 +241,7 @@ export function AdminDirectOrderForm({
           type="button"
           disabled={submitting || selectedCount === 0 || !customerName.trim()}
           onClick={handleSubmit}
-          className="rounded-sm bg-amber-400 px-6 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-sm bg-(--color-accent-tertiary) px-6 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Creando pedido..." : "Crear pedido directo"}
         </button>

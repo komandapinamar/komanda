@@ -87,14 +87,14 @@ export default async function TenantOrdersPage({
     <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase text-amber-400">
+          <p className="text-sm uppercase text-(--color-accent-tertiary)">
             Operación
           </p>
           <h1 className="mt-2 text-3xl font-semibold">Pedidos en curso</h1>
         </div>
         <Link
           href={`/admin/${tenantId}/orders/new`}
-          className="rounded-sm bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950"
+          className="rounded-sm bg-(--color-accent-tertiary) px-4 py-3 text-sm font-semibold text-zinc-950"
         >
           Crear pedido directo
         </Link>

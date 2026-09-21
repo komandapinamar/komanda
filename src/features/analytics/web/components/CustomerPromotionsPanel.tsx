@@ -35,7 +35,7 @@ export default function CustomerPromotionsPanel({
         {recurrence && recurrence.identityCoverageRate > 0 && (
           <span className="self-start sm:self-auto rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-medium text-zinc-300 border border-zinc-700/60">
             Cobertura de comensales:{" "}
-            <strong className="text-amber-400">{recurrence.identityCoverageRate}%</strong>
+            <strong className="text-(--color-accent-tertiary)">{recurrence.identityCoverageRate}%</strong>
           </span>
         )}
       </div>
@@ -230,7 +230,7 @@ export default function CustomerPromotionsPanel({
               Uso de Descuentos
             </span>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-amber-400">
+              <span className="text-2xl font-bold text-(--color-accent-tertiary)">
                 {promotions ? `${promotions.discountAdoptionRate}%` : "--"}
               </span>
             </div>
@@ -282,7 +282,7 @@ export default function CustomerPromotionsPanel({
               </span>
             </div>
             <div className="mt-1 flex flex-col gap-0.5 text-xs text-zinc-400">
-              <span className={promotions?.ticketComparison && Number(promotions.ticketComparison.differenceAmount) >= 0 ? "text-emerald-400 font-medium" : "text-amber-400 font-medium"}>
+              <span className={promotions?.ticketComparison && Number(promotions.ticketComparison.differenceAmount) >= 0 ? "text-emerald-400 font-medium" : "text-(--color-accent-tertiary) font-medium"}>
                 {promotions?.ticketComparison
                   ? `${Number(promotions.ticketComparison.differenceAmount) >= 0 ? "+" : ""}${formatCurrency(promotions.ticketComparison.differenceAmount)} (${promotions.ticketComparison.differencePercent > 0 ? "+" : ""}${promotions.ticketComparison.differencePercent}%)`
                   : "Sin datos"}

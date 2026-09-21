@@ -73,3 +73,18 @@ be the migration owner and must not have `BYPASSRLS`.
 This project is intended to be used in any part of the ticketing process: kitchen, app/client menu, in the storefronts.
 For dashboard access we have a segregation of roles, so the user can only access the information that is needed for their role.
 For the menu anyone can access it, but for the kitchen and dashboard, the user needs to be authenticated and have the correct role to access it.
+
+## Local Media Storage
+
+The catalog media flow uses S3-compatible storage. Start MinIO from this
+repository before running the app:
+
+```bash
+docker compose up -d
+npm --prefix src run dev
+```
+
+The compose setup creates `komanda-dev-media` and enables anonymous reads for
+local previews. `src/.env.local` contains the matching `OBJECT_STORAGE_*`
+configuration. Use a private bucket plus a CDN/public media origin in staging
+and production, setting `OBJECT_STORAGE_PUBLIC_BASE_URL` accordingly.

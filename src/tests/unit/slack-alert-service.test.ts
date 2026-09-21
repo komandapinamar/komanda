@@ -22,7 +22,15 @@ describe("Epic 5: Slack Cash Order Alert Service", () => {
 
   it("dispatches structured Block Kit payload to Slack webhook", async () => {
     let capturedUrl = "";
-    let capturedBody: any = null;
+    let capturedBody: {
+      text?: string;
+      blocks?: Array<{
+        type?: string;
+        fields?: Array<{ text?: string }>;
+        text?: { text?: string };
+        elements?: Array<{ text?: string }>;
+      }>;
+    } = {};
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       capturedUrl = url;
@@ -48,14 +56,14 @@ describe("Epic 5: Slack Cash Order Alert Service", () => {
     expect(capturedBody.text).toContain("3500.00 ARS");
 
     // Check Block Kit structure
-    const blocks = capturedBody.blocks;
+    const blocks = capturedBody.blocks!;
     expect(blocks).toHaveLength(4);
-    expect(blocks[0].type).toBe("header");
-    expect(blocks[1].fields[0].text).toContain("#1042");
-    expect(blocks[1].fields[1].text).toContain("$3500.00 ARS");
-    expect(blocks[2].text.text).toContain("1x Coca-Cola 500ml");
-    expect(blocks[2].text.text).toContain("2x Alfajor Havanna");
-    expect(blocks[3].elements[0].text).toContain("Komanda Espresso");
+    expect(blocks[0]?.type).toBe("header");
+    expect(blocks[1]?.fields?.[0]?.text).toContain("#1042");
+    expect(blocks[1]?.fields?.[1]?.text).toContain("$3500.00 ARS");
+    expect(blocks[2]?.text?.text).toContain("1x Coca-Cola 500ml");
+    expect(blocks[2]?.text?.text).toContain("2x Alfajor Havanna");
+    expect(blocks[3]?.elements?.[0]?.text).toContain("Komanda Espresso");
   });
 
   it("handles fetch network failure gracefully without throwing", async () => {

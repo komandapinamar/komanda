@@ -11,6 +11,7 @@ import {
   PublicTenantService,
   type PublicTenant,
 } from "@/features/tenancy/application/public-tenant.service";
+import { fetchTenantReadiness } from "@/features/tenancy/application/tenant-readiness.service";
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
@@ -37,6 +38,13 @@ export class CartService {
     const request = createCartSchema.parse(value);
     const tenant = await this.tenants.resolve(slug);
     return withTenantTransaction(publicContext(tenant), async (transaction) => {
+      const eligibility = await fetchTenantReadiness(transaction, tenant.id);
+      if (!eligibility.orderingAvailable) {
+        throw new CartRevalidationError(
+          "Online ordering is currently unavailable for this store.",
+        );
+      }
+
       const repository = new CartRepository(transaction, tenant.id);
       const idempotency = new IdempotencyService(transaction);
       const claim = await idempotency.claim({

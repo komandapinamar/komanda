@@ -67,7 +67,7 @@ export default function FinancialSummaryPanel({
         </div>
         <div className="flex items-center gap-2">
           {mp.isFeeInclusiveOfTax && (
-            <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-[11px] font-medium text-amber-400">
+            <span className="rounded-full bg-(--color-accent-tertiary)/10 px-2.5 py-1 text-[11px] font-medium text-(--color-accent-tertiary)">
               Comisión con impuestos incluidos
             </span>
           )}
@@ -88,8 +88,8 @@ export default function FinancialSummaryPanel({
           </p>
         </div>
         {Number(mp.pendingReleaseAmount) > 0 && (
-          <div className="rounded-md border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-right">
-            <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block">
+          <div className="rounded-md border border-(--color-accent-tertiary)/20 bg-(--color-accent-tertiary)/5 px-3 py-2 text-right">
+            <span className="text-[11px] font-semibold text-(--color-accent-tertiary) uppercase tracking-wider block">
               Plata por liberar
             </span>
             <span className="text-base font-bold text-amber-300">
@@ -126,10 +126,10 @@ export default function FinancialSummaryPanel({
             {/* 2. Comisiones de Mercado Pago */}
             <div className="flex items-center justify-between text-zinc-400 py-1 border-b border-zinc-800/60">
               <span className="flex items-center gap-2 pl-3">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="h-1.5 w-1.5 rounded-full bg-(--color-accent-tertiary)" />
                 Comisiones de Mercado Pago
               </span>
-              <span className="font-medium text-amber-400">
+              <span className="font-medium text-(--color-accent-tertiary)">
                 -{formatCurrency(mp.feeAmount)}
               </span>
             </div>
@@ -137,10 +137,10 @@ export default function FinancialSummaryPanel({
             {/* 3. Impuestos y retenciones */}
             <div className="flex items-center justify-between text-zinc-400 py-1 border-b border-zinc-800/60">
               <span className="flex items-center gap-2 pl-3">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="h-1.5 w-1.5 rounded-full bg-(--color-accent-tertiary)" />
                 Impuestos y retenciones
               </span>
-              <span className="font-medium text-amber-400">
+              <span className="font-medium text-(--color-accent-tertiary)">
                 -{formatCurrency(mp.taxesAmount)}
               </span>
             </div>

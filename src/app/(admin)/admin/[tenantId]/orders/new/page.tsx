@@ -47,7 +47,7 @@ export default async function NewDirectOrderPage({
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header>
-        <p className="text-sm uppercase text-amber-400">
+        <p className="text-sm uppercase text-(--color-accent-tertiary)">
           Operación
         </p>
         <h1 className="mt-2 text-3xl font-semibold">Nuevo pedido directo</h1>

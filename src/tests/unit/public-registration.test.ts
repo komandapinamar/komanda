@@ -9,7 +9,10 @@ vi.mock("@/db", () => ({
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { publicRegistrationSchema } from "@/features/provisioning/application/public-registration.service";
+import {
+  businessRegistrationSchema,
+  publicRegistrationSchema,
+} from "@/features/provisioning/application/public-registration.service";
 import BusinessRegistrationWizard from "@/features/identity/web/BusinessRegistrationWizard";
 
 describe("Public Registration Feature", () => {
@@ -53,6 +56,16 @@ describe("Public Registration Feature", () => {
 
       const parsed = publicRegistrationSchema.parse(input);
       expect(parsed.preset).toBe("gastronomy");
+    });
+
+    it("accepts business details without credentials for an authenticated user", () => {
+      const parsed = businessRegistrationSchema.parse({
+        businessName: "Segundo Local",
+        slug: "segundo-local",
+        preset: "gastronomy",
+      });
+
+      expect(parsed.slug).toBe("segundo-local");
     });
 
     it("rejects invalid slugs with uppercase or special characters", () => {
@@ -104,6 +117,17 @@ describe("Public Registration Feature", () => {
       expect(markup).toContain("komanda.app/");
       expect(markup).toContain("Komanda Kiosk");
       expect(markup).toContain("Iniciá sesión acá");
+    });
+
+    it("uses the active account without rendering credential fields", () => {
+      const markup = renderToStaticMarkup(
+        React.createElement(BusinessRegistrationWizard, {
+          authenticatedEmail: "owner@example.com",
+        }),
+      );
+
+      expect(markup).toContain("Vas a usar la cuenta owner@example.com.");
+      expect(markup).not.toContain('id="password"');
     });
   });
 });

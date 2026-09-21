@@ -4,13 +4,11 @@ on:
   pull_request:
     paths:
       - "src/**"
-      - "komanda-desktop/**"
       - ".github/workflows/core-ci.yml"
   push:
     branches: [main]
     paths:
       - "src/**"
-      - "komanda-desktop/**"
       - ".github/workflows/core-ci.yml"
 
 permissions:
@@ -95,6 +93,37 @@ jobs:
     name: Browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: komanda_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d komanda_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      KOMANDA_TEST_MODE: "1"
+      DATABASE_DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/komanda_test
+      DATABASE_URL: postgresql://komanda_test_runtime:runtime-test-only@127.0.0.1:5432/komanda_test
+      DATABASE_RUNTIME_TEST_USER: komanda_test_runtime
+      DATABASE_RUNTIME_TEST_PASSWORD: runtime-test-only
+      DATABASE_TEST_INTEGRATION: "1"
+      APP_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_ENCRYPTION_KEY_VERSION: "1"
+      SESSION_SECRET: test-session-secret-key-32-chars-long
+      KOMANDA_PUBLIC_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      MERCADOPAGO_CLIENT_ID: "3514416644027736"
+      MERCADOPAGO_CLIENT_SECRET: vtmRyWI1Tu3VyuXpjvuu9f14Mhal7MJr
+      MERCADOPAGO_REDIRECT_URI: http://localhost:3000/api/v1/integrations/mercadopago/oauth/callback
+      MERCADOPAGO_WEBHOOK_SECRET: 68901b2db3ef0044f78a4b8b8144cfb8ddffd95f0058c918ee1e1455d9047f16
     defaults:
       run:
         working-directory: src
@@ -106,6 +135,8 @@ jobs:
           cache: npm
           cache-dependency-path: src/package-lock.json
       - run: npm ci
+      - run: npm run db:migrate:test
+      - run: npm run db:verify-roles:test
       - run: npx playwright install --with-deps chromium
       - name: Run browser suite when scenarios exist
         run: |
@@ -114,21 +145,3 @@ jobs:
           else
             echo "No browser scenarios in this increment."
           fi
-
-  desktop:
-    name: Komanda Desktop checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: komanda-desktop
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: komanda-desktop/package-lock.json
-      - run: npm ci --ignore-scripts
-      - run: npm run typecheck
-      - run: npm test

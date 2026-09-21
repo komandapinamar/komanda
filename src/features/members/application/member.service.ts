@@ -1,4 +1,8 @@
-import { withPlatformServiceTransaction, withTenantTransaction } from "@/db/tenant-transaction";
+import {
+  setTenantTransactionContext,
+  withPlatformServiceTransaction,
+  withTenantTransaction,
+} from "@/db/tenant-transaction";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import bcrypt from "bcrypt";
 import { randomUUID } from "node:crypto";
@@ -9,7 +13,6 @@ import {
   AddMemberSchema,
   ChangeRoleSchema,
   DeleteMemberSchema,
-  RevokeMemberSchema,
   type AddMemberInput,
   type ChangeRoleInput,
   type DeleteMemberInput,
@@ -199,34 +202,39 @@ export class MemberService {
     input: DeleteMemberInput,
   ): Promise<void> {
     const data = DeleteMemberSchema.parse(input);
-    return withTenantTransaction(context, async (transaction) => {
-      const repository = new MemberRepository(transaction, context.tenantId);
-      const membership = await repository.findMembership(data.membershipId);
-      if (!membership) {
-        throw new Error("Membership not found");
-      }
-      const actorUserId =
-        context.actor.kind === "user" ? context.actor.userId : null;
-      if (actorUserId && membership.userId === actorUserId && membership.role === "owner") {
-        const ownerCount = await repository.countActiveOwners();
-        if (ownerCount <= 1) {
-          throw new LastOwnerError(
-            "Cannot remove the last active owner",
-          );
+    return withPlatformServiceTransaction(
+      { serviceId: "member-service", correlationId: context.correlationId },
+      async (transaction) => {
+        await setTenantTransactionContext(transaction, context.tenantId);
+        const repository = new MemberRepository(transaction, context.tenantId);
+        const membership = await repository.findMembership(data.membershipId);
+        if (!membership) {
+          throw new Error("Membership not found");
         }
-      }
-      await repository.delete(data.membershipId);
-      await appendAuditEvent(transaction, context, {
-        action: MEMBERSHIP_AUDIT_EVENTS.REVOKED,
-        resourceType: "tenant_membership",
-        resourceId: data.membershipId,
-        outcome: "allowed",
-        metadata: {
-          membershipId: data.membershipId,
-          previousRole: membership.role,
-        },
-      });
-    });
+        const actorUserId =
+          context.actor.kind === "user" ? context.actor.userId : null;
+        if (actorUserId && membership.userId === actorUserId && membership.role === "owner") {
+          const ownerCount = await repository.countActiveOwners();
+          if (ownerCount <= 1) {
+            throw new LastOwnerError(
+              "Cannot remove the last active owner",
+            );
+          }
+        }
+        await repository.delete(data.membershipId);
+        await repository.deleteUserIfUnassigned(membership.userId);
+        await appendAuditEvent(transaction, context, {
+          action: MEMBERSHIP_AUDIT_EVENTS.REVOKED,
+          resourceType: "tenant_membership",
+          resourceId: data.membershipId,
+          outcome: "allowed",
+          metadata: {
+            membershipId: data.membershipId,
+            previousRole: membership.role,
+          },
+        });
+      },
+    );
   }
 
   async revokeMember(

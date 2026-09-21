@@ -55,12 +55,11 @@ export default function KitchenPerformancePanel({
             <span className="text-2xl font-bold text-zinc-100">
               {waiting ? `${waiting.p50} min` : "--"}
             </span>
-            <span className="text-xs text-zinc-500 font-medium">(p50)</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-xs text-zinc-400">
             <span>
               p90:{" "}
-              <strong className="text-amber-400 font-semibold">
+              <strong className="text-(--color-accent-tertiary) font-semibold">
                 {waiting ? `${waiting.p90} min` : "--"}
               </strong>
             </span>
@@ -79,12 +78,11 @@ export default function KitchenPerformancePanel({
             <span className="text-2xl font-bold text-zinc-100">
               {prep ? `${prep.p50} min` : "--"}
             </span>
-            <span className="text-xs text-zinc-500 font-medium">(p50)</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-xs text-zinc-400">
             <span>
               p90:{" "}
-              <strong className="text-amber-400 font-semibold">
+              <strong className="text-(--color-accent-tertiary) font-semibold">
                 {prep ? `${prep.p90} min` : "--"}
               </strong>
             </span>
@@ -103,12 +101,11 @@ export default function KitchenPerformancePanel({
             <span className="text-2xl font-bold text-zinc-100">
               {total ? `${total.p50} min` : "--"}
             </span>
-            <span className="text-xs text-zinc-500 font-medium">(p50)</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-xs text-zinc-400">
             <span>
               p90:{" "}
-              <strong className="text-amber-400 font-semibold">
+              <strong className="text-(--color-accent-tertiary) font-semibold">
                 {total ? `${total.p90} min` : "--"}
               </strong>
             </span>
@@ -152,7 +149,7 @@ export default function KitchenPerformancePanel({
                     <span
                       className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
                         order.fulfillmentStatus === "preparing"
-                          ? "bg-amber-400/10 text-amber-300 border border-amber-400/20"
+                          ? "bg-(--color-accent-tertiary)/10 text-amber-300 border border-(--color-accent-tertiary)/20"
                           : "bg-zinc-800 text-zinc-400 border border-zinc-700/40"
                       }`}
                     >
@@ -168,7 +165,7 @@ export default function KitchenPerformancePanel({
                         isUrgent
                           ? "text-red-400"
                           : isModerate
-                          ? "text-amber-400"
+                          ? "text-(--color-accent-tertiary)"
                           : "text-zinc-300"
                       }`}
                     >

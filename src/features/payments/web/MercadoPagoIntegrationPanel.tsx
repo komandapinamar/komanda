@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export type MercadoPagoIntegrationView = {
   provider: "mercadopago";
@@ -29,6 +30,7 @@ export function MercadoPagoIntegrationPanel({
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [message, setMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   async function connect() {
     setMessage(null);
@@ -48,12 +50,14 @@ export function MercadoPagoIntegrationPanel({
   async function revoke() {
     setMessage(null);
     try {
-      await jsonOrThrow(
+      const result = (await jsonOrThrow(
         await fetch(`/api/v1/tenants/${tenantId}/integrations/mercadopago`, {
           method: "DELETE",
           headers: { "If-Match": String(status.version) },
         }),
-      );
+      )) as { localRevoked?: boolean; remoteConfirmed?: boolean; version?: number } | null;
+
+      const nextVersion = result?.version ?? status.version + 1;
       setStatus({
         provider: "mercadopago",
         status: "revoked",
@@ -61,9 +65,17 @@ export function MercadoPagoIntegrationPanel({
         scopes: [],
         expiresAt: null,
         lastVerifiedAt: null,
-        version: status.version + 1,
+        version: nextVersion,
       });
-      setMessage("Mercado Pago revocado.");
+
+      if (result?.remoteConfirmed) {
+        setMessage("Mercado Pago desconectado y autorización remota revocada.");
+      } else {
+        setMessage(
+          "Mercado Pago desconectado de Komanda (la revocación remota en Mercado Pago no pudo ser confirmada).",
+        );
+      }
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error inesperado.");
     }
@@ -104,7 +116,7 @@ export function MercadoPagoIntegrationPanel({
         <button
           type="button"
           onClick={connect}
-          className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950"
+          className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
         >
           Conectar por OAuth
         </button>

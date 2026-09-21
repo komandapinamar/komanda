@@ -21,40 +21,48 @@ test.describe("catalog administration", () => {
 
     await page.goto(`/admin/${pair.tenantA.id}/catalog`);
     await page.getByPlaceholder("Nueva categoría").fill(categoryA);
-    await page.getByRole("button", { name: "Agregar", exact: true }).click();
-    const categoryRow = page.getByRole("listitem").filter({ hasText: categoryA });
-    await categoryRow.getByRole("button", { name: "Publicar" }).click();
+    await page
+      .getByRole("button", { name: "Agregar categoría", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Publicar categoría", exact: true })
+      .click();
     await expect(page.locator('p[role="alert"]')).toContainText(
-      "Recurso publicado",
+      "Categoría publicada",
     );
 
-    await page.getByPlaceholder("Producto").fill(itemA);
-    await page.getByPlaceholder("3500.00").first().fill("3500.00");
-    await page.locator('select[name="categoryId"]').first().selectOption({
+    await page.getByRole("button", { name: "+ Nuevo producto" }).click();
+    const productDialog = page.getByRole("dialog", { name: "Nuevo producto" });
+    await productDialog.getByLabel("Nombre").fill(itemA);
+    await productDialog.getByPlaceholder("3500,50").fill("3500");
+    await productDialog.locator("select").selectOption({
       label: categoryA,
     });
-    await page.getByRole("button", { name: "Agregar producto" }).click();
-    const itemRow = page.getByRole("listitem").filter({ hasText: itemA });
-    await itemRow.getByRole("button", { name: "Publicar" }).click();
+    await productDialog
+      .getByRole("button", { name: "Guardar producto" })
+      .click();
+    await page
+      .getByRole("article")
+      .filter({ hasText: itemA })
+      .getByRole("button", { name: "Publicar" })
+      .click();
     await expect(page.locator('p[role="alert"]')).toContainText(
-      "Recurso publicado",
+      "Producto publicado",
     );
 
     await page.goto(`/admin/${pair.tenantB.id}/catalog`);
     await expect(page.getByText(categoryA)).toHaveCount(0);
     await expect(page.getByText(itemA)).toHaveCount(0);
     await page.getByPlaceholder("Nueva categoría").fill(categoryB);
-    await page.getByRole("button", { name: "Agregar", exact: true }).click();
-    await expect(
-      page.getByRole("listitem").filter({ hasText: categoryB }),
-    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Agregar categoría", exact: true })
+      .click();
+    await expect(page.getByText(categoryB, { exact: true })).toBeVisible();
 
     await page.goto(`/admin/${pair.tenantA.id}/catalog`);
+    await expect(page.getByText(categoryA, { exact: true })).toBeVisible();
     await expect(
-      page.getByRole("listitem").filter({ hasText: categoryA }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("listitem").filter({ hasText: itemA }),
+      page.getByRole("article").filter({ hasText: itemA }),
     ).toBeVisible();
     await expect(page.getByText(categoryB)).toHaveCount(0);
 

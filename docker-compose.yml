@@ -1,0 +1,38 @@
+# Desarrollo local: almacenamiento de objetos compatible con S3 para multimedia del catálogo.
+# Uso: docker compose up -d
+# Luego configurar src/.env.local con las variables OBJECT_STORAGE_* documentadas en README.md
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: komanda-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: komanda
+      MINIO_ROOT_PASSWORD: komanda-dev-only
+    ports:
+      - "9000:9000" # API S3
+      - "9001:9001" # Consola web (http://localhost:9001)
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: komanda-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 komanda komanda-dev-only;
+      mc mb --ignore-existing local/komanda-dev-media;
+      mc anonymous set download local/komanda-dev-media;
+      "
+    restart: "no"
+
+volumes:
+  minio-data:

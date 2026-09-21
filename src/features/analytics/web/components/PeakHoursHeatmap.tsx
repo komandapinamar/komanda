@@ -15,7 +15,7 @@ function formatCurrency(amount: string | number): string {
 
 function getCellColorClass(orderCount: number, maxOrders: number, isPeak: boolean): string {
   if (isPeak && orderCount > 0) {
-    return "bg-amber-400 text-zinc-950 font-bold shadow-sm shadow-amber-400/20";
+    return "bg-(--color-accent-tertiary) text-zinc-950 font-bold shadow-sm shadow-(--color-accent-tertiary)/20";
   }
   if (orderCount === 0 || maxOrders === 0) {
     return "bg-zinc-800/60 text-zinc-600 hover:bg-zinc-800";
@@ -79,7 +79,7 @@ export default function PeakHoursHeatmap({
               Horarios con Más Trabajo
             </h2>
             {heatmap?.busiestDay && (
-              <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[11px] font-medium text-amber-400 border border-amber-400/20">
+              <span className="rounded-full bg-(--color-accent-tertiary)/10 px-2 py-0.5 text-[11px] font-medium text-(--color-accent-tertiary) border border-(--color-accent-tertiary)/20">
                 Pico semanal: {heatmap.busiestDay}{" "}
                 {heatmap.busiestHour !== null && heatmap.busiestHour !== undefined
                   ? `${String(heatmap.busiestHour).padStart(2, "0")}:00 hs`
@@ -99,7 +99,7 @@ export default function PeakHoursHeatmap({
             onClick={() => setViewMode("matrix")}
             className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
               viewMode === "matrix"
-                ? "bg-amber-400 text-zinc-950 shadow-sm"
+                ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -110,7 +110,7 @@ export default function PeakHoursHeatmap({
             onClick={() => setViewMode("table")}
             className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
               viewMode === "table"
-                ? "bg-amber-400 text-zinc-950 shadow-sm"
+                ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -191,7 +191,7 @@ export default function PeakHoursHeatmap({
           </div>
 
           {/* Legend and Selected Cell Detail */}
-          <div className="flex flex-col gap-3 pt-2 border-t border-zinc-800 text-xs sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 pt-2 border-t border-zinc-800 text-md sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-zinc-500 text-[11px]">Intensidad:</span>
               <div className="flex items-center gap-1 text-[10px] text-zinc-400">
@@ -211,16 +211,16 @@ export default function PeakHoursHeatmap({
                 <span>Alto</span>
               </div>
               <div className="flex items-center gap-1 text-[10px] text-zinc-950 font-bold">
-                <span className="h-3 w-6 rounded bg-amber-400 text-[8px] flex items-center justify-center">
+                <span className="h-3 w-6 rounded bg-(--color-accent-tertiary) text-[8px] flex items-center justify-center">
                   Pico
                 </span>
-                <span className="text-amber-400">Máximo</span>
+                <span className="text-(--color-accent-tertiary)">Máximo</span>
               </div>
             </div>
 
             {selectedCell ? (
               <div className="rounded-md bg-zinc-800/80 px-3 py-1.5 text-zinc-200 text-xs border border-zinc-700/60">
-                <span className="font-semibold text-amber-400">
+                <span className="font-semibold text-(--color-accent-tertiary)">
                   {selectedCell.dayName} {String(selectedCell.hour).padStart(2, "0")}:00 hs:
                 </span>{" "}
                 {selectedCell.orderCount} pedido
@@ -271,7 +271,7 @@ export default function PeakHoursHeatmap({
                     </td>
                     <td className="py-2 px-3 text-center">
                       {cell.isPeak ? (
-                        <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+                        <span className="rounded bg-(--color-accent-tertiary) px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
                           Pico
                         </span>
                       ) : (

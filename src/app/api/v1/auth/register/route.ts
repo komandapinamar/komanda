@@ -9,6 +9,10 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from "@/features/identity/web/session-cookie";
+import {
+  coreSessionService,
+  sessionTokenFromRequest,
+} from "@/features/identity/web/authenticated-session";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 import { problemResponse } from "@/lib/http/problem";
 
@@ -19,10 +23,21 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    const sessionToken = await sessionTokenFromRequest(request);
+    let authenticatedUser: { id: string; email: string } | undefined;
+    if (sessionToken) {
+      try {
+        const session = await coreSessionService().resolve(sessionToken);
+        authenticatedUser = { id: session.userId, email: session.email };
+      } catch {
+        // An expired cookie must not prevent a guest from registering.
+      }
+    }
     const service = new PublicRegistrationService();
     const result = await service.register(body, {
       userAgent: request.headers.get("user-agent"),
       correlationId,
+      authenticatedUser,
     });
 
     const redirectUrl = `/admin/${result.tenantId}`;

@@ -55,7 +55,7 @@ export default function RevenueTimelineChart({
           </p>
         </div>
         {hoveredIndex !== null && items[hoveredIndex] && (
-          <div className="text-xs text-amber-400 font-medium">
+          <div className="text-xs text-(--color-accent-tertiary) font-medium">
             {formatBucketLabel(items[hoveredIndex].bucket, granularity)}:{" "}
             <span className="text-emerald-400 font-bold">
               {formatCurrency(Number(items[hoveredIndex].revenue))}

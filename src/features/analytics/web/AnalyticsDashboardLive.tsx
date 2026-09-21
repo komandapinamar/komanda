@@ -156,7 +156,7 @@ export default function AnalyticsDashboardLive({
               onClick={() => handlePresetChange(p.id)}
               className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
                 preset === p.id
-                  ? "bg-amber-400 text-zinc-950 shadow-sm"
+                  ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
                   : "bg-zinc-800/80 text-zinc-300 hover:bg-zinc-800"
               }`}
             >
@@ -176,7 +176,7 @@ export default function AnalyticsDashboardLive({
                   e.target.value as "all" | "mercadopago_webhook" | "admin_direct",
                 )
               }
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-200 outline-none focus:border-amber-400"
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-200 outline-none focus:border-(--color-accent-tertiary)"
             >
               <option value="all">Todos los canales</option>
               <option value="mercadopago_webhook">Mercado Pago (Online)</option>
@@ -227,7 +227,7 @@ export default function AnalyticsDashboardLive({
           <button
             type="button"
             onClick={handleApplyCustomRange}
-            className="rounded bg-amber-400 px-3 py-1 font-semibold text-zinc-950 hover:bg-amber-300"
+            className="rounded bg-(--color-accent-tertiary) px-3 py-1 font-semibold text-zinc-950 hover:bg-amber-300"
           >
             Aplicar Rango
           </button>
@@ -236,7 +236,7 @@ export default function AnalyticsDashboardLive({
 
       {/* Loading overlay indicator */}
       {isPending && (
-        <div className="text-center text-xs text-amber-400">
+        <div className="text-center text-xs text-(--color-accent-tertiary)">
           Cargando datos analíticos actualizados...
         </div>
       )}

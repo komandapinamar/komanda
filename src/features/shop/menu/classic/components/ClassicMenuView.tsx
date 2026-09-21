@@ -7,12 +7,14 @@ export interface ClassicMenuViewProps {
   categories: Category[];
   items: MenuItem[];
   tenantSlug?: string;
+  orderingAvailable?: boolean;
 }
 
 export default function ClassicMenuView({
   categories,
   items,
   tenantSlug,
+  orderingAvailable = true,
 }: ClassicMenuViewProps) {
   const itemsByCategory = new Map<string, MenuItem[]>();
 
@@ -43,6 +45,11 @@ export default function ClassicMenuView({
           <p className="max-w-2xl text-sm opacity-80 sm:text-base">
             Selecciona categorias y agregá productos al carrito.
           </p>
+          {!orderingAvailable && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-300">
+              Pedidos online no disponibles temporalmente. Podés consultar la carta.
+            </div>
+          )}
         </header>
 
         <nav className="sticky top-0 z-10 border-y border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)]/95 py-3 backdrop-blur">

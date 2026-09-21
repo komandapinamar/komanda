@@ -20,7 +20,7 @@ describe("Tenant Preset & Backoffice Adaptive Architecture", () => {
     expect(presetCheck).toBeDefined();
   });
 
-  it("renders the TenantSettingsPanel with the operational preset selector", () => {
+  it("renders the TenantSettingsPanel with a read-only preset and no selector", () => {
     const markup = renderToStaticMarkup(
       React.createElement(TenantSettingsPanel, {
         initialSettings: {
@@ -39,12 +39,15 @@ describe("Tenant Preset & Backoffice Adaptive Architecture", () => {
     );
 
     expect(markup).toContain("Perfil operativo del negocio");
-    expect(markup).toContain("Gastronomía (Komanda POS)");
     expect(markup).toContain("Autoservicio / Kiosco (Komanda Kiosk)");
-    expect(markup).toContain('value="express_retail"');
-    expect(markup).toContain('value="gastronomy"');
+    expect(markup).toContain(
+      "El perfil se define al registrar el negocio y no puede modificarse.",
+    );
+    expect(markup).not.toContain('name="preset"');
     expect(markup).not.toContain("Tema del menú digital (QR)");
     expect(markup).not.toContain('name="menuTheme"');
+    expect(markup).toContain("Webhook de Slack para cobros en efectivo");
+    expect(markup).toContain('name="slackCashAlertWebhookUrl"');
 
     const gastronomyMarkup = renderToStaticMarkup(
       React.createElement(TenantSettingsPanel, {
@@ -64,8 +67,11 @@ describe("Tenant Preset & Backoffice Adaptive Architecture", () => {
       }),
     );
 
+    expect(gastronomyMarkup).toContain("Gastronomía (Komanda POS)");
     expect(gastronomyMarkup).toContain("Tema del menú digital (QR)");
     expect(gastronomyMarkup).toContain('name="menuTheme"');
     expect(gastronomyMarkup).toContain('checked="" value="reels"');
+    expect(gastronomyMarkup).not.toContain("Webhook de Slack para cobros en efectivo");
+    expect(gastronomyMarkup).not.toContain('name="slackCashAlertWebhookUrl"');
   });
 });
