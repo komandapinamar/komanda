@@ -26,6 +26,7 @@ import {
   createVerifiedTenantContext,
   type TenantContext,
 } from "@/lib/tenant-context/types";
+import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
 
 export class MercadoPagoIntegrationNotFoundError extends Error {}
 export { MercadoPagoIntegrationConflictError } from "@/features/payments/infrastructure/integration.repository";
@@ -200,6 +201,7 @@ export class MercadoPagoIntegrationService {
       await this.assertMembershipStillActive(transaction, state);
       const repository = new IntegrationRepository(transaction, state.tenantId);
       await repository.saveMercadoPago(tokens);
+      await searchProjectionSyncService.syncTenantEligibility(transaction, state.tenantId);
     });
 
     return { tenantId: state.tenantId };
@@ -237,6 +239,8 @@ export class MercadoPagoIntegrationService {
           "Mercado Pago integration version conflict.",
         );
       }
+
+      await searchProjectionSyncService.syncTenantEligibility(transaction, context.tenantId);
 
       return {
         localRevoked: true,

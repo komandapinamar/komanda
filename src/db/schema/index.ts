@@ -10,3 +10,4 @@ export * from "./analytics";
 export * from "./billing";
 export * from "./discounts";
 export * from "./inventory";
+export * from "./search";
