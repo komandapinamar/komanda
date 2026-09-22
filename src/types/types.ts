@@ -123,7 +123,7 @@ export type AdminDashboardOrder = {
   id: string;
   purchaseNumber: string;
   status: OrderStatus;
-  paymentStatus?: "pending" | "paid" | "failed" | "refunded";
+  paymentStatus?: "pending" | "paid" | "failed" | "refunded" | "verification_required";
   customer: CustomerInfo;
   notes: string | null;
   source: OrderSource | null;

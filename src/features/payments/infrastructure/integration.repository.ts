@@ -178,7 +178,12 @@ export class IntegrationRepository {
         and(
           eq(paymentAttempts.tenantId, this.tenantId),
           eq(paymentAttempts.cartId, cartId),
-          inArray(paymentAttempts.status, ["initiated", "processing", "pending"]),
+          inArray(paymentAttempts.status, [
+            "initiated",
+            "processing",
+            "pending",
+            "verification_required",
+          ]),
         ),
       )
       .limit(1);

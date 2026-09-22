@@ -196,6 +196,7 @@ export const paymentAttempts = pgTable(
         | "rejected"
         | "failed"
         | "duplicate"
+        | "verification_required"
       >()
       .default("initiated")
       .notNull(),
@@ -249,7 +250,7 @@ export const tenantOrders = pgTable(
       .default("approved")
       .notNull(),
     paymentStatus: text("payment_status")
-      .$type<"pending" | "paid" | "failed" | "refunded">()
+      .$type<"pending" | "paid" | "failed" | "refunded" | "verification_required">()
       .notNull(),
     tender: text("tender")
       .$type<"cash" | "posnet">()
@@ -326,7 +327,7 @@ export const tenantOrders = pgTable(
     ),
     check(
       "orders_payment_status_check",
-      sql`${table.paymentStatus} in ('pending', 'paid', 'failed', 'refunded')`,
+      sql`${table.paymentStatus} in ('pending', 'paid', 'failed', 'refunded', 'verification_required')`,
     ),
     check("orders_tender_check", sql`${table.tender} in ('cash', 'posnet')`),
     check("orders_currency_check", sql`char_length(${table.currency}) = 3`),

@@ -2,6 +2,7 @@ import { administrativeTenantContext } from "@/features/identity/web/tenant-auth
 import { OrderQueryService } from "@/features/orders/application/order-query.service";
 import { orderErrorResponse } from "@/features/orders/web/order-http";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
+import { shutdownManager } from "@/lib/runtime/shutdown";
 
 type RouteContext = { params: Promise<{ tenantId: string }> };
 
@@ -40,15 +41,18 @@ export async function GET(request: Request, route: RouteContext) {
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        let unregisterShutdown: (() => void) | null = null;
         const closeStream = () => {
           if (closed) return;
           closed = true;
+          if (unregisterShutdown) unregisterShutdown();
           if (pollTimer) clearInterval(pollTimer);
           if (heartbeatTimer) clearInterval(heartbeatTimer);
           try {
             controller.close();
           } catch {}
         };
+        unregisterShutdown = shutdownManager.registerSseClient(closeStream);
 
         const enqueue = (message: string) => {
           if (!closed) controller.enqueue(encoder.encode(message));

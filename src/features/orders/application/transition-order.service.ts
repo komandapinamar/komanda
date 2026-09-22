@@ -4,6 +4,7 @@ import { cashRegisterMovements } from "@/db/schema";
 import {
   assertFulfillmentTransition,
   type FulfillmentStatus,
+  OrderTransitionError,
 } from "@/features/orders/domain/order.rules";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
@@ -44,6 +45,15 @@ export class TransitionOrderService {
         nextStatus,
         current.source,
       );
+
+      if (
+        nextStatus === "delivered" &&
+        current.paymentStatus === "verification_required"
+      ) {
+        throw new OrderTransitionError(
+          "No se puede entregar un pedido cuyo pago requiere verificación.",
+        );
+      }
 
       if (nextStatus === "delivered" && current.pickupPin) {
         if (!request.pickupPin || request.pickupPin !== current.pickupPin) {
