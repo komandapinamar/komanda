@@ -2,9 +2,31 @@ import { describe, expect, it } from "vitest";
 import { InvalidPickupPinError } from "@/features/orders/application/order-errors";
 import { orderErrorResponse } from "@/features/orders/web/order-http";
 import { transitionOrderSchema } from "@/features/orders/application/transition-order.service";
+import { createDirectOrderSchemaFromItems } from "@/features/orders/application/create-order.service";
 import { tenantOrders } from "@/db/schema/commerce";
+import { assertFulfillmentTransition } from "@/features/orders/domain/order.rules";
 
 describe("Order Pickup PIN and ETA Specification", () => {
+  it("allows direct transition from approved to ready in kitchen", () => {
+    expect(() => assertFulfillmentTransition("approved", "ready")).not.toThrow();
+    expect(() => assertFulfillmentTransition("ready", "delivered")).not.toThrow();
+  });
+
+  it("createDirectOrderSchemaFromItems defaults customer name to NN and parses discountCode", () => {
+    const parsed = createDirectOrderSchemaFromItems.parse({
+      items: [{ kind: "item", resourceId: "a0000000-0000-4000-8000-000000000001", quantity: 2 }],
+      customer: { name: "" },
+      discountCode: "PROMO10",
+    });
+    expect(parsed.customer.name).toBe("NN");
+    expect(parsed.discountCode).toBe("PROMO10");
+
+    const parsedWithoutCustomer = createDirectOrderSchemaFromItems.parse({
+      items: [{ kind: "item", resourceId: "a0000000-0000-4000-8000-000000000001", quantity: 1 }],
+    });
+    expect(parsedWithoutCustomer.customer.name).toBe("NN");
+    expect(parsedWithoutCustomer.discountCode).toBeUndefined();
+  });
   it("transitionOrderSchema parses valid statuses and pickupPin", () => {
     const valid = transitionOrderSchema.parse({
       fulfillmentStatus: "delivered",

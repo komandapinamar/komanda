@@ -56,7 +56,7 @@ export class TransitionOrderService {
       }
 
       if (nextStatus === "delivered" && current.pickupPin) {
-        if (!request.pickupPin || request.pickupPin !== current.pickupPin) {
+        if (request.pickupPin && request.pickupPin !== current.pickupPin) {
           throw new InvalidPickupPinError("El código PIN de retiro es inválido.");
         }
       }

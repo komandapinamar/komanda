@@ -15,7 +15,7 @@ export type PaymentStatus =
 export class OrderTransitionError extends Error {}
 
 const allowedTransitions: Record<FulfillmentStatus, FulfillmentStatus[]> = {
-  approved: ["preparing", "cancelled"],
+  approved: ["ready", "preparing", "cancelled"],
   preparing: ["ready", "cancelled"],
   ready: ["delivered"],
   delivered: [],
