@@ -1,5 +1,5 @@
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { tenants, tenantLocations } from "@/db/schema";
+import { tenants, tenantLocations, paymentAttempts } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
@@ -197,6 +197,69 @@ export class KioskPaymentService {
         await idempotency.fail(claim.recordId);
         throw error;
       }
+    });
+  }
+
+  async cancelAttempt(input: {
+    context: TenantContext;
+    attemptId: string;
+    idempotencyKey: string;
+  }): Promise<{ status: "cancelled"; cancelledAt: string }> {
+    const { context, attemptId, idempotencyKey } = input;
+    return withTenantTransaction(context, async (transaction) => {
+      const idempotency = new IdempotencyService(transaction);
+      const claim = await idempotency.claim({
+        tenantId: context.tenantId,
+        scope: `kiosk-cancel-attempt:${attemptId}`,
+        key: idempotencyKey,
+        request: { attemptId },
+        retentionSeconds: 120,
+      });
+
+      if (claim.replayed) {
+        return claim.body as { status: "cancelled"; cancelledAt: string };
+      }
+
+      const [attempt] = await transaction
+        .select()
+        .from(paymentAttempts)
+        .where(
+          and(
+            eq(paymentAttempts.tenantId, context.tenantId),
+            eq(paymentAttempts.id, attemptId),
+          ),
+        )
+        .limit(1);
+
+      if (!attempt) {
+        throw new KioskPaymentCartUnavailableError("Payment attempt not found.");
+      }
+
+      const cancelledAt = new Date().toISOString();
+
+      if (
+        attempt.status === "initiated" ||
+        attempt.status === "processing" ||
+        attempt.status === "pending"
+      ) {
+        await transaction
+          .update(paymentAttempts)
+          .set({
+            status: "failed",
+            failureCode: "cancelled_by_kiosk_timeout_or_user",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(paymentAttempts.tenantId, context.tenantId),
+              eq(paymentAttempts.id, attemptId),
+            ),
+          );
+      }
+
+      const body = { status: "cancelled" as const, cancelledAt };
+      await idempotency.complete(claim.recordId, 200, body);
+      return body;
     });
   }
 }

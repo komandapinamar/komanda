@@ -313,5 +313,50 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
       });
       expect(mockIdempotencyComplete).toHaveBeenCalledWith("claim-rec-1", 201, result);
     });
+
+    it("cancels pending payment attempt idempotently", async () => {
+      mockIdempotencyClaim.mockResolvedValueOnce({
+        replayed: false,
+        recordId: "cancel-claim-1",
+        requestHash: "cancel-hash-1",
+      });
+
+      const mockUpdate = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValueOnce([]),
+        }),
+      });
+
+      vi.mocked(withTenantTransaction).mockImplementationOnce(async (_ctx, callback) => {
+        const tx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValueOnce([
+                  {
+                    id: "att-cancel-1",
+                    tenantId: mockContext.tenantId,
+                    status: "pending",
+                  },
+                ]),
+              }),
+            }),
+          }),
+          update: mockUpdate,
+        };
+        return callback(tx as any);
+      });
+
+      const service = new KioskPaymentService();
+      const result = await service.cancelAttempt({
+        context: mockContext,
+        attemptId: "att-cancel-1",
+        idempotencyKey: "idem-cancel-key",
+      });
+
+      expect(result.status).toBe("cancelled");
+      expect(result.cancelledAt).toBeDefined();
+      expect(mockIdempotencyComplete).toHaveBeenCalledWith("cancel-claim-1", 200, result);
+    });
   });
 });
