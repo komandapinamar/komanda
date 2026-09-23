@@ -1,5 +1,5 @@
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { tenants, tenantLocations, paymentAttempts } from "@/db/schema";
+import { tenants, tenantLocations, paymentAttempts, tenantOrders, carts } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
@@ -260,6 +260,99 @@ export class KioskPaymentService {
       const body = { status: "cancelled" as const, cancelledAt };
       await idempotency.complete(claim.recordId, 200, body);
       return body;
+    });
+  }
+
+  async getAttemptStatus(input: {
+    context: TenantContext;
+    attemptId: string;
+  }): Promise<{
+    status: string;
+    secondsRemaining?: number;
+    orderId?: string;
+    purchaseNumber?: string;
+    total?: string;
+    paymentId?: string;
+    reason?: string;
+  }> {
+    const { context, attemptId } = input;
+    return withTenantTransaction(context, async (transaction) => {
+      const [attempt] = await transaction
+        .select()
+        .from(paymentAttempts)
+        .where(
+          and(
+            eq(paymentAttempts.tenantId, context.tenantId),
+            eq(paymentAttempts.id, attemptId),
+          ),
+        )
+        .limit(1);
+
+      if (!attempt) {
+        throw new KioskPaymentCartUnavailableError("Payment attempt not found.");
+      }
+
+      if (attempt.status === "approved") {
+        const [order] = await transaction
+          .select({
+            id: tenantOrders.id,
+            purchaseNumber: tenantOrders.purchaseNumber,
+          })
+          .from(tenantOrders)
+          .where(
+            and(
+              eq(tenantOrders.tenantId, context.tenantId),
+              eq(tenantOrders.paymentAttemptId, attemptId),
+            ),
+          )
+          .limit(1);
+
+        return {
+          status: "approved",
+          orderId: order?.id ?? attempt.id,
+          purchaseNumber: order ? String(order.purchaseNumber) : undefined,
+          total: attempt.amount,
+          paymentId: attempt.providerPaymentId ?? undefined,
+        };
+      }
+
+      if (attempt.status === "failed" || attempt.status === "rejected") {
+        return {
+          status: "failed",
+          reason: attempt.failureCode ?? "payment_failed",
+        };
+      }
+
+      const [cart] = await transaction
+        .select({ expiresAt: carts.expiresAt })
+        .from(carts)
+        .where(
+          and(
+            eq(carts.tenantId, context.tenantId),
+            eq(carts.id, attempt.cartId),
+          ),
+        )
+        .limit(1);
+
+      const expiresAtMs = cart?.expiresAt
+        ? cart.expiresAt.getTime()
+        : attempt.createdAt.getTime() + 120_000;
+      const secondsRemaining = Math.max(
+        0,
+        Math.round((expiresAtMs - Date.now()) / 1000),
+      );
+
+      if (secondsRemaining === 0 && attempt.status !== "approved") {
+        return {
+          status: "expired",
+          reason: "timeout_reached",
+        };
+      }
+
+      return {
+        status: "pending",
+        secondsRemaining,
+      };
     });
   }
 }

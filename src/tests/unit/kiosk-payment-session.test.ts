@@ -358,5 +358,90 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
       expect(result.cancelledAt).toBeDefined();
       expect(mockIdempotencyComplete).toHaveBeenCalledWith("cancel-claim-1", 200, result);
     });
+
+    it("returns pending status with secondsRemaining for active attempt", async () => {
+      const futureExpiresAt = new Date(Date.now() + 95_000);
+      vi.mocked(withTenantTransaction).mockImplementationOnce(async (_ctx, callback) => {
+        const tx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi
+                  .fn()
+                  .mockResolvedValueOnce([
+                    {
+                      id: "att-status-1",
+                      tenantId: mockContext.tenantId,
+                      cartId: "cart-status-1",
+                      status: "pending",
+                      amount: "3500.00",
+                      createdAt: new Date(),
+                    },
+                  ])
+                  .mockResolvedValueOnce([
+                    {
+                      expiresAt: futureExpiresAt,
+                    },
+                  ]),
+              }),
+            }),
+          }),
+        };
+        return callback(tx as any);
+      });
+
+      const service = new KioskPaymentService();
+      const result = await service.getAttemptStatus({
+        context: mockContext,
+        attemptId: "att-status-1",
+      });
+
+      expect(result.status).toBe("pending");
+      expect(result.secondsRemaining).toBeGreaterThan(80);
+      expect(result.secondsRemaining).toBeLessThanOrEqual(96);
+    });
+
+    it("returns approved status with order details when webhook completed", async () => {
+      vi.mocked(withTenantTransaction).mockImplementationOnce(async (_ctx, callback) => {
+        const tx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi
+                  .fn()
+                  .mockResolvedValueOnce([
+                    {
+                      id: "att-status-app",
+                      tenantId: mockContext.tenantId,
+                      status: "approved",
+                      amount: "3500.00",
+                      providerPaymentId: "mp-pay-9988",
+                    },
+                  ])
+                  .mockResolvedValueOnce([
+                    {
+                      id: "ord-approved-1",
+                      purchaseNumber: 1042,
+                    },
+                  ]),
+              }),
+            }),
+          }),
+        };
+        return callback(tx as any);
+      });
+
+      const service = new KioskPaymentService();
+      const result = await service.getAttemptStatus({
+        context: mockContext,
+        attemptId: "att-status-app",
+      });
+
+      expect(result.status).toBe("approved");
+      expect(result.orderId).toBe("ord-approved-1");
+      expect(result.purchaseNumber).toBe("1042");
+      expect(result.total).toBe("3500.00");
+      expect(result.paymentId).toBe("mp-pay-9988");
+    });
   });
 });
