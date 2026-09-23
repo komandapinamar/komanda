@@ -132,6 +132,7 @@ export type AdminDashboardOrder = {
   discountTotal: string;
   total: string;
   currency: string;
+  pickupPin?: string | null;
   approvedAt: string | null;
   deliveredAt?: string | null;
   createdAt: string;

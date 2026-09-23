@@ -49,8 +49,8 @@ test.describe("tenant order dashboard", () => {
     await expect(page.getByText(orderB.id)).toHaveCount(0);
     await expect(page.getByText("Conexion En vivo")).toBeVisible();
 
-    await page.getByRole("button", { name: "Preparar" }).click();
-    await expect(page.getByText("Estado: En preparación")).toBeVisible();
+    await page.getByRole("button", { name: "Listo para entregar" }).click();
+    await expect(page.getByText("Estado: Listo para entregar")).toBeVisible();
     const current = await page.request.get(
       `/api/v1/tenants/${pair.tenantA.id}/orders/${orderA.id}`,
     );
@@ -62,10 +62,10 @@ test.describe("tenant order dashboard", () => {
       `/api/v1/tenants/${pair.tenantA.id}/orders/${orderA.id}`,
       {
         headers: { "If-Match": String(currentOrder.version) },
-        data: { fulfillmentStatus: "ready" },
+        data: { fulfillmentStatus: "delivered" },
       },
     );
     expect(transition.ok()).toBe(true);
-    await expect(page.getByText("Estado: Listo")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Estado: Entregado")).toBeVisible({ timeout: 10_000 });
   });
 });

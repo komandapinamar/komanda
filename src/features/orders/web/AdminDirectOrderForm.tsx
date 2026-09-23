@@ -30,6 +30,7 @@ export function AdminDirectOrderForm({
   const router = useRouter();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +61,6 @@ export function AdminDirectOrderForm({
       setError("Seleccioná al menos un producto.");
       return;
     }
-    if (!customerName.trim()) {
-      setError("Ingresá el nombre del cliente.");
-      return;
-    }
 
     setSubmitting(true);
     setError(null);
@@ -87,8 +84,9 @@ export function AdminDirectOrderForm({
           },
           body: JSON.stringify({
             items,
-            customer: { name: customerName.trim() },
+            customer: { name: customerName.trim() || "NN" },
             notes: notes.trim() || undefined,
+            discountCode: discountCode.trim() || undefined,
           }),
         },
       );
@@ -96,11 +94,11 @@ export function AdminDirectOrderForm({
       if (!response.ok) {
         const body = await response.json().catch(() => null);
         throw new Error(
-          body?.title ?? "Error al crear el pedido.",
+          body?.title ?? body?.detail ?? "Error al crear el pedido.",
         );
       }
 
-      const order = (await response.json()) as { purchaseNumber?: string; id?: string };
+      const order = (await response.json()) as { purchaseNumber?: string; id?: string; pickupPin?: string };
       const ref = order.purchaseNumber || order.id || "1";
       router.replace(
         `/admin/${tenantId}/orders?created=${encodeURIComponent(ref)}`,
@@ -201,15 +199,31 @@ export function AdminDirectOrderForm({
               htmlFor="customerName"
               className="mb-1 block text-sm font-medium"
             >
-              Nombre del cliente *
+              Nombre del cliente (opcional, por defecto: NN)
             </label>
             <input
               id="customerName"
               type="text"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="Ej: Juan Pérez"
+              placeholder="Ej: Juan Pérez o NN"
               className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-(--color-accent-tertiary) focus:outline-none"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="discountCode"
+              className="mb-1 block text-sm font-medium"
+            >
+              Código de descuento (opcional)
+            </label>
+            <input
+              id="discountCode"
+              type="text"
+              value={discountCode}
+              onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+              placeholder="Ej: PROMO10"
+              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm uppercase focus:border-(--color-accent-tertiary) focus:outline-none"
             />
           </div>
           <div>
@@ -239,7 +253,7 @@ export function AdminDirectOrderForm({
         </p>
         <button
           type="button"
-          disabled={submitting || selectedCount === 0 || !customerName.trim()}
+          disabled={submitting || selectedCount === 0}
           onClick={handleSubmit}
           className="rounded-sm bg-(--color-accent-tertiary) px-6 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
         >

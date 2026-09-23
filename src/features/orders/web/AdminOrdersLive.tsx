@@ -37,11 +37,10 @@ function sourceLabel(source: string | null) {
 function statusLabel(status: OrderStatus) {
   switch (status) {
     case "approved":
-      return "Aprobado";
     case "preparing":
-      return "En preparación";
+      return "Preparando";
     case "ready":
-      return "Listo";
+      return "Listo para entregar";
     case "delivered":
       return "Entregado";
     case "cancelled":
@@ -52,7 +51,6 @@ function statusLabel(status: OrderStatus) {
 function nextStatus(status: OrderStatus): OrderStatus | null {
   switch (status) {
     case "approved":
-      return "preparing";
     case "preparing":
       return "ready";
     case "ready":
@@ -65,9 +63,8 @@ function nextStatus(status: OrderStatus): OrderStatus | null {
 
 function nextStatusLabel(status: OrderStatus) {
   const next = nextStatus(status);
-  if (next === "preparing") return "Preparar";
-  if (next === "ready") return "Marcar listo";
-  if (next === "delivered") return "Marcar entregado";
+  if (next === "ready") return "Listo para entregar";
+  if (next === "delivered") return "Entregado";
   return null;
 }
 
@@ -150,6 +147,7 @@ type TenantOrderResponse = {
   discountTotal: string;
   total: string;
   currency: string;
+  pickupPin?: string | null;
   approvedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
@@ -188,6 +186,7 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
     discountTotal: order.discountTotal,
     total: order.total,
     currency: order.currency,
+    pickupPin: order.pickupPin ?? null,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
     createdAt: order.createdAt,
@@ -288,7 +287,10 @@ export default function AdminOrdersLive({
           "Content-Type": "application/merge-patch+json",
           "If-Match": String(order.version),
         },
-        body: JSON.stringify({ fulfillmentStatus: targetStatus }),
+        body: JSON.stringify({
+          fulfillmentStatus: targetStatus,
+          pickupPin: order.pickupPin || undefined,
+        }),
       });
       if (!response.ok) throw new Error("Failed to transition order.");
       const updated = toDashboardOrder((await response.json()) as TenantOrderResponse);
@@ -348,6 +350,11 @@ export default function AdminOrdersLive({
                     <span className="rounded-full bg-[var(--color-accent-secondary)] px-3 py-1 text-sm font-bold text-[var(--color-accent-primary)]">
                       Compra #{order.purchaseNumber}
                     </span>
+                    {order.pickupPin ? (
+                      <span className="rounded-full border border-emerald-400 bg-emerald-500/10 px-3 py-1 text-sm font-black text-emerald-400">
+                        PIN: #{order.pickupPin}
+                      </span>
+                    ) : null}
                     <span className="rounded-full border border-[var(--color-accent-secondary)]/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]">
                       {sourceLabel(order.source)}
                     </span>
@@ -360,7 +367,9 @@ export default function AdminOrdersLive({
                   </div>
 
                   <div className="text-sm opacity-85">
-                    <p>Estado: {statusLabel(order.status)}</p>
+                    <p className="text-base font-extrabold uppercase">
+                      Estado: {statusLabel(order.status)}
+                    </p>
                     {order.paymentStatus ? (
                       <p>Pago: {order.paymentStatus}</p>
                     ) : null}

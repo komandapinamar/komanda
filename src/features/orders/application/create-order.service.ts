@@ -6,16 +6,25 @@ import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
-import { centsToMoney, revalidateCartSelection } from "@/features/cart/domain/cart.rules";
+import { centsToMoney, moneyToCents, revalidateCartSelection } from "@/features/cart/domain/cart.rules";
 import { OrderConflictError, OrderNotFoundError } from "./order-errors";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import { PrintJobService } from "@/features/printing/application/print-job.service";
 import { BillingRepository } from "@/features/billing/infrastructure/billing.repository";
 import { SlackAlertService } from "@/features/integrations/application/slack-alert.service";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
+import { calculateDiscountAmounts } from "@/features/discounts/domain/discount.rules";
 
 const customerSchema = z
   .object({
-    name: z.string().trim().min(1),
+    name: z
+      .preprocess(
+        (value) =>
+          typeof value === "string" && value.trim() !== ""
+            ? value.trim()
+            : "NN",
+        z.string().trim().min(1).default("NN"),
+      ),
     email: z
       .preprocess(
         (value) =>
@@ -54,10 +63,10 @@ const directOrderItemSchema = z
   })
   .strict();
 
-const createDirectOrderSchemaFromItems = z
+export const createDirectOrderSchemaFromItems = z
   .object({
     items: z.array(directOrderItemSchema).min(1).max(100),
-    customer: customerSchema.optional().default({ name: "Cliente Autoservicio" }),
+    customer: customerSchema.optional().default({ name: "NN" }),
     tender: z.enum(["cash", "posnet"]).default("cash"),
     paymentStatus: z
       .enum(["paid", "pending", "verification_required"])
@@ -67,6 +76,12 @@ const createDirectOrderSchemaFromItems = z
         (value) =>
           typeof value === "string" && value.trim() === "" ? undefined : value,
         z.string().trim().max(1000).optional(),
+      ),
+    discountCode: z
+      .preprocess(
+        (value) =>
+          typeof value === "string" && value.trim() === "" ? undefined : value,
+        z.string().trim().max(50).optional(),
       ),
   })
   .strict();
@@ -192,6 +207,7 @@ export class CreateOrderService {
       const orderRepo = new OrderRepository(transaction, context);
 
       let subtotalCents = 0;
+      const categoryMap = new Map<string, string | null>();
       const lines: Array<{
         kind: "item" | "combo";
         resourceId: string;
@@ -216,6 +232,7 @@ export class CreateOrderService {
             `Product ${selection.resourceId} is unavailable.`,
           );
         }
+        categoryMap.set(selection.resourceId, (catalog as { categoryId?: string | null }).categoryId ?? null);
         const validated = revalidateCartSelection(selection, catalog);
         const lineTotalCents = validated.unitPriceCents * selection.quantity;
         subtotalCents += lineTotalCents;
@@ -232,22 +249,79 @@ export class CreateOrderService {
         });
       }
 
+      let initialDiscountTotal = "0.00";
+      let initialTotalCents = subtotalCents;
+      let appliedDiscountCodeId: string | null = null;
+      let discountMetadata: {
+        code: string;
+        name: string;
+        discountType: string;
+        discountValue: string;
+        savingsAmount: string;
+      } | null = null;
+
+      if (request.discountCode) {
+        const discountRepo = new DiscountRepository(transaction, context.tenantId);
+        const discount = await discountRepo.findByCode(request.discountCode);
+        if (discount) {
+          const linesForDiscount = lines.map((line, index) => ({
+            id: `line-${index}`,
+            resourceId: line.resourceId,
+            categoryId: categoryMap.get(line.resourceId) ?? undefined,
+            quantity: line.quantity,
+            unitPriceCents: moneyToCents(line.unitPrice),
+            lineTotalCents: moneyToCents(line.lineTotal),
+          }));
+
+          const calcResult = calculateDiscountAmounts({
+            lines: linesForDiscount,
+            coupon: discount,
+            now: new Date(),
+          });
+
+          if (calcResult.isEligible) {
+            initialDiscountTotal = calcResult.discountTotal;
+            initialTotalCents = calcResult.totalCents;
+            appliedDiscountCodeId = discount.id;
+            discountMetadata = {
+              code: discount.code,
+              name: discount.name,
+              discountType: discount.discountType,
+              discountValue: discount.discountValue,
+              savingsAmount: calcResult.discountTotal,
+            };
+          } else {
+            throw new OrderConflictError("El código de descuento no es aplicable a este pedido.");
+          }
+        } else {
+          throw new OrderConflictError("Código de descuento inválido o no encontrado.");
+        }
+      }
+
       const cart = await cartRepo.create({
         locationId: location.id,
         currency: tenantRow.currency,
         subtotal: centsToMoney(subtotalCents),
-        total: centsToMoney(subtotalCents),
+        discountTotal: initialDiscountTotal,
+        total: centsToMoney(initialTotalCents),
+        appliedDiscountCodeId,
+        discountMetadata,
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
         lines,
       });
       if (!cart) throw new Error("Failed to create cart.");
+
+      const resolvedCustomer = {
+        ...request.customer,
+        name: request.customer?.name?.trim() || "NN",
+      };
 
       const { order, created } = await orderRepo.createFromCartSnapshot({
         cart,
         source: "admin_direct",
         paymentStatus: request.paymentStatus,
         tender: request.tender,
-        customer: request.customer as Record<string, unknown>,
+        customer: resolvedCustomer as Record<string, unknown>,
         notes: request.notes,
         idempotencyKey,
         paymentAttemptId: null,
