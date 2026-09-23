@@ -61,7 +61,3 @@ END $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "discount_redemptions" TO komanda_runtime;
 --> statement-breakpoint
 GRANT ALL ON TABLE "discount_redemptions" TO komanda_migration;
---> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "print_agent_pairings" TO komanda_runtime;
---> statement-breakpoint
-GRANT ALL ON TABLE "print_agent_pairings" TO komanda_migration;
