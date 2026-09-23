@@ -32,6 +32,10 @@ export const outboxEvents = pgTable(
       .notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
     attempts: integer("attempts").default(0).notNull(),
+    claimedBy: text("claimed_by"),
+    leasedUntil: timestamp("leased_until", { withTimezone: true, mode: "date" }),
+    lastError: text("last_error"),
+    deadLetterAt: timestamp("dead_letter_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .defaultNow()
       .notNull(),
@@ -39,7 +43,13 @@ export const outboxEvents = pgTable(
   (table) => [
     unique("outbox_events_tenant_id_id_key").on(table.tenantId, table.id),
     unique("outbox_events_tenant_sequence_key").on(table.tenantId, table.sequence),
-    index("outbox_events_delivery_idx").on(table.publishedAt, table.availableAt, table.sequence),
+    index("outbox_events_delivery_idx").on(
+      table.publishedAt,
+      table.deadLetterAt,
+      table.leasedUntil,
+      table.availableAt,
+      table.sequence,
+    ),
     check("outbox_events_attempts_check", sql`${table.attempts} >= 0`),
   ],
 );

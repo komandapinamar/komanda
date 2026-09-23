@@ -500,6 +500,27 @@ export class OrderRepository {
     return updated ?? null;
   }
 
+  async updatePaymentStatus(input: {
+    orderId: string;
+    paymentStatus: PaymentStatus;
+  }) {
+    const [updated] = await this.transaction
+      .update(tenantOrders)
+      .set({
+        paymentStatus: input.paymentStatus,
+        version: sql`${tenantOrders.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tenantOrders.tenantId, this.tenantId),
+          eq(tenantOrders.id, input.orderId),
+        ),
+      )
+      .returning();
+    return updated ?? null;
+  }
+
   async appendTransitionEvent(input: {
     orderId: string;
     fromStatus: FulfillmentStatus | null;

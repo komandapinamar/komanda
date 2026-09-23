@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import OrderProductCard from "@/features/shop/order/components/OrderProductCard";
 import OrderShell from "@/features/shop/order/components/OrderShell";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
@@ -16,6 +19,36 @@ export default function ClassicMenuView({
   tenantSlug,
   orderingAvailable = true,
 }: ClassicMenuViewProps) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const targetItemId = params.get("item");
+    if (!targetItemId) return;
+
+    let highlightTimer: NodeJS.Timeout | undefined;
+
+    const scrollTimer = setTimeout(() => {
+      try {
+        const safeId = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(targetItemId) : targetItemId;
+        const el = document.querySelector(`[data-item-id="${safeId}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add("ring-4", "ring-[var(--color-accent-secondary)]", "transition-all", "duration-500");
+          highlightTimer = setTimeout(() => {
+            el.classList.remove("ring-4", "ring-[var(--color-accent-secondary)]");
+          }, 2500);
+        }
+      } catch {
+        // Ignore selector errors
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      if (highlightTimer) clearTimeout(highlightTimer);
+    };
+  }, []);
+
   const itemsByCategory = new Map<string, MenuItem[]>();
 
   for (const item of items) {

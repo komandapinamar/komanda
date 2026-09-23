@@ -1,4 +1,5 @@
 import { runtimePool } from "@/db";
+import { readOutboxMetrics } from "@/lib/outbox/outbox-metrics";
 
 export type HealthCheckName =
   | "database"
@@ -56,20 +57,34 @@ export async function checkMercadoPagoHealth() {
   };
 }
 
-export async function checkOutboxHealth() {
-  return {
-    name: "outbox" as const,
-    status: "ok" as const,
-    latencyMs: 0,
-  };
+export async function checkOutboxHealth(): Promise<HealthCheckResult> {
+  const started = performance.now();
+  try {
+    const metrics = await readOutboxMetrics();
+    const latencyMs = Math.round(performance.now() - started);
+    if (metrics.deadLetterCount > 50 || metrics.oldestPendingSeconds > 300) {
+      return {
+        name: "outbox",
+        status: "degraded",
+        latencyMs,
+        detail: `Outbox backlog: ${metrics.pendingCount} pending, oldest ${Math.round(metrics.oldestPendingSeconds)}s, ${metrics.deadLetterCount} in DLQ`,
+      };
+    }
+    return { name: "outbox", status: "ok", latencyMs };
+  } catch (error) {
+    return {
+      name: "outbox",
+      status: "down",
+      latencyMs: Math.round(performance.now() - started),
+      detail: error instanceof Error ? error.message : "unknown",
+    };
+  }
 }
 
-export async function checkPrintingHealth() {
-  return {
-    name: "printing" as const,
-    status: process.env.PRINTING_HEALTH_DISABLED === "true" ? "degraded" as const : "ok" as const,
-    latencyMs: 0,
-  };
+export async function checkPrintingHealth(): Promise<HealthCheckResult> {
+  return measured("printing", async () => {
+    await runtimePool.query("select 1 from print_jobs limit 1");
+  });
 }
 
 export async function collectHealth() {
@@ -86,4 +101,26 @@ export async function collectHealth() {
       ? "degraded"
       : "ok";
   return { status, checks, checkedAt: new Date().toISOString() };
+}
+
+import { shutdownManager } from "@/lib/runtime/shutdown";
+
+export function collectLiveness() {
+  return {
+    status: "ok" as const,
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export async function collectReadiness() {
+  if (shutdownManager.isTerminating()) {
+    return {
+      status: "down" as const,
+      checks: [],
+      detail: "Server is draining for shutdown",
+      checkedAt: new Date().toISOString(),
+    };
+  }
+  return collectHealth();
 }

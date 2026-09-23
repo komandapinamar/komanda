@@ -1,5 +1,31 @@
 # KOMANDA CORE
 
+# Komanda isn't POS software. It's KaaS
+
+Komanda as a service
+
+Komanda is the operating system for modern food businesses.
+
+It connects the entire selling operation - from the moment a customer places an order to the moment that order is prepared, delivered, and completed.
+
+What is KaaS?
+
+KaaS (Komanda as a Service) is our approach to running a food business through a single, connected platform.
+
+Instead of treating ordering, kitchen management, customer interfaces, terminals, and analytics as separate systems, Komanda brings them together into one operation.
+
+Customer
+   ↓
+Order
+   ↓
+Komanda
+   ↓
+Kitchen → Preparation
+   ↓
+Fulfillment
+   ↓
+Analytics
+
 ## Target Architecture
 
 This repository owns Komanda's operational product: `app.komanda.com`, tenant

@@ -110,7 +110,7 @@ export async function fetchTenantReadiness(
   const checks: TenantReadinessCheck[] = [
     {
       code: "public_slug",
-      complete: tenant.normalizedSlug.length > 0,
+      complete: Boolean(tenant.normalizedSlug && tenant.normalizedSlug.length > 0),
       requiredForActivation: true,
     },
     {

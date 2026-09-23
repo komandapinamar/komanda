@@ -1,6 +1,40 @@
 import { Pool, type PoolClient } from "pg";
 
 const RUNTIME_ROLE = "komanda_runtime";
+const ANALYTICS_ROLE = "komanda_analytics";
+
+async function configureAnalyticsRole(
+  client: PoolClient,
+  password?: string,
+) {
+  if (password) {
+    await client.query("select set_config('app.bootstrap_analytics_password', $1, true)", [
+      password,
+    ]);
+  }
+  await client.query(`
+    do $bootstrap$
+    begin
+      if not exists (select 1 from pg_roles where rolname = '${ANALYTICS_ROLE}') then
+        execute format(
+          'create role ${ANALYTICS_ROLE} nosuperuser nocreatedb nocreaterole noinherit nobypassrls %s',
+          case when nullif(current_setting('app.bootstrap_analytics_password', true), '') is not null
+               then format('login password %L', current_setting('app.bootstrap_analytics_password', true))
+               else '' end
+        );
+      else
+        if nullif(current_setting('app.bootstrap_analytics_password', true), '') is not null then
+          execute format(
+            'alter role ${ANALYTICS_ROLE} login password %L nosuperuser nocreatedb nocreaterole noinherit nobypassrls',
+            current_setting('app.bootstrap_analytics_password', true)
+          );
+        end if;
+      end if;
+      grant usage on schema public to ${ANALYTICS_ROLE};
+    end
+    $bootstrap$;
+  `);
+}
 
 async function configureRuntimeRole(
   client: PoolClient,
@@ -52,6 +86,7 @@ export async function bootstrapRuntimeRole(input: {
   try {
     await client.query("begin");
     await configureRuntimeRole(client, input.runtimePassword);
+    await configureAnalyticsRole(client, process.env.DATABASE_ANALYTICS_PASSWORD);
     const result = await client.query<{
       rolcanlogin: boolean;
       rolsuper: boolean;

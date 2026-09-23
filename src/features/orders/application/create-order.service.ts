@@ -59,7 +59,9 @@ const createDirectOrderSchemaFromItems = z
     items: z.array(directOrderItemSchema).min(1).max(100),
     customer: customerSchema.optional().default({ name: "Cliente Autoservicio" }),
     tender: z.enum(["cash", "posnet"]).default("cash"),
-    paymentStatus: z.enum(["paid", "pending"]).default("paid"),
+    paymentStatus: z
+      .enum(["paid", "pending", "verification_required"])
+      .default("paid"),
     notes: z
       .preprocess(
         (value) =>

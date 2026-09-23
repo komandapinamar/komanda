@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   foreignKey,
@@ -8,6 +9,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  pgView,
   text,
   timestamp,
   unique,
@@ -272,4 +274,58 @@ export const storefrontItemEvents = pgTable(
 
 export type StorefrontItemEvent = typeof storefrontItemEvents.$inferSelect;
 export type NewStorefrontItemEvent = typeof storefrontItemEvents.$inferInsert;
+
+export const vAnalyticsTenants = pgView("v_analytics_tenants", {
+  tenantId: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  status: text("status").notNull(),
+  preset: text("preset").notNull(),
+  defaultCurrency: text("default_currency").notNull(),
+  defaultTimezone: text("default_timezone").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+  activatedAt: timestamp("activated_at", { withTimezone: true, mode: "date" }),
+  suspendedAt: timestamp("suspended_at", { withTimezone: true, mode: "date" }),
+}).existing();
+
+export const vAnalyticsOrders = pgView("v_analytics_orders", {
+  orderId: uuid("order_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  locationId: uuid("location_id").notNull(),
+  purchaseNumber: bigint("purchase_number", { mode: "bigint" }).notNull(),
+  source: text("source").notNull(),
+  fulfillmentStatus: text("fulfillment_status").notNull(),
+  paymentStatus: text("payment_status").notNull(),
+  tender: text("tender").notNull(),
+  subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
+  discountTotal: numeric("discount_total", { precision: 12, scale: 2 }).notNull(),
+  total: numeric("total", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true, mode: "date" }),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true, mode: "date" }),
+}).existing();
+
+export const vAnalyticsOrderItems = pgView("v_analytics_order_items", {
+  orderLineId: uuid("order_line_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  orderId: uuid("order_id").notNull(),
+  itemName: text("item_name").notNull(),
+  quantity: integer("quantity").notNull(),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+  lineTotal: numeric("line_total", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+}).existing();
+
+export const vAnalyticsTenantActivity = pgView("v_analytics_tenant_activity", {
+  tenantId: uuid("tenant_id").notNull(),
+  tenantName: text("tenant_name").notNull(),
+  tenantStatus: text("tenant_status").notNull(),
+  tenantPreset: text("tenant_preset").notNull(),
+  hasOpenCashShift: boolean("has_open_cash_shift").notNull(),
+  activePrintersCount: integer("active_printers_count").notNull(),
+  ordersTodayCount: integer("orders_today_count").notNull(),
+  lastOrderAt: timestamp("last_order_at", { withTimezone: true, mode: "date" }),
+}).existing();
+
 

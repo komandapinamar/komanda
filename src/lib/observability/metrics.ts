@@ -9,6 +9,15 @@ export type MetricEvent =
   | "outbox.created"
   | "print.lease.claimed"
   | "print.lease.expired"
+  | "outbox.claimed"
+  | "outbox.dispatched"
+  | "outbox.failed"
+  | "outbox.retry_scheduled"
+  | "outbox.dead_lettered"
+  | "payment.verification_required"
+  | "payment.reconciled"
+  | "payment.reconciliation_failed"
+  | "payment.verification_lag_alert"
   | "migration.reported";
 
 export type MetricFields = {

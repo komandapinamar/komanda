@@ -5,7 +5,12 @@ export type FulfillmentStatus =
   | "delivered"
   | "cancelled";
 
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "verification_required";
 
 export class OrderTransitionError extends Error {}
 

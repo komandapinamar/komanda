@@ -18,6 +18,7 @@ import {
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { locationSchema } from "@/features/location/application/location.schemas";
+import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
 
 export class TenantSettingsNotFoundError extends Error {}
 export class TenantSettingsConflictError extends Error {}
@@ -191,6 +192,10 @@ export class TenantSettingsService {
           eq(tenantLocations.status, "active"),
         ))
         .limit(1);
+
+      if (patch.salesEnabled !== undefined || patch.location !== undefined) {
+        await searchProjectionSyncService.syncTenantEligibility(transaction, context.tenantId);
+      }
       return serializeSettings({ settings: updated, tenant, location });
     });
   }
@@ -242,6 +247,8 @@ export class TenantSettingsService {
           updatedAt: now,
         })
         .where(eq(tenantSettings.tenantId, context.tenantId));
+
+      await searchProjectionSyncService.syncTenantEligibility(transaction, context.tenantId);
 
       const response = {
         id: tenant.id,

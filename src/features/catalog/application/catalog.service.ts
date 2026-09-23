@@ -22,6 +22,7 @@ import {
   normalizeCatalogName,
 } from "@/features/catalog/domain/catalog.rules";
 import { CatalogRepository } from "@/features/catalog/infrastructure/catalog.repository";
+import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
 
 export class CatalogNotFoundError extends Error {}
 export class CatalogConflictError extends Error {}
@@ -103,6 +104,14 @@ export class CatalogService {
       });
       if (!category)
         throw new CatalogConflictError("Category version conflict.");
+      if (input.name) {
+        await searchProjectionSyncService.syncCategoryRename(
+          transaction,
+          context.tenantId,
+          categoryId,
+          category.name,
+        );
+      }
       await recordMutation(transaction, context, {
         action: "catalog.category.updated",
         resourceType: "catalog_category",
@@ -208,6 +217,13 @@ export class CatalogService {
         resourceType: "catalog_item",
         resourceId: item.id,
       });
+      if (item.status === "active") {
+        await searchProjectionSyncService.syncItem(
+          transaction,
+          context.tenantId,
+          item,
+        );
+      }
       return item;
     });
   }
@@ -274,6 +290,11 @@ export class CatalogService {
         resourceType: "catalog_item",
         resourceId: item.id,
       });
+      await searchProjectionSyncService.syncItem(
+        transaction,
+        context.tenantId,
+        item,
+      );
       return item;
     });
   }
