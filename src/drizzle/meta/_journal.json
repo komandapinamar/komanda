@@ -113,6 +113,34 @@
       "when": 1790004000000,
       "tag": "0015_add_search_projections_and_pg_trgm",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790005000000,
+      "tag": "0016_add_outbox_delivery_leases",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790006000000,
+      "tag": "0017_add_verification_required_payment_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790007000000,
+      "tag": "0018_add_sanitized_analytics_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790008000000,
+      "tag": "0019_grant_print_agent_pairings",
+      "breakpoints": true
     }
   ]
 }
