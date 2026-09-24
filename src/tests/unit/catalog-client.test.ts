@@ -1,6 +1,44 @@
-import { describe, expect, it } from "vitest";
-import { normalizeMoneyInput } from "@/features/catalog/web/catalog-client";
-import { mediaUploadInputSchema } from "@/features/catalog/domain/catalog.rules";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { catalogFetch, CatalogRequestError, normalizeMoneyInput } from "@/features/catalog/web/catalog-client";
+import { CatalogRuleViolationError, mediaUploadInputSchema } from "@/features/catalog/domain/catalog.rules";
+import { CatalogConflictError } from "@/features/catalog/application/catalog.service";
+import { catalogErrorResponse } from "@/features/catalog/web/catalog-http";
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("product publishing conflicts", () => {
+  it("explains an unpublished category instead of blaming another operator", async () => {
+    const response = catalogErrorResponse(
+      new CatalogRuleViolationError("Item category must be active."), "test-correlation",
+    );
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+    await expect(catalogFetch("/api/catalog/items/item-id", { method: "PATCH" }))
+      .rejects.toMatchObject({
+        status: 409,
+        code: "CATALOG_CONFLICT",
+        message: "Publicá la categoría antes de publicar este producto.",
+      } satisfies Partial<CatalogRequestError>);
+  });
+
+  it("distinguishes processing media from a stale product version", async () => {
+    for (const [error, message] of [
+      [new CatalogRuleViolationError("Item media must be ready."), "Esperá a que termine de procesarse la imagen o el video antes de publicar el producto."],
+      [new CatalogConflictError("Item version conflict."), "El producto cambió desde que abriste la página. Recargá la página y volvé a intentar."],
+    ] as const) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(catalogErrorResponse(error, "test")));
+      await expect(catalogFetch("/api/catalog/items/item-id", { method: "PATCH" }))
+        .rejects.toThrow(message);
+    }
+  });
+
+  it("does not display arbitrary server details for unknown catalog conflicts", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
+      code: "CATALOG_CONFLICT", detail: "internal diagnostics",
+    }, { status: 409 })));
+    await expect(catalogFetch("/api/catalog/items/item-id", { method: "PATCH" }))
+      .rejects.toThrow("No se pudo aplicar el cambio:");
+  });
+});
 
 describe("normalizeMoneyInput", () => {
   it("accepta enteros y les agrega decimales", () => {

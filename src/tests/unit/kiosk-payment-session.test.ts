@@ -11,7 +11,7 @@ import {
   KioskPaymentItemUnavailableError,
 } from "@/features/payments/web/kiosk-payment-http";
 import { KioskPaymentService } from "@/features/payments/application/kiosk-payment.service";
-import type { TenantContext } from "@/lib/tenant-context/types";
+import { createVerifiedTenantContext, type TenantContext } from "@/lib/tenant-context/types";
 
 // Mock db and transaction
 vi.mock("@/db", () => ({
@@ -152,13 +152,13 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
   });
 
   describe("KioskPaymentService application logic", () => {
-    const mockContext: TenantContext = {
+    const mockContext: TenantContext = createVerifiedTenantContext({
       tenantId: "00000000-0000-4000-8000-000000000001",
       locationId: "00000000-0000-4000-8000-000000000002",
       correlationId: "corr-kiosk-test",
-      source: "terminal",
-      actor: { kind: "system", systemId: "kiosk-terminal-1" },
-    };
+      source: "administrative",
+      actor: { kind: "system", process: "kiosk-terminal-1" },
+    });
 
     it("throws PaymentGatewayNotConfiguredError if tenant has no active Mercado Pago account", async () => {
       mockCurrentMercadoPago.mockResolvedValueOnce(null);
@@ -282,10 +282,10 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
             }),
           }),
         };
-        return callback(tx as any);
+        return callback(tx as unknown as Parameters<typeof callback>[0]);
       });
 
-      const service = new KioskPaymentService(mockMpClient as any);
+      const service = new KioskPaymentService(mockMpClient as unknown as ConstructorParameters<typeof KioskPaymentService>[0]);
       const result = await service.createSession({
         context: mockContext,
         body: {
@@ -344,7 +344,7 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
           }),
           update: mockUpdate,
         };
-        return callback(tx as any);
+        return callback(tx as unknown as Parameters<typeof callback>[0]);
       });
 
       const service = new KioskPaymentService();
@@ -387,7 +387,7 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
             }),
           }),
         };
-        return callback(tx as any);
+        return callback(tx as unknown as Parameters<typeof callback>[0]);
       });
 
       const service = new KioskPaymentService();
@@ -428,7 +428,7 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
             }),
           }),
         };
-        return callback(tx as any);
+        return callback(tx as unknown as Parameters<typeof callback>[0]);
       });
 
       const service = new KioskPaymentService();

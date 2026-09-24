@@ -49,6 +49,28 @@ export function catalogErrorResponse(error: unknown, correlationId: string) {
       status: 409,
       title: "Catalog conflict",
       code: "CATALOG_CONFLICT",
+      ...(error instanceof CatalogConflictError ||
+      error instanceof CatalogRuleViolationError
+        ? { detail: error.message }
+        : {}),
+      correlationId,
+    });
+  }
+  if ((error as { code?: string }).code === "23505") {
+    const detail = (error as { detail?: string }).detail ?? "";
+    let message = "Item version conflict.";
+    if (detail.includes("catalog_items_tenant_name_active_uidx")) {
+      message = "Duplicate item name.";
+    } else if (detail.includes("catalog_items_tenant_barcode_uidx")) {
+      message = "Duplicate barcode.";
+    } else if (detail.includes("catalog_categories_tenant_name_active_uidx")) {
+      message = "Duplicate category name.";
+    }
+    return problemResponse({
+      status: 409,
+      title: "Catalog conflict",
+      code: "CATALOG_CONFLICT",
+      detail: message,
       correlationId,
     });
   }

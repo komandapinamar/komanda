@@ -119,7 +119,7 @@ export class KioskPaymentService {
             kind: "item",
             resourceId: itemReq.catalogItemId,
             quantity: itemReq.quantity,
-            options: [],
+            optionIds: [],
           },
           catalog,
         );
@@ -342,7 +342,7 @@ export class KioskPaymentService {
         Math.round((expiresAtMs - Date.now()) / 1000),
       );
 
-      if (secondsRemaining === 0 && attempt.status !== "approved") {
+      if (secondsRemaining === 0) {
         return {
           status: "expired",
           reason: "timeout_reached",
