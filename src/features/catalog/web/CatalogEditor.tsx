@@ -5,6 +5,7 @@ import { MediaUploader } from "@/features/catalog/web/MediaUploader";
 import {
   catalogFetch,
   catalogHeaders,
+  CatalogRequestError,
   normalizeMoneyInput,
 } from "@/features/catalog/web/catalog-client";
 
@@ -227,6 +228,18 @@ export function CatalogEditor({
             : "Producto archivado.",
       );
     } catch (error) {
+      if (error instanceof CatalogRequestError && error.status === 409) {
+        try {
+          const [latestItems, latestCategories] = await Promise.all([
+            mutate<{ data: Item[] }>(`/api/v1/tenants/${tenantId}/catalog/items`, { method: "GET" }),
+            mutate<{ data: Category[] }>(`/api/v1/tenants/${tenantId}/catalog/categories`, { method: "GET" }),
+          ]);
+          setItems(latestItems.data);
+          setCategories(latestCategories.data);
+        } catch {
+          // Preserve the original, actionable conflict message if refresh fails.
+        }
+      }
       setMessage(
         error instanceof Error
           ? error.message

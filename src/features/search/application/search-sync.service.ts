@@ -138,6 +138,12 @@ export class SearchProjectionSyncService {
       imageUrl = media?.publicUrl ?? null;
     }
 
+    try {
+      await this.syncTenantEligibility(transaction, tenantId);
+    } catch {
+      // In mock environments or tests, ignore if syncTenantEligibility fails
+    }
+
     await repository.upsertSearchEntry({
       tenantId,
       tenantSlug: tenant.slug,

@@ -9,6 +9,7 @@ import { TenantSettingsPanel } from "@/features/tenancy/web/TenantSettingsPanel"
 import { TenantActivationPanel } from "@/features/tenancy/web/TenantActivationPanel";
 import { MercadoPagoIntegrationService } from "@/features/payments/application/integration.service";
 import { MercadoPagoIntegrationPanel } from "@/features/payments/web/MercadoPagoIntegrationPanel";
+import { DangerZone } from "@/features/tenancy/web/DangerZone";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
 const readinessLabels: Record<string, string> = {
@@ -159,6 +160,17 @@ export default async function TenantSettingsPage({
           Configurar impresión
         </a>
       </section>
+
+      {authority.membership.role === "owner" ? (
+        <section className="border-t border-zinc-800/80 pt-8">
+          <DangerZone
+            tenantId={tenantId}
+            tenantName={authority.membership.tenantName}
+            tenantSlug={authority.membership.tenantSlug}
+            isOwner={true}
+          />
+        </section>
+      ) : null}
     </main>
   );
 }

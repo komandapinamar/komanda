@@ -28,11 +28,28 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Error interno del servidor. Intentá de nuevo en unos segundos.",
 };
 
+const CONFLICT_DETAILS: Record<string, string> = {
+  "Item category must be active.":
+    "Publicá la categoría antes de publicar este producto.",
+  "Item media must be ready.":
+    "Esperá a que termine de procesarse la imagen o el video antes de publicar el producto.",
+  "Item version conflict.":
+    "El producto cambió desde que abriste la página. Recargá la página y volvé a intentar.",
+  "Duplicate item name.":
+    "Ya existe un producto activo con este nombre en este negocio.",
+  "Duplicate barcode.":
+    "Ya existe un producto con este código de barras en este negocio.",
+  "Duplicate category name.":
+    "Ya existe una categoría activa con este nombre.",
+};
+
 async function parseProblem(response: Response): Promise<CatalogRequestError> {
   let code: string | null = null;
+  let detail: string | null = null;
   try {
     const body = (await response.json()) as { code?: string; detail?: string };
     code = typeof body.code === "string" ? body.code : null;
+    detail = typeof body.detail === "string" ? body.detail : null;
   } catch {
     // Respuesta sin cuerpo JSON legible.
   }
@@ -40,6 +57,9 @@ async function parseProblem(response: Response): Promise<CatalogRequestError> {
     code = "CATALOG_CONFLICT";
   }
   const message =
+    (code === "CATALOG_CONFLICT" && detail
+      ? CONFLICT_DETAILS[detail]
+      : undefined) ??
     (code ? ERROR_MESSAGES[code] : undefined) ??
     `No se pudo completar la operación (HTTP ${response.status}).`;
   return new CatalogRequestError(message, response.status, code);

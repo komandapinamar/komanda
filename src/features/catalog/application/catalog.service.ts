@@ -88,37 +88,46 @@ export class CatalogService {
     });
   }
 
-  updateCategory(context: TenantContext, categoryId: string, value: unknown) {
+  async updateCategory(context: TenantContext, categoryId: string, value: unknown) {
     const { version, ...input } = categoryPatchSchema.parse(value);
-    return withTenantTransaction(context, async (transaction) => {
+    const category = await withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
       await requireCatalogManagement(repository);
       if (!(await repository.findCategory(categoryId))) {
         throw new CatalogNotFoundError("Category not found.");
       }
-      const category = await repository.updateCategory(categoryId, version, {
+      const updatedCategory = await repository.updateCategory(categoryId, version, {
         ...input,
         ...(input.name
           ? { normalizedName: normalizeCatalogName(input.name) }
           : {}),
       });
-      if (!category)
+      if (!updatedCategory)
         throw new CatalogConflictError("Category version conflict.");
-      if (input.name) {
-        await searchProjectionSyncService.syncCategoryRename(
-          transaction,
-          context.tenantId,
-          categoryId,
-          category.name,
-        );
-      }
       await recordMutation(transaction, context, {
         action: "catalog.category.updated",
         resourceType: "catalog_category",
-        resourceId: category.id,
+        resourceId: updatedCategory.id,
       });
-      return category;
+      return updatedCategory;
     });
+
+    if (input.name) {
+      try {
+        await withTenantTransaction(context, async (transaction) => {
+          await searchProjectionSyncService.syncCategoryRename(
+            transaction,
+            context.tenantId,
+            categoryId,
+            category.name,
+          );
+        });
+      } catch (err) {
+        console.warn("[catalog] Search projection sync failed for category rename:", err);
+      }
+    }
+
+    return category;
   }
 
   archiveCategory(context: TenantContext, categoryId: string, value: unknown) {
@@ -177,9 +186,9 @@ export class CatalogService {
     });
   }
 
-  createItem(context: TenantContext, value: unknown) {
+  async createItem(context: TenantContext, value: unknown) {
     const input = catalogItemInputSchema.parse(value);
-    return withTenantTransaction(context, async (transaction) => {
+    const item = await withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
       await requireCatalogManagement(repository);
       const category = await repository.findCategory(input.categoryId);
@@ -208,30 +217,39 @@ export class CatalogService {
         }
       }
       const { addonGroupIds, ...values } = input;
-      const item = await repository.createItem(
+      const createdItem = await repository.createItem(
         { ...values, normalizedName: normalizeCatalogName(input.name) },
         [...new Set(addonGroupIds)],
       );
       await recordMutation(transaction, context, {
         action: "catalog.item.created",
         resourceType: "catalog_item",
-        resourceId: item.id,
+        resourceId: createdItem.id,
       });
-      if (item.status === "active") {
-        await searchProjectionSyncService.syncItem(
-          transaction,
-          context.tenantId,
-          item,
-        );
-      }
-      return item;
+      return createdItem;
     });
+
+    if (item.status === "active") {
+      try {
+        await withTenantTransaction(context, async (transaction) => {
+          await searchProjectionSyncService.syncItem(
+            transaction,
+            context.tenantId,
+            item,
+          );
+        });
+      } catch (err) {
+        console.warn("[catalog] Search projection sync failed for created item:", err);
+      }
+    }
+
+    return item;
   }
 
-  updateItem(context: TenantContext, itemId: string, value: unknown) {
+  async updateItem(context: TenantContext, itemId: string, value: unknown) {
     const { version, addonGroupIds, ...input } =
       catalogItemPatchSchema.parse(value);
-    return withTenantTransaction(context, async (transaction) => {
+    const item = await withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
       await requireCatalogManagement(repository);
       const current = await repository.findItem(itemId);
@@ -273,7 +291,7 @@ export class CatalogService {
           });
         }
       }
-      const item = await repository.updateItem(
+      const updatedItem = await repository.updateItem(
         itemId,
         version,
         {
@@ -284,19 +302,28 @@ export class CatalogService {
         },
         addonGroupIds ? [...new Set(addonGroupIds)] : undefined,
       );
-      if (!item) throw new CatalogConflictError("Item version conflict.");
+      if (!updatedItem) throw new CatalogConflictError("Item version conflict.");
       await recordMutation(transaction, context, {
         action: "catalog.item.updated",
         resourceType: "catalog_item",
-        resourceId: item.id,
+        resourceId: updatedItem.id,
       });
-      await searchProjectionSyncService.syncItem(
-        transaction,
-        context.tenantId,
-        item,
-      );
-      return item;
+      return updatedItem;
     });
+
+    try {
+      await withTenantTransaction(context, async (transaction) => {
+        await searchProjectionSyncService.syncItem(
+          transaction,
+          context.tenantId,
+          item,
+        );
+      });
+    } catch (err) {
+      console.warn("[catalog] Search projection sync failed for updated item:", err);
+    }
+
+    return item;
   }
 
   archiveItem(context: TenantContext, itemId: string, value: unknown) {
