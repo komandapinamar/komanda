@@ -36,14 +36,21 @@ export const orderEventsRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     let closed = false;
+    let isPolling = false;
     let pollTimer: NodeJS.Timeout | null = null;
     let heartbeatTimer: NodeJS.Timeout | null = null;
 
     const closeStream = () => {
       if (closed) return;
       closed = true;
-      if (pollTimer) clearInterval(pollTimer);
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
       try {
         reply.raw.end();
       } catch {}
@@ -58,10 +65,12 @@ export const orderEventsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const service = new OrderQueryService();
 
-    const sendEvents = async () => {
-      if (closed) return;
+    const runPoll = async () => {
+      if (closed || isPolling) return;
+      isPolling = true;
       try {
         const events = await service.eventsAfter({ context, lastEventId });
+        if (closed) return;
         for (const event of events) {
           lastEventId = event.sequence;
           reply.raw.write(
@@ -70,7 +79,20 @@ export const orderEventsRoutes: FastifyPluginAsync = async (fastify) => {
         }
       } catch {
         closeStream();
+      } finally {
+        isPolling = false;
       }
+    };
+
+    const scheduleNextPoll = (delayMs = 2000) => {
+      if (closed) return;
+      pollTimer = setTimeout(async () => {
+        if (closed) return;
+        await runPoll();
+        if (!closed) {
+          scheduleNextPoll(2000);
+        }
+      }, delayMs);
     };
 
     reply.raw.write("retry: 2000\n\n");
@@ -79,6 +101,7 @@ export const orderEventsRoutes: FastifyPluginAsync = async (fastify) => {
     // deliver events. Signal the client to resync and continue from head.
     try {
       const head = await service.eventsHead({ context });
+      if (closed) return;
       const resolution = resolveEventCursor({ raw: lastEventId, head });
       if (resolution.kind === "reset") {
         lastEventId = resolution.head.toString();
@@ -90,24 +113,24 @@ export const orderEventsRoutes: FastifyPluginAsync = async (fastify) => {
         );
       }
     } catch (error) {
-      console.error(
-        `[fastify:orders-sse] Failed to resolve event cursor. correlationId=${correlationId}`,
-        error,
+      request.log.error(
+        { err: error, correlationId },
+        "Failed to resolve order event cursor",
       );
       closeStream();
       return;
     }
 
-    await sendEvents();
+    await runPoll();
 
-    pollTimer = setInterval(() => {
-      void sendEvents();
-    }, 2000);
+    if (!closed) {
+      scheduleNextPoll(2000);
 
-    heartbeatTimer = setInterval(() => {
-      if (!closed) {
-        reply.raw.write(`: heartbeat ${Date.now()}\n\n`);
-      }
-    }, 15000);
+      heartbeatTimer = setInterval(() => {
+        if (!closed) {
+          reply.raw.write(`: heartbeat ${Date.now()}\n\n`);
+        }
+      }, 15000);
+    }
   });
 };
