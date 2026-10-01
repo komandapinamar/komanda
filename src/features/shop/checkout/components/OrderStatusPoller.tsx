@@ -2,21 +2,25 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import ClearCartOnSuccess from "./ClearCartOnSuccess";
 
 type OrderData = {
   orderId: string;
+  tenantId?: string | null;
   purchaseNumber: string;
   fulfillmentStatus: string;
   paymentStatus: string;
   pickupPin?: string | null;
   estimatedWaitMinutes?: number | null;
   estimatedReadyAt?: string | null;
+  hasCustomerPhone?: boolean;
 };
 
 export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [status, setStatus] = useState<"polling" | "completed" | "timeout" | "error">("polling");
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
@@ -36,12 +40,14 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
         const data = await response.json() as {
           status: string;
           orderId: string | null;
+          tenantId?: string | null;
           purchaseNumber: string | null;
           fulfillmentStatus: string | null;
           paymentStatus: string | null;
           pickupPin?: string | null;
           estimatedWaitMinutes?: number | null;
           estimatedReadyAt?: string | null;
+          hasCustomerPhone?: boolean;
         };
         if (!mountedRef.current) return;
         if (data.status === "completed" && data.orderId) {
@@ -57,12 +63,14 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
             }
             return {
               orderId: data.orderId!,
+              tenantId: data.tenantId ?? null,
               purchaseNumber: data.purchaseNumber ?? "",
               fulfillmentStatus: data.fulfillmentStatus ?? "",
               paymentStatus: data.paymentStatus ?? "",
               pickupPin: data.pickupPin ?? null,
               estimatedWaitMinutes: data.estimatedWaitMinutes ?? null,
               estimatedReadyAt: data.estimatedReadyAt ?? null,
+              hasCustomerPhone: Boolean(data.hasCustomerPhone),
             };
           });
           setStatus("completed");
@@ -90,6 +98,33 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [paymentId]);
+
+  useEffect(() => {
+    if (!order?.tenantId || !order?.orderId) {
+      setQrDataUrl(null);
+      return;
+    }
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const trackingUrl = `${origin}/orders/status/${encodeURIComponent(order.tenantId)}/${encodeURIComponent(order.orderId)}`;
+
+    QRCode.toDataURL(trackingUrl, {
+      margin: 1,
+      width: 200,
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUri) => {
+        if (mountedRef.current) {
+          setQrDataUrl(dataUri);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to generate order tracking QR code:", err);
+      });
+  }, [order?.tenantId, order?.orderId]);
 
   if (status === "polling") {
     return (
@@ -191,6 +226,41 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
           <p className="mt-2 text-xs opacity-80">
             Mostrá o decí este código en la caja para retirar tu pedido.
           </p>
+        </div>
+      ) : null}
+
+      {order.hasCustomerPhone ? (
+        <div className="mt-5 flex items-center gap-3 rounded-sm bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-emerald-300 text-sm">
+          <span className="text-xl">📲</span>
+          <p>
+            Te avisaremos por <strong className="font-semibold text-emerald-200">WhatsApp</strong> en cuanto tu pedido esté listo para retirar.
+          </p>
+        </div>
+      ) : null}
+
+      {qrDataUrl && order.tenantId && order.orderId ? (
+        <div className="mt-5 flex flex-col items-center rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)]/5 p-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent-secondary)]">
+            Código QR de seguimiento en vivo
+          </p>
+          <p className="mt-1 text-xs opacity-75">
+            Escaneá con tu celular para seguir el estado de tu pedido en tiempo real
+          </p>
+          <div className="mt-3 rounded bg-white p-2.5 shadow-sm inline-block">
+            <img
+              src={qrDataUrl}
+              alt={`QR de seguimiento para compra #${order.purchaseNumber}`}
+              className="h-44 w-44"
+            />
+          </div>
+          <a
+            href={`/orders/status/${encodeURIComponent(order.tenantId)}/${encodeURIComponent(order.orderId)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 text-xs underline opacity-80 hover:opacity-100"
+          >
+            Abrir página de seguimiento
+          </a>
         </div>
       ) : null}
 

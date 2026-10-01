@@ -8,6 +8,8 @@
 4. Run producer contracts, tenant-isolation and database compatibility suites.
 5. Run staging restore and load gates before production.
 
+> For the full database lifecycle, manual RLS policies, security barrier views, and reproducible setup guide, see `docs/base-de-datos.md` in the workspace.
+
 ## Tenant Boundary
 
 All operational routes use the versioned tenant-aware APIs. There is no initial-tenant

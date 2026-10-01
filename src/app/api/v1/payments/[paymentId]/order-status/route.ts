@@ -10,12 +10,14 @@ type RouteContext = { params: Promise<{ paymentId: string }> };
 export type PaymentOrderStatusResponse = {
   status: "pending" | "completed" | "not_found";
   orderId: string | null;
+  tenantId?: string | null;
   purchaseNumber: string | null;
   fulfillmentStatus: string | null;
   paymentStatus: string | null;
   pickupPin: string | null;
   estimatedWaitMinutes: number | null;
   estimatedReadyAt: string | null;
+  hasCustomerPhone?: boolean;
 };
 
 export async function GET(_request: Request, route: RouteContext) {
@@ -41,12 +43,14 @@ export async function GET(_request: Request, route: RouteContext) {
         return {
           status: "pending" as const,
           orderId: null,
+          tenantId: null,
           purchaseNumber: null,
           fulfillmentStatus: null,
           paymentStatus: null,
           pickupPin: null,
           estimatedWaitMinutes: null,
           estimatedReadyAt: null,
+          hasCustomerPhone: false,
         };
       }
 
@@ -65,12 +69,14 @@ export async function GET(_request: Request, route: RouteContext) {
         return {
           status: "pending" as const,
           orderId: null,
+          tenantId: route.tenantId,
           purchaseNumber: null,
           fulfillmentStatus: null,
           paymentStatus: attempt?.status ?? null,
           pickupPin: null,
           estimatedWaitMinutes: null,
           estimatedReadyAt: null,
+          hasCustomerPhone: false,
         };
       }
 
@@ -83,6 +89,7 @@ export async function GET(_request: Request, route: RouteContext) {
           pickupPin: tenantOrders.pickupPin,
           estimatedWaitMinutes: tenantOrders.estimatedWaitMinutes,
           estimatedReadyAt: tenantOrders.estimatedReadyAt,
+          customerSnapshot: tenantOrders.customerSnapshot,
         })
         .from(tenantOrders)
         .where(
@@ -97,24 +104,33 @@ export async function GET(_request: Request, route: RouteContext) {
         return {
           status: "pending" as const,
           orderId: null,
+          tenantId: route.tenantId,
           purchaseNumber: null,
           fulfillmentStatus: null,
           paymentStatus: attempt.status,
           pickupPin: null,
           estimatedWaitMinutes: null,
           estimatedReadyAt: null,
+          hasCustomerPhone: false,
         };
       }
+
+      const customer = (order.customerSnapshot ?? {}) as Record<string, unknown>;
+      const hasCustomerPhone = Boolean(
+        typeof customer.phone === "string" && customer.phone.trim().length > 0,
+      );
 
       return {
         status: "completed" as const,
         orderId: order.id,
+        tenantId: route.tenantId,
         purchaseNumber: order.purchaseNumber.toString(),
         fulfillmentStatus: order.fulfillmentStatus,
         paymentStatus: order.paymentStatus,
         pickupPin: order.pickupPin ?? null,
         estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
         estimatedReadyAt: order.estimatedReadyAt ? order.estimatedReadyAt.toISOString() : null,
+        hasCustomerPhone,
       };
     },
   );

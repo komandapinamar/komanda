@@ -121,3 +121,28 @@ export async function bootstrapRuntimeRole(input: {
     await pool.end();
   }
 }
+
+if (process.argv[1]?.endsWith("database-role-bootstrap.ts")) {
+  const directUrl = process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
+  if (!directUrl) {
+    console.error("DATABASE_DIRECT_URL or DATABASE_URL is required to bootstrap database roles.");
+    process.exit(1);
+  }
+  const password =
+    process.env.DATABASE_RUNTIME_PASSWORD ??
+    process.env.KOMANDA_BOOTSTRAP_RUNTIME_PASSWORD;
+  if (!password || password.length < 32) {
+    console.error(
+      "DATABASE_RUNTIME_PASSWORD (or KOMANDA_BOOTSTRAP_RUNTIME_PASSWORD) must contain at least 32 characters.",
+    );
+    process.exit(1);
+  }
+  bootstrapRuntimeRole({ connectionString: directUrl, runtimePassword: password })
+    .then(() => {
+      console.log("Database roles (komanda_runtime, komanda_analytics) bootstrapped successfully.");
+    })
+    .catch((err) => {
+      console.error("Role bootstrap failed:", err);
+      process.exit(1);
+    });
+}
