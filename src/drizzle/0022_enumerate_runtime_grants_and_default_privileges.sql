@@ -42,6 +42,13 @@ BEGIN
   -- `plan_definitions` is catalogue data for entitlements: read-only at runtime.
   EXECUTE 'GRANT SELECT ON TABLE public.plan_definitions TO komanda_runtime';
   EXECUTE 'GRANT ALL ON TABLE public.plan_definitions TO komanda_migration';
+
+  -- Migration 0000 ran `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN
+  -- SCHEMA public` before plan_definitions could be reviewed, which handed the
+  -- runtime role write access to entitlement and pricing data that has no RLS.
+  -- Enumerating the grants above is not enough on its own: the old blanket grant
+  -- is still in force, so it has to be revoked explicitly.
+  EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON TABLE public.plan_definitions FROM komanda_runtime';
 END $$;
 --> statement-breakpoint
 GRANT USAGE ON SCHEMA public TO komanda_runtime;

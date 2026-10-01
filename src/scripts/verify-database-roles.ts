@@ -108,6 +108,18 @@ export const REQUIRED_TENANT_NOT_NULL_TABLES = [
   "webhook_events",
 ] as const;
 
+/**
+ * Tables with no `tenant_id`, so RLS cannot apply to them, that the runtime role
+ * is nevertheless allowed to write. Anything not listed here must be read-only
+ * for `komanda_runtime`: without RLS nothing stops one request from rewriting
+ * another tenant's reference data.
+ */
+export const EXPECTED_UNPROTECTED_WRITES: Record<string, readonly string[]> = {
+  // Cross-tenant barcode cache, filled by BarcodeLookupService inside a tenant
+  // transaction. It holds no customer data, so an unconditional insert is safe.
+  global_product_catalog: ["INSERT"],
+};
+
 async function inspect(connectionString: string) {
   const pool = new Pool({ connectionString });
   try {
@@ -165,12 +177,31 @@ async function inspect(connectionString: string) {
         and not c.convalidated
       order by c.conrelid::regclass::text, c.conname
     `);
+    const unprotectedWrites = await pool.query<{
+      tablename: string;
+      privileges: string[];
+    }>(`
+      select c.relname as tablename,
+             array_agg(distinct g.privilege_type::text)::text[] as privileges
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      join information_schema.role_table_grants g
+        on g.table_schema = 'public' and g.table_name = c.relname
+      where n.nspname = 'public'
+        and c.relkind in ('r', 'p')
+        and not c.relrowsecurity
+        and g.grantee = 'komanda_runtime'
+        and g.privilege_type in ('INSERT', 'UPDATE', 'DELETE')
+      group by c.relname
+      order by c.relname
+    `);
     return {
       role: role.rows[0],
       tables: tables.rows,
       maintenancePolicies: maintenancePolicies.rows,
       tenantColumns: tenantColumns.rows,
       unvalidatedConstraints: unvalidatedConstraints.rows,
+      unprotectedWrites: unprotectedWrites.rows,
     };
   } finally {
     await pool.end();
@@ -262,6 +293,17 @@ export async function verifyDatabaseRoles(input?: {
   if (missingMaintenancePolicies.length > 0) {
     throw new Error(
       `Missing komanda_migration RLS policies: ${missingMaintenancePolicies.join(", ")}`,
+    );
+  }
+  const unexpectedWrites = runtime.unprotectedWrites.filter(({ tablename, privileges }) => {
+    const allowed = EXPECTED_UNPROTECTED_WRITES[tablename] ?? [];
+    return privileges.some((privilege) => !allowed.includes(privilege));
+  });
+  if (unexpectedWrites.length > 0) {
+    throw new Error(
+      `Runtime role can write tables without RLS isolation. Add the table to EXPECTED_UNPROTECTED_WRITES only if the write is genuinely cross-tenant safe, otherwise revoke it: ${unexpectedWrites
+        .map(({ tablename, privileges }) => `${tablename} (${privileges.join(", ")})`)
+        .join("; ")}`,
     );
   }
   return { runtime, migration };
