@@ -29,7 +29,10 @@ import {
 import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
 
 export class MercadoPagoIntegrationNotFoundError extends Error {}
-export { MercadoPagoIntegrationConflictError } from "@/features/payments/infrastructure/integration.repository";
+export {
+  MercadoPagoAccountAlreadyLinkedError,
+  MercadoPagoIntegrationConflictError,
+} from "@/features/payments/infrastructure/integration.repository";
 export class MercadoPagoOAuthStateError extends Error {}
 export class MercadoPagoIntegrationDependencyError extends Error {}
 
@@ -79,7 +82,13 @@ function encodeOAuthState(payload: OAuthStatePayload) {
   return base64Url(Buffer.from(JSON.stringify(state), "utf8"));
 }
 
-function decodeOAuthState(value: string) {
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function decodeOAuthState(
+  value: string,
+  options: { allowExpired?: boolean } = {},
+) {
   try {
     const state = JSON.parse(
       Buffer.from(value, "base64url").toString("utf8"),
@@ -102,13 +111,28 @@ function decodeOAuthState(value: string) {
         key: config.key,
       },
     );
-    if (new Date(payload.expiresAt) <= new Date()) {
+    if (!options.allowExpired && new Date(payload.expiresAt) <= new Date()) {
       throw new MercadoPagoOAuthStateError("OAuth state expired.");
     }
     return payload;
   } catch (error) {
     if (error instanceof MercadoPagoOAuthStateError) throw error;
     throw new MercadoPagoOAuthStateError("OAuth state is invalid.");
+  }
+}
+
+/**
+ * Tenant the authorization belongs to, so a failed callback can send the owner
+ * back to the right settings screen instead of rendering a raw problem
+ * document. The state stays authenticated and is only used as a redirect
+ * target, so an expired state still resolves.
+ */
+export function oauthStateTenantId(state: string) {
+  try {
+    const payload = decodeOAuthState(state, { allowExpired: true });
+    return UUID_PATTERN.test(payload.tenantId) ? payload.tenantId : null;
+  } catch {
+    return null;
   }
 }
 

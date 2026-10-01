@@ -20,6 +20,48 @@ export type MercadoPagoIntegrationAccount =
 export class PaymentAttemptIdempotencyConflictError extends Error {}
 export class MercadoPagoIntegrationConflictError extends Error {}
 
+/**
+ * The seller account returned by Mercado Pago is already linked to a different
+ * tenant. A seller account can only back one business, so the link is refused
+ * instead of silently moving the other business' payments to this tenant.
+ */
+export class MercadoPagoAccountAlreadyLinkedError extends Error {
+  readonly reason = "seller_account_already_linked" as const;
+
+  constructor() {
+    super(
+      "The Mercado Pago seller account is already linked to another tenant.",
+    );
+  }
+}
+
+const PROVIDER_ACCOUNT_UNIQUE_INDEX =
+  "integration_accounts_provider_account_uidx";
+const UNIQUE_VIOLATION_SQLSTATE = "23505";
+
+type UniqueViolation = { constraint?: string; detail?: string };
+
+/**
+ * Drizzle wraps driver errors, so the SQLSTATE lives on `cause` rather than on
+ * the thrown value. Walk the chain instead of reading `code` off the wrapper.
+ */
+function uniqueViolation(error: unknown): UniqueViolation | null {
+  let current: unknown = error;
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!current || typeof current !== "object") return null;
+    const candidate = current as { code?: string; cause?: unknown } & UniqueViolation;
+    if (candidate.code === UNIQUE_VIOLATION_SQLSTATE) return candidate;
+    current = candidate.cause;
+  }
+  return null;
+}
+
+function isSellerAccountLinkViolation(violation: UniqueViolation) {
+  return `${violation.constraint ?? ""} ${violation.detail ?? ""}`.includes(
+    PROVIDER_ACCOUNT_UNIQUE_INDEX,
+  );
+}
+
 function encryptionConfig() {
   const encoded = process.env.APP_ENCRYPTION_KEY_BASE64;
   const version = Number(process.env.APP_ENCRYPTION_KEY_VERSION);
@@ -106,17 +148,14 @@ export class IntegrationRepository {
         .returning();
       return created!;
     } catch (error: unknown) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        (error as { code: string }).code === "23505"
-      ) {
-        throw new MercadoPagoIntegrationConflictError(
-          "Esta cuenta de Mercado Pago ya se encuentra vinculada a otro restaurante.",
-        );
+      const violation = uniqueViolation(error);
+      if (!violation) throw error;
+      if (isSellerAccountLinkViolation(violation)) {
+        throw new MercadoPagoAccountAlreadyLinkedError();
       }
-      throw error;
+      throw new MercadoPagoIntegrationConflictError(
+        "Mercado Pago integration conflict.",
+      );
     }
   }
 

@@ -7,6 +7,14 @@ export type MercadoPagoTokens = {
 };
 
 export class MercadoPagoDependencyError extends Error {}
+export class MercadoPagoAuthorizationError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 function testEndpoint(name: string, fallback: string) {
   const value = process.env[name]?.trim();
@@ -18,6 +26,24 @@ function testEndpoint(name: string, fallback: string) {
     throw new Error(`${name} can only override Mercado Pago in test mode.`);
   }
   return value;
+}
+
+// Only non-sensitive diagnostic fields are surfaced; tokens and credentials are never logged.
+async function readProviderErrorDetail(response: Response) {
+  let payload: unknown;
+  try {
+    payload = await response.clone().json();
+  } catch {
+    return null;
+  }
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const field of ["error", "error_description", "message"] as const) {
+    const value = record[field];
+    if (typeof value === "string" && value.trim()) parts.push(`${field}=${value.trim()}`);
+  }
+  return parts.length ? parts.join(" ") : null;
 }
 
 export class MercadoPagoOAuthClient {
@@ -106,17 +132,26 @@ export class MercadoPagoOAuthClient {
   }
 
   private async tokenRequest(body: Record<string, string>) {
-    const response = await this.request(`${this.apiBaseUrl()}/oauth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        ...body,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await this.request(`${this.apiBaseUrl()}/oauth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: this.config.clientId,
+          client_secret: this.config.clientSecret,
+          ...body,
+        }),
+      });
+    } catch (error) {
+      throw new MercadoPagoDependencyError(
+        `Mercado Pago OAuth exchange request failed: ${
+          error instanceof Error ? error.message : "unknown transport error"
+        }`,
+      );
+    }
     if (!response.ok) {
-      throw new MercadoPagoDependencyError("Mercado Pago OAuth exchange failed.");
+      throw await this.exchangeFailure(response);
     }
     const payload = (await response.json()) as {
       access_token?: string;
@@ -140,6 +175,17 @@ export class MercadoPagoOAuthClient {
       userId: String(payload.user_id),
       scopes: payload.scope?.split(/\s+/).filter(Boolean) ?? [],
     } satisfies MercadoPagoTokens;
+  }
+
+  private async exchangeFailure(response: Response) {
+    const detail = await readProviderErrorDetail(response);
+    const summary = `Mercado Pago OAuth exchange failed with status ${
+      response.status
+    }${detail ? ` (${detail})` : ""}.`;
+    if (response.status >= 400 && response.status < 500) {
+      return new MercadoPagoAuthorizationError(summary, response.status);
+    }
+    return new MercadoPagoDependencyError(summary);
   }
 
   private request(url: string, init: RequestInit) {

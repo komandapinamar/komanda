@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  mercadoPagoProblemMessage,
+  type MercadoPagoOutcome,
+} from "./mercado-pago-outcome";
 
 export type MercadoPagoIntegrationView = {
   provider: "mercadopago";
@@ -13,23 +17,29 @@ export type MercadoPagoIntegrationView = {
   version: number;
 };
 
+type Notice = { tone: "success" | "error"; text: string } | null;
+
 async function jsonOrThrow(response: Response) {
   if (response.ok) return response.status === 204 ? null : response.json();
-  if (response.status === 409) {
-    throw new Error("La integración cambió. Recargá antes de continuar.");
-  }
-  throw new Error("No se pudo completar la operación.");
+  const problem = (await response.json().catch(() => null)) as {
+    code?: string;
+  } | null;
+  throw new Error(mercadoPagoProblemMessage(problem));
 }
 
 export function MercadoPagoIntegrationPanel({
   tenantId,
   initialStatus,
+  outcome,
 }: {
   tenantId: string;
   initialStatus: MercadoPagoIntegrationView;
+  outcome?: MercadoPagoOutcome | null;
 }) {
   const [status, setStatus] = useState(initialStatus);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<Notice>(
+    outcome ? { tone: outcome.kind, text: outcome.message } : null,
+  );
   const router = useRouter();
 
   async function connect() {
@@ -43,7 +53,10 @@ export function MercadoPagoIntegrationPanel({
       )) as { authorizationUrl: string };
       window.location.assign(session.authorizationUrl);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Error inesperado.");
+      setMessage({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Error inesperado.",
+      });
     }
   }
 
@@ -69,23 +82,37 @@ export function MercadoPagoIntegrationPanel({
       });
 
       if (result?.remoteConfirmed) {
-        setMessage("Mercado Pago desconectado y autorización remota revocada.");
+        setMessage({
+          tone: "success",
+          text: "Mercado Pago desconectado y autorización remota revocada.",
+        });
       } else {
-        setMessage(
-          "Mercado Pago desconectado de Komanda (la revocación remota en Mercado Pago no pudo ser confirmada).",
-        );
+        setMessage({
+          tone: "success",
+          text: "Mercado Pago desconectado de Komanda (la revocación remota en Mercado Pago no pudo ser confirmada).",
+        });
       }
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Error inesperado.");
+      setMessage({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Error inesperado.",
+      });
     }
   }
 
   return (
     <section className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
       {message ? (
-        <p role="status" className="rounded-md border border-zinc-700 p-3 text-sm">
-          {message}
+        <p
+          role="status"
+          className={`rounded-md border p-3 text-sm ${
+            message.tone === "error"
+              ? "border-amber-700 bg-amber-950/40 text-amber-100"
+              : "border-emerald-800 bg-emerald-950/40 text-emerald-100"
+          }`}
+        >
+          {message.text}
         </p>
       ) : null}
       <div className="grid gap-3 text-sm sm:grid-cols-2">

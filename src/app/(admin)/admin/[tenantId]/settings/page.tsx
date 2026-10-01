@@ -10,6 +10,12 @@ import { TenantActivationPanel } from "@/features/tenancy/web/TenantActivationPa
 import { MercadoPagoIntegrationService } from "@/features/payments/application/integration.service";
 import { MercadoPagoIntegrationPanel } from "@/features/payments/web/MercadoPagoIntegrationPanel";
 import { DangerZone } from "@/features/tenancy/web/DangerZone";
+import type { MercadoPagoOutcome } from "@/features/payments/web/mercado-pago-outcome";
+import {
+  MERCADO_PAGO_CONNECTED_MESSAGE,
+  mercadoPagoFailureMessage,
+  mercadoPagoReasonFromValue,
+} from "@/features/payments/web/mercado-pago-outcome";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 
 const readinessLabels: Record<string, string> = {
@@ -31,12 +37,35 @@ const readinessHints: Record<string, string> = {
   print_agent_connected: "Enrolá un agente de impresión (opcional).",
 };
 
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** OAuth sends the owner back here after leaving Mercado Pago, so the outcome
+ * travels in the query string instead of rendering a problem document. */
+function mercadoPagoOutcomeFromQuery(
+  status: string | undefined,
+  reason: string | undefined,
+): MercadoPagoOutcome | null {
+  if (status === "connected") {
+    return { kind: "success", message: MERCADO_PAGO_CONNECTED_MESSAGE };
+  }
+  if (status !== "error") return null;
+  return {
+    kind: "error",
+    message: mercadoPagoFailureMessage(mercadoPagoReasonFromValue(reason) ?? "failed"),
+  };
+}
+
 export default async function TenantSettingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tenantId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { tenantId } = await params;
+  const query = (await searchParams) ?? {};
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) redirect("/login");
   let authority;
@@ -65,6 +94,11 @@ export default async function TenantSettingsPage({
     new MercadoPagoIntegrationService().getStatus(context),
     new TenantReadinessService().get(authority.session, authority.membership),
   ]);
+
+  const mercadoPagoOutcome = mercadoPagoOutcomeFromQuery(
+    firstValue(query.mercadopago),
+    firstValue(query.reason),
+  );
 
   return (
     <main className="mx-auto max-w-4xl space-y-10 px-4 py-8 sm:px-6">
@@ -145,6 +179,7 @@ export default async function TenantSettingsPage({
         <MercadoPagoIntegrationPanel
           tenantId={tenantId}
           initialStatus={mpStatus}
+          outcome={mercadoPagoOutcome}
         />
       </section>
 
