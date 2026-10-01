@@ -39,6 +39,12 @@ export class OrderQueryService {
       new OrderRepository(transaction, input.context).listEventsAfter(sequence),
     );
   }
+
+  async eventsHead(input: { context: TenantContext }) {
+    return withTenantTransaction(input.context, (transaction) =>
+      new OrderRepository(transaction, input.context).currentEventSequence(),
+    );
+  }
 }
 
 function parseStatus(value: string): FulfillmentStatus {

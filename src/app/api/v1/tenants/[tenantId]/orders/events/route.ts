@@ -1,5 +1,9 @@
 import { administrativeTenantContext } from "@/features/identity/web/tenant-authority";
 import { OrderQueryService } from "@/features/orders/application/order-query.service";
+import {
+  formatResetEvent,
+  resolveEventCursor,
+} from "@/features/orders/domain/order-event-cursor";
 import { orderErrorResponse } from "@/features/orders/web/order-http";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 import { shutdownManager } from "@/lib/runtime/shutdown";
@@ -70,6 +74,26 @@ export async function GET(request: Request, route: RouteContext) {
             closeStream();
           }
         };
+
+        // A malformed or ahead-of-log cursor opens a valid stream but can never
+        // deliver events. Signal the client to resync and continue from head.
+        try {
+          const head = await service.eventsHead({ context });
+          const resolution = resolveEventCursor({ raw: lastEventId, head });
+          if (resolution.kind === "reset") {
+            lastEventId = resolution.head.toString();
+            enqueue(
+              formatResetEvent({
+                reason: resolution.reason,
+                head: resolution.head,
+              }),
+            );
+          }
+        } catch (error) {
+          console.error("[orders:sse] Failed to resolve event cursor.", error);
+          closeStream();
+          return;
+        }
 
         enqueue(`retry: ${POLL_INTERVAL_MS}\n\n`);
         await sendEvents();

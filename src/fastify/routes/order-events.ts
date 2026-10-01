@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { OrderQueryService } from "@/features/orders/application/order-query.service";
+import {
+  formatResetEvent,
+  resolveEventCursor,
+} from "@/features/orders/domain/order-event-cursor";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { shutdownManager } from "@/lib/runtime/shutdown";
 
@@ -92,6 +96,31 @@ export const orderEventsRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     reply.raw.write("retry: 2000\n\n");
+
+    // A malformed or ahead-of-log cursor opens a valid stream but can never
+    // deliver events. Signal the client to resync and continue from head.
+    try {
+      const head = await service.eventsHead({ context });
+      if (closed) return;
+      const resolution = resolveEventCursor({ raw: lastEventId, head });
+      if (resolution.kind === "reset") {
+        lastEventId = resolution.head.toString();
+        reply.raw.write(
+          formatResetEvent({
+            reason: resolution.reason,
+            head: resolution.head,
+          }),
+        );
+      }
+    } catch (error) {
+      request.log.error(
+        { err: error, correlationId },
+        "Failed to resolve order event cursor",
+      );
+      closeStream();
+      return;
+    }
+
     await runPoll();
 
     if (!closed) {

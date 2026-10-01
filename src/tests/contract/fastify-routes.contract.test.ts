@@ -4,12 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 const mockClaim = vi.fn();
 const mockReportResult = vi.fn();
 const mockEventsAfter = vi.fn().mockResolvedValue([]);
+const mockEventsHead = vi.fn().mockResolvedValue(BigInt(0));
 
 vi.mock("@/features/orders/application/order-query.service", () => {
   return {
     OrderQueryService: vi.fn(function () {
       return {
         eventsAfter: mockEventsAfter,
+        eventsHead: mockEventsHead,
       };
     }),
   };
@@ -167,7 +169,7 @@ describe("Fastify Extracted Routes Contract Test", () => {
 
     const dataPromise = new Promise<string>((resolve, reject) => {
       const req = http.get(
-        `http://127.0.0.1:${port}/api/v1/tenants/11111111-1111-4111-8111-111111111111/orders/events`,
+        `http://127.0.0.1:${port}/api/v1/tenants/11111111-1111-4111-8111-111111111111/orders/events?cursor=99`,
         (res) => {
           expect(res.statusCode).toBe(200);
           expect(res.headers["content-type"]).toContain("text/event-stream");
@@ -193,8 +195,13 @@ describe("Fastify Extracted Routes Contract Test", () => {
 
     const received = await dataPromise;
     expect(received).toContain("retry: 2000");
+    expect(received).toContain("event: reset");
+    expect(received).toContain('"reason":"ahead"');
     expect(received).toContain("id: 1");
     expect(received).toContain("event: order");
+    expect(mockEventsAfter).toHaveBeenLastCalledWith(
+      expect.objectContaining({ lastEventId: "0" }),
+    );
     await app.close();
   });
 });
