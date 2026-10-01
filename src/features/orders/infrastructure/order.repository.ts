@@ -549,6 +549,17 @@ export class OrderRepository {
     return rows.map(serializeEvent);
   }
 
+  async currentEventSequence() {
+    const result = await this.transaction.execute<{ current_value: string }>(sql`
+      select current_value
+      from tenant_counters
+      where tenant_id = ${this.tenantId}::uuid
+        and counter_type = 'order_event_sequence'
+    `);
+    const row = result.rows[0];
+    return row ? BigInt(row.current_value) : BigInt(0);
+  }
+
   private async hydrate(order: OrderRecord) {
     const lines = await this.transaction
       .select()
