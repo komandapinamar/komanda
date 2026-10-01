@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { PublicDirectoryTenant } from "@/features/tenancy/application/public-tenant.service";
 import {
   buildGoogleMapsDirectUrl,
@@ -304,8 +305,21 @@ export function PublicDirectoryView({ tenants }: Props) {
                     >
                       <div>
                         <div className="flex items-start gap-4">
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm border-3 border-black bg-[var(--color-accent-secondary)] text-2xl font-black text-black shadow-[0px_0px_0px_3px_var(--color-zinc-100)]">
-                            {tenant.name.slice(0, 1).toUpperCase()}
+                          <div className="flex  shrink-0 items-center justify-center rounded-sm border-3 border-black bg-[var(--color-accent-secondary)] text-2xl font-black text-black shadow-[0px_0px_0px_3px_var(--color-zinc-100)]">
+                            {/*
+                              refill hardcodeado para mostrar el logo real, sin necesitar bucket en infra
+                            */}
+                            {tenant.name === "refill" ? (
+                              <Image
+                                src="/images/logo_refill.jpg"
+                                alt={tenant.name}
+                                width={40}
+                                height={40}
+                                className="h-10 w-10 object-contain"
+                              />
+                            ) : (
+                              tenant.name.slice(0, 1).toUpperCase()
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <h2 className="truncate text-3xl font-black uppercase tracking-tight text-white underline">
