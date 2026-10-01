@@ -1,0 +1,215 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Komanda Core — Next.js + multi-tenant SaaS backend (src/ is the app root).
+language: "en-US"
+inheritance: false
+
+reviews:
+  # Payment/tenant-scoped platform: correctness over brevity.
+  profile: "assertive"
+  high_level_summary: true
+  high_level_summary_in_walkthrough: false
+  review_status: true
+  review_details: false
+  poem: false
+  sequence_diagrams: true
+  changed_files_summary: true
+  estimate_code_review_effort: true
+  abort_on_close: true
+  commit_status: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    base_branches:
+      - main
+    ignore_title_keywords:
+      - "wip"
+      - "[skip ci]"
+
+  tools:
+    eslint:
+      enabled: true
+      e18e:
+        enabled: false
+    actionlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    hadolint:
+      enabled: false
+
+  pre_merge_checks:
+    docstrings:
+      enabled: false
+    title:
+      enabled: true
+    issue_assessment:
+      enabled: true
+    custom_checks:
+      - name: "Tenant isolation preserved"
+        mode: "error"
+        instructions: |
+          Every read and write of tenant-owned data must be scoped to an
+          explicit tenantId resolved from @/lib/tenant-context. Flag any of:
+          - a repository query whose WHERE clause omits tenantId;
+          - a tenantId accepted from a request body, query string, or header
+            without being re-resolved through the tenant resolver;
+          - a cross-tenant lookup without an explicit, justified allowlist;
+          - a new table in src/db/schema that lacks an RLS policy and is not
+            covered by an existing policy.
+          Pass when each touched query is tenant-scoped and RLS still applies.
+
+      - name: "Layer boundaries intact"
+        mode: "error"
+        instructions: |
+          src/features/*/domain and src/features/*/application must stay
+          independent of Next.js. Fail if either imports `next/`,
+          `next/server`, `@/app/`, or any React hook. Also fail if a
+          domain module imports from infrastructure, or if infrastructure
+          imports from application. Web adapters may import inward only.
+
+      - name: "Money uses exact arithmetic"
+        mode: "error"
+        instructions: |
+          Monetary amounts must never be represented as JavaScript floats.
+          Fail on arithmetic on currency values, implicit any->number casts
+          on amount fields, `parseFloat`/`Number()` on money, and rounding
+          performed with `toFixed` before persisting. Pass when amounts stay
+          in minor units (integer cents) or use a decimal type, and rounding
+          is explicit and consistent with the order total.
+
+  path_instructions:
+    - path: "src/features/**/domain/**"
+      instructions: |
+        Pure domain: no I/O, no framework imports, no `Date.now()` for
+        business rules. Require explicit domain errors over thrown strings.
+        Flag any import from `next/`, `@/app/`, `infrastructure`, or a
+        database client. Check that state transitions are exhaustive and
+        reject illegal ones.
+
+    - path: "src/features/**/application/**"
+      instructions: |
+        Orchestration only. Must not import `next/`, `next/server`, or
+        `@/app/` — see src/tests/architecture/layer-boundaries.test.ts.
+        Require that multi-step writes are wrapped in the tenant transaction
+        helper and that the tenantId is threaded through from the context,
+        never inferred.
+
+    - path: "src/features/**/infrastructure/**"
+      instructions: |
+        Database and third-party clients (MercadoPago, AFIP, S3). Require
+        parameterized queries — flag any string-concatenated SQL. Require
+        typed error mapping so provider failures do not leak raw vendor
+        payloads or credentials to callers. Check that outbound calls have
+        timeouts and that sensitive tokens are never logged.
+
+    - path: "src/features/**/web/**"
+      instructions: |
+        HTTP and UI adapters. Validate and coerce all input with the
+        schemas in the matching domain module; never trust the body. Require
+        an authorization/role check before any tenant-scoped mutation. In
+        React components, flag `useEffect` state writes that could be derived
+        during render and missing `useEffect` cleanup for subscriptions or
+        polling timers.
+
+    - path: "src/features/payments/**"
+      instructions: |
+        Highest-risk area — review most carefully.
+        - Webhook handlers must verify the provider signature and reject
+          unverified payloads outright, never "log and continue".
+        - Payment state changes must be idempotent: a replayed webhook or
+          retried request must not double-apply, double-credit, or move an
+          order backwards. Verify a uniqueness constraint or an idempotency
+          key backs this.
+        - Never log access tokens, refresh tokens, card data, or full
+          webhook bodies containing them.
+        - Amounts and currency codes must be validated against the order
+          server-side; never trust a client-supplied total.
+
+    - path: "src/features/orders/**"
+      instructions: |
+        - State transitions must be validated server-side against the
+          allowed graph; reject skipped, repeated, and backward transitions.
+        - Any operation that changes order status or stock must be atomic
+          and emit the corresponding outbox event for the same tenant.
+
+    - path: "src/db/schema/**"
+      instructions: |
+        - Every new tenant-owned table needs tenantId, RLS enabled, and
+          policies. Flag a table added without them.
+        - Require indexes covering the columns used for tenant-scoped lookups
+          and flag a new FK without an index on the referencing side.
+        - Flag destructive changes (drop/rename column, type narrowing, added
+          NOT NULL without default) that need a staged migration.
+
+    - path: "src/drizzle/**/*.sql"
+      instructions: |
+        Generated Drizzle migrations. Flag destructive statements (DROP
+        TABLE/COLUMN, TRUNCATE) that are not guarded against pre-existing
+        rows, missing `IF EXISTS`/`IF NOT EXISTS` where the chain depends on
+        it, and any change that would require a full table rewrite on
+        staging or production data.
+
+    - path: "src/app/**/api/**/route.ts"
+      instructions: |
+        - Derive the tenant from the resolved context, never from a URL slug
+          or body field alone.
+        - Return the correct status codes and do not leak stack traces,
+          SQL, or internal ids in error responses.
+        - Require idempotency keys on any non-GET handler that creates a
+          resource or moves money.
+
+    - path: "src/app/**"
+      instructions: |
+        Server components and pages. Confirm that data access goes through
+        the feature layer rather than querying the database directly, and
+        that authorization is enforced server-side rather than only by
+        hiding UI.
+
+    - path: "src/lib/**"
+      instructions: |
+        Shared infrastructure (tenant-context, authorization, encryption,
+        outbox, observability, idempotency). Treat changes here as
+        cross-cutting: require the impact on every caller to be considered.
+        In encryption and authorization, fail on any weakening of an existing
+        check.
+
+    - path: "src/fastify/**"
+      instructions: |
+        The Fastify sidecar. Keep route contracts in sync with the Next.js
+        handlers they mirror, propagate correlation IDs, and validate all
+        inbound payloads.
+
+    - path: "src/tests/**"
+      instructions: |
+        - Test the security and isolation properties, not just the happy
+          path: cross-tenant access must be proven to fail.
+        - Flag weakened assertions, `.only`, skipped tests, and tests that
+          assert a mock rather than observable behavior.
+        - New behavior in src/features/** should arrive with a matching test
+          under the appropriate project (unit, integration, contract,
+          tenant-isolation, security).
+
+    - path: "src/**/*.{ts,tsx}"
+      instructions: |
+        TypeScript conventions: prefer `type` over `interface` for unions,
+        avoid non-null assertions, no `any`, and keep async errors typed.
+        Flag unused exports, `console.log` left in server code in favor of
+        the observability helpers in src/lib/observability, and secrets
+        read at module scope instead of per-request.
+
+  path_filters:
+    - "**/node_modules/**"
+    - "**/.next/**"
+    - "**/dist/**"
+    - "**/coverage/**"
+    - "**/playwright-report/**"
+    - "**/*.test-artifacts/**"
+    - "**/*.md"
+
+chat:
+  auto_reply: true
+  art: false
