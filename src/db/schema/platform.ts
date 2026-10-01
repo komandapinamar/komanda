@@ -94,7 +94,6 @@ export const users = pgTable(
     email: text("email").notNull(),
     normalizedEmail: text("normalized_email").notNull(),
     passwordHash: text("password_hash").notNull(),
-    passwordPlain: text("password_plain"),
     status: text("status")
       .$type<UserStatus>()
       .default("pending_verification")
