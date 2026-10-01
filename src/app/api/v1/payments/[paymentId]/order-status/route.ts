@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { withPlatformServiceTransaction } from "@/db/tenant-transaction";
 import { providerResourceRoutes, paymentAttempts, tenantOrders } from "@/db/schema";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
@@ -89,7 +89,9 @@ export async function GET(_request: Request, route: RouteContext) {
           pickupPin: tenantOrders.pickupPin,
           estimatedWaitMinutes: tenantOrders.estimatedWaitMinutes,
           estimatedReadyAt: tenantOrders.estimatedReadyAt,
-          customerSnapshot: tenantOrders.customerSnapshot,
+          // Derived in SQL: this route is public and polled every 3s, so the
+          // customer snapshot must never be materialised into the process.
+          hasCustomerPhone: sql<boolean>`coalesce(btrim(${tenantOrders.customerSnapshot} ->> 'phone') <> '', false)`,
         })
         .from(tenantOrders)
         .where(
@@ -115,11 +117,6 @@ export async function GET(_request: Request, route: RouteContext) {
         };
       }
 
-      const customer = (order.customerSnapshot ?? {}) as Record<string, unknown>;
-      const hasCustomerPhone = Boolean(
-        typeof customer.phone === "string" && customer.phone.trim().length > 0,
-      );
-
       return {
         status: "completed" as const,
         orderId: order.id,
@@ -130,12 +127,12 @@ export async function GET(_request: Request, route: RouteContext) {
         pickupPin: order.pickupPin ?? null,
         estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
         estimatedReadyAt: order.estimatedReadyAt ? order.estimatedReadyAt.toISOString() : null,
-        hasCustomerPhone,
+        hasCustomerPhone: order.hasCustomerPhone,
       };
     },
   );
 
   return Response.json(result satisfies PaymentOrderStatusResponse, {
-    headers: { "X-Correlation-Id": correlationId },
+    headers: { "Cache-Control": "no-store", "X-Correlation-Id": correlationId },
   });
 }

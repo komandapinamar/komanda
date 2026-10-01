@@ -17,11 +17,14 @@ function getSingleValue(value: string | string[] | undefined) {
 export default async function CheckoutPaySuccessPage({ searchParams }: SuccessPageProps) {
   const resolvedSearchParams = await searchParams;
   const paymentId = getSingleValue(resolvedSearchParams.payment_id)?.trim() ?? "";
+  // Canonical origin: the QR must survive being photographed and scanned later,
+  // so it cannot be composed from the browser's location.
+  const trackingBaseUrl = process.env.KOMANDA_PUBLIC_BASE_URL?.trim() ?? "";
 
   return (
     <main className="min-h-[100dvh] bg-[var(--color-accent-primary)] p-6 text-[var(--color-accent-secondary)]">
       {paymentId ? (
-        <OrderStatusPoller paymentId={paymentId} />
+        <OrderStatusPoller paymentId={paymentId} trackingBaseUrl={trackingBaseUrl} />
       ) : (
         <div className="mx-auto max-w-3xl rounded-sm border border-amber-700 bg-[var(--color-accent-primary)] p-6">
           <ClearCartOnSuccess />

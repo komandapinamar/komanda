@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import {
@@ -17,6 +17,10 @@ import type {
   OfficialCartLine,
 } from "@/types/types";
 import OfficialCartSkeleton from "@/features/shop/checkout/components/skeleton/Skeleton";
+import {
+  buildCheckoutPayload,
+  normalizeOptionalPhone,
+} from "@/features/shop/checkout/components/checkout-payload";
 
 const initialFormValues: CheckoutFormValues = {
   customer: {
@@ -180,6 +184,8 @@ export default function CheckoutPayPage() {
   } = useCart();
   const [formValues, setFormValues] = useState(initialFormValues);
   const [showNotes, setShowNotes] = useState(false);
+  const [pendingNotesClear, setPendingNotesClear] = useState<string | null>(null);
+  const submittingRef = useRef(false);
   const [officialCart, setOfficialCart] = useState<OfficialCart | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
   const [isLoadingCart, setIsLoadingCart] = useState(false);
@@ -312,18 +318,25 @@ export default function CheckoutPayPage() {
     }
 
     const customerName = formValues.customer.name.trim();
-    const customerPhone = formValues.customer.phone?.trim();
+    if (!customerName) {
+      setSubmitError("Ingresá tu nombre para poder entregarte el pedido.");
+      return;
+    }
+
+    const customerPhone = normalizeOptionalPhone(formValues.customer.phone);
     const orderNotes = formValues.notes.trim();
 
-    const payload = {
+    // Synchronous re-entry guard: isSubmitting only disables the button on the
+    // next render, so a double tap could otherwise start two payment sessions.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
+    const payload = buildCheckoutPayload({
       cartId: officialCart.id,
-      customer: {
-        name: customerName,
-        phone: customerPhone || undefined,
-      },
-      notes: orderNotes || undefined,
       cartVersion: officialCart.version,
-    };
+      customer: { name: customerName, phone: customerPhone },
+      notes: orderNotes,
+    });
 
     setIsSubmitting(true);
 
@@ -331,12 +344,12 @@ export default function CheckoutPayPage() {
       const session = await createPaymentSession(tenantSlug, payload);
       window.location.assign(session.initPoint);
     } catch (error) {
+      submittingRef.current = false;
       setSubmitError(
         error instanceof Error
           ? error.message
           : "No se pudo continuar con el pedido.",
       );
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -455,6 +468,7 @@ export default function CheckoutPayPage() {
               </div>
               <input
                 type="tel"
+                inputMode="tel"
                 autoComplete="tel"
                 placeholder="Ej: 11 2345 6789"
                 value={formValues.customer.phone ?? ""}
@@ -470,7 +484,7 @@ export default function CheckoutPayPage() {
                 className="w-full rounded-sm border border-[var(--color-accent-secondary)]/70 bg-transparent px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-secondary)]"
               />
               <p className="text-xs opacity-70">
-                Opcional: te avisamos por WhatsApp cuando tu pedido esté listo para retirar.
+                Opcional. Si lo dejás, el local te puede avisar por teléfono cuando tu pedido esté listo.
               </p>
             </label>
           </div>
@@ -491,8 +505,12 @@ export default function CheckoutPayPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      const current = formValues.notes.trim();
+                      if (current.length > 0) {
+                        setPendingNotesClear(current);
+                        return;
+                      }
                       setShowNotes(false);
-                      setFormValues((current) => ({ ...current, notes: "" }));
                     }}
                     className="text-xs opacity-60 hover:opacity-100 underline"
                   >
@@ -511,6 +529,32 @@ export default function CheckoutPayPage() {
                   className="w-full rounded-sm border border-[var(--color-accent-secondary)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-secondary)]"
                   placeholder="Ej: sin cebolla, aderezos aparte..."
                 />
+                {pendingNotesClear ? (
+                  <div className="rounded-sm border border-red-500/50 bg-red-500/10 p-3 text-sm">
+                    <p className="font-medium">Vas a descartar esta nota:</p>
+                    <p className="mt-1 opacity-90">&laquo;{pendingNotesClear}&raquo;</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNotes(false);
+                          setFormValues((current) => ({ ...current, notes: "" }));
+                          setPendingNotesClear(null);
+                        }}
+                        className="rounded-sm border border-current px-3 py-1.5 font-semibold"
+                      >
+                        Quitar de todos modos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingNotesClear(null)}
+                        className="px-3 py-1.5 opacity-75 hover:opacity-100"
+                      >
+                        Mantener la nota
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -526,6 +570,9 @@ export default function CheckoutPayPage() {
           >
             {isSubmitting ? "Procesando pedido..." : "Pagar con Mercado Pago"}
           </button>
+          <p className="text-center text-xs opacity-70">
+            Después de pagar vas a volver automáticamente a esta pantalla para ver el estado de tu pedido.
+          </p>
         </form>
       </div>
     </main>

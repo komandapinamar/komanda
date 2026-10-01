@@ -160,7 +160,7 @@
       "idx": 22,
       "version": "7",
       "when": 1790011000000,
-      "tag": "0022_grant_all_runtime_tables_and_default_privileges",
+      "tag": "0022_enumerate_runtime_grants_and_default_privileges",
       "breakpoints": true
     }
   ]

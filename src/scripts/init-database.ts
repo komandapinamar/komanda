@@ -1,18 +1,54 @@
 import "dotenv/config";
 
 import { randomBytes } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { bootstrapRuntimeRole } from "./database-role-bootstrap";
-import { verifyDatabaseRoles } from "./verify-database-roles";
+import {
+  EXPECTED_PROTECTED_TABLES,
+  verifyDatabaseRoles,
+} from "./verify-database-roles";
 import { verifyMigrationJournal } from "./verify-migration-journal";
+
+const MIGRATIONS_FOLDER = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "drizzle",
+);
+
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function isLocalHost(hostname: string) {
+  return LOCAL_HOSTS.has(hostname.replace(/^\[|\]$/g, ""));
+}
+
+function redact(raw: string) {
+  try {
+    const url = new URL(raw);
+    return `${url.protocol}//${url.username}:***@${url.host}${url.pathname}`;
+  } catch {
+    return "***";
+  }
+}
 
 function generateSecurePassword(length = 32): string {
   return randomBytes(length)
     .toString("base64")
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, length);
+}
+
+function parsedUsername(raw: string | undefined) {
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(new URL(raw).username);
+  } catch {
+    return null;
+  }
 }
 
 function buildRuntimeUrl(directUrl: string, runtimePassword: string): string {
@@ -23,86 +59,108 @@ function buildRuntimeUrl(directUrl: string, runtimePassword: string): string {
 }
 
 async function main() {
-  console.log("\n🚀 Komanda — Inicializador Universal de Base de Datos\n");
+  console.log("\n=== Komanda - Inicializador de base de datos (local / vacia) ===\n");
 
   const directUrl = process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
   if (!directUrl) {
-    console.error("❌ Error: Se requiere DATABASE_DIRECT_URL o DATABASE_URL en las variables de entorno.");
-    process.exit(1);
+    throw new Error(
+      "DATABASE_DIRECT_URL or DATABASE_URL is required. For staging/production use `pnpm db:prepare`, which has the environment gate.",
+    );
   }
 
-  const parsedDirect = new URL(directUrl);
-  console.log(`📡 Conectando a PostgreSQL en: ${parsedDirect.hostname}:${parsedDirect.port || 5432}/${parsedDirect.pathname.replace(/^\//, "")}`);
-  console.log(`👤 Usuario de conexión administrativa: ${decodeURIComponent(parsedDirect.username)}`);
+  let parsedDirect: URL;
+  try {
+    parsedDirect = new URL(directUrl);
+  } catch {
+    throw new Error(
+      "DATABASE_DIRECT_URL is not a valid URL (expected postgresql://user:pass@host:5432/database).",
+    );
+  }
+  if (!["postgresql:", "postgres:"].includes(parsedDirect.protocol)) {
+    throw new Error("DATABASE_DIRECT_URL must use the postgresql:// protocol.");
+  }
 
-  const sslOption = directUrl.includes("localhost") || directUrl.includes("127.0.0.1")
-    ? undefined
-    : { rejectUnauthorized: false };
+  if (!isLocalHost(parsedDirect.hostname)) {
+    throw new Error(
+      `Refusing to initialise a remote database (${parsedDirect.hostname}). ` +
+        "This command has no environment gate and no production confirmation, so it is restricted to local/empty databases. " +
+        "Use `pnpm db:prepare` (requires KOMANDA_ENVIRONMENT, DATABASE_EXPECTED_HOST and the production confirmation token).",
+    );
+  }
 
-  const pool = new Pool({
-    connectionString: directUrl,
-    max: 1,
-    ssl: sslOption,
-  });
+  const local = isLocalHost(parsedDirect.hostname);
+  const sslOption = local ? undefined : { rejectUnauthorized: true };
 
+  console.log(`Host: ${parsedDirect.hostname}:${parsedDirect.port || 5432}/${parsedDirect.pathname.replace(/^\//, "")}`);
+  console.log(`Migration user: ${decodeURIComponent(parsedDirect.username)}`);
+
+  const pool = new Pool({ connectionString: directUrl, max: 1, ssl: sslOption });
   const client = await pool.connect();
   try {
-    const versionRes = await client.query<{ version: string }>("select version()");
-    console.log(`ℹ️  Versión del motor: ${versionRes.rows[0]?.version.split(" on ")[0]}`);
+    const version = await client.query<{ version: string }>("select version()");
+    console.log(`Engine: ${version.rows[0]?.version.split(" on ")[0]}\n`);
 
-    // 1. Extensiones requeridas
-    console.log("\n⚙️  1/4 Verificando extensiones nativas de PostgreSQL...");
-    await client.query('create extension if not exists "pg_trgm";');
-    console.log("   ✓ Extensión pg_trgm habilitada (para búsqueda rápida trigram).");
-
-    // 2. Provisionar roles de acceso (komanda_runtime y komanda_analytics)
-    console.log("\n🔐 2/4 Provisionando roles con menor privilegio (Least Privilege)...");
-    let runtimePassword =
+    console.log("1/4 Provisioning roles (least privilege)");
+    const provided =
       process.env.DATABASE_RUNTIME_PASSWORD ??
       process.env.KOMANDA_BOOTSTRAP_RUNTIME_PASSWORD;
-
-    let autoGeneratedPassword = false;
-    if (!runtimePassword || runtimePassword.length < 32) {
-      runtimePassword = generateSecurePassword(32);
-      autoGeneratedPassword = true;
+    if (provided && provided.length < 32) {
+      throw new Error(
+        `DATABASE_RUNTIME_PASSWORD is ${provided.length} characters; the minimum is 32. Fix the variable instead of letting this script rotate the role.`,
+      );
     }
 
+    const existingRole = await client.query<{ rolcanlogin: boolean }>(
+      "select rolcanlogin from pg_roles where rolname = 'komanda_runtime'",
+    );
+    if (!provided && existingRole.rows[0]?.rolcanlogin) {
+      throw new Error(
+        "komanda_runtime already exists and can log in. Set DATABASE_RUNTIME_PASSWORD explicitly; refusing to auto-rotate an existing role because that invalidates the running application's DATABASE_URL.",
+      );
+    }
+
+    const runtimePassword = provided ?? generateSecurePassword(32);
     await bootstrapRuntimeRole({
       connectionString: directUrl,
       runtimePassword,
     });
-    console.log("   ✓ Rol komanda_runtime configurado (NOBYPASSRLS, sujeto a FORCE RLS).");
-    console.log("   ✓ Rol komanda_analytics configurado (restringido a vistas sanitizadas).");
+    console.log("    komanda_runtime: NOBYPASSRLS, subject to FORCE RLS");
+    console.log("    komanda_analytics: read-only, sanitized views only");
 
-    // 3. Aplicar todas las migraciones (tablas, RLS, triggers y vistas)
-    console.log("\n📦 3/4 Aplicando migraciones de Drizzle...");
-    await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
-    const journalCheck = await verifyMigrationJournal({ connectionString: directUrl });
-    console.log(`   ✓ ${journalCheck.sourceCount} migraciones aplicadas e indexadas en __drizzle_migrations.`);
+    console.log("\n2/4 Applying migrations");
+    await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER });
+    const journal = await verifyMigrationJournal({
+      connectionString: directUrl,
+      requireComplete: true,
+    });
+    console.log(`    ${journal.appliedCount}/${journal.sourceCount} migrations applied`);
 
-    // 4. Auditar las 61 tablas y verificar aislamiento multi-tenant
-    console.log("\n🛡️  4/4 Auditando FORCE ROW LEVEL SECURITY en todas las tablas...");
-    const runtimeUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.includes("komanda_runtime")
-      ? process.env.DATABASE_URL
-      : buildRuntimeUrl(directUrl, runtimePassword);
-
-    await verifyDatabaseRoles({
+    console.log("\n3/4 Auditing FORCE ROW LEVEL SECURITY");
+    const runtimeUrl =
+      parsedUsername(process.env.DATABASE_URL) === "komanda_runtime"
+        ? process.env.DATABASE_URL!
+        : buildRuntimeUrl(directUrl, runtimePassword);
+    const audit = await verifyDatabaseRoles({
       runtimeUrl,
       migrationUrl: directUrl,
     });
-    console.log("   ✓ Las 61 tablas protegidas tienen rowsecurity=true y forcerowsecurity=true.");
-    console.log("   ✓ Verificación de aislamiento multi-tenant exitosa.");
+    console.log(
+      `    ${audit.runtime.tables.length}/${EXPECTED_PROTECTED_TABLES.length} protected tables verified`,
+    );
 
-    console.log("\n========================================================");
-    console.log("🎉 ¡BASE DE DATOS INICIALIZADA Y LISTA PARA USAR!");
-    console.log("========================================================\n");
-    console.log("Para tu archivo .env, configurá las siguientes cadenas:\n");
-    console.log(`DATABASE_DIRECT_URL="${directUrl}"`);
-    console.log(`DATABASE_URL="${runtimeUrl}"`);
-    if (autoGeneratedPassword) {
-      console.log(`DATABASE_RUNTIME_PASSWORD="${runtimePassword}"`);
+    if (!provided) {
+      const secretPath = resolve(process.cwd(), ".komanda-runtime-password");
+      await mkdir(dirname(secretPath), { recursive: true });
+      await writeFile(secretPath, `${runtimePassword}\n`, { mode: 0o600 });
+      console.log(`\n    Generated runtime password written to ${secretPath} (mode 0600).`);
     }
-    console.log("\n========================================================\n");
+
+    console.log("\n=== Ready ===\n");
+    console.log("Set these in your .env:\n");
+    console.log(`  DATABASE_DIRECT_URL=${JSON.stringify(directUrl)}`);
+    console.log(`  DATABASE_URL=${JSON.stringify(runtimeUrl)}`);
+    if (!provided) console.log("  DATABASE_RUNTIME_PASSWORD=<read from .komanda-runtime-password>");
+    console.log("");
   } finally {
     client.release();
     await pool.end();
@@ -110,7 +168,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error("\n❌ Error durante la inicialización de base de datos:");
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
+  console.error(`\nDatabase initialisation failed: ${error instanceof Error ? error.message : error}`);
+  process.exitCode = 1;
 });
