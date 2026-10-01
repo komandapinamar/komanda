@@ -124,16 +124,12 @@ export function OrderStatusPoller({
     };
   }, [paymentId]);
 
-  // A new payment must never render the previous order's PIN or QR.
-  useEffect(() => {
-    setOrder(null);
-    setStatus("polling");
-    setQrDataUrl(null);
-  }, [paymentId]);
+  // A new paymentId remounts this component (see the `key` on the caller), so
+  // the previous order's PIN and QR can never linger here.
 
   useEffect(() => {
     if (!order?.tenantId || !order?.orderId) {
-      setQrDataUrl(null);
+      // Nothing to render: the QR block is guarded by the same condition.
       return;
     }
 
@@ -287,6 +283,7 @@ export function OrderStatusPoller({
           </p>
           {qrDataUrl ? (
             <div className="mt-3 inline-block rounded bg-white p-2.5 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element -- inlined data: URL; next/image cannot fetch it and would need a remote loader */}
               <img
                 src={qrDataUrl}
                 alt={`QR de seguimiento para compra #${order.purchaseNumber}`}

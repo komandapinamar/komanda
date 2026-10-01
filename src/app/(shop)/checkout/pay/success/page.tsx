@@ -24,7 +24,11 @@ export default async function CheckoutPaySuccessPage({ searchParams }: SuccessPa
   return (
     <main className="min-h-[100dvh] bg-[var(--color-accent-primary)] p-6 text-[var(--color-accent-secondary)]">
       {paymentId ? (
-        <OrderStatusPoller paymentId={paymentId} trackingBaseUrl={trackingBaseUrl} />
+        <OrderStatusPoller
+          key={paymentId}
+          paymentId={paymentId}
+          trackingBaseUrl={trackingBaseUrl}
+        />
       ) : (
         <div className="mx-auto max-w-3xl rounded-sm border border-amber-700 bg-[var(--color-accent-primary)] p-6">
           <ClearCartOnSuccess />

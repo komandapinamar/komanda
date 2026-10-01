@@ -148,19 +148,31 @@ async function main() {
       `    ${audit.runtime.tables.length}/${EXPECTED_PROTECTED_TABLES.length} protected tables verified`,
     );
 
-    if (!provided) {
-      const secretPath = resolve(process.cwd(), ".komanda-runtime-password");
-      await mkdir(dirname(secretPath), { recursive: true });
-      await writeFile(secretPath, `${runtimePassword}\n`, { mode: 0o600 });
-      console.log(`\n    Generated runtime password written to ${secretPath} (mode 0600).`);
-    }
+    // Ready-to-paste .env lines go to a 0600 file, never to stdout: they embed
+    // the admin password, and scrollback, CI logs and shell transcripts outlive
+    // the terminal session.
+    const credentialsPath = resolve(process.cwd(), ".komanda-db-credentials");
+    await mkdir(dirname(credentialsPath), { recursive: true });
+    await writeFile(
+      credentialsPath,
+      [
+        `DATABASE_DIRECT_URL=${directUrl}`,
+        `DATABASE_URL=${runtimeUrl}`,
+        ...(provided ? [] : [`DATABASE_RUNTIME_PASSWORD=${runtimePassword}`]),
+        "",
+      ].join("\n"),
+      { mode: 0o600 },
+    );
 
     console.log("\n=== Ready ===\n");
-    console.log("Set these in your .env:\n");
-    console.log(`  DATABASE_DIRECT_URL=${JSON.stringify(directUrl)}`);
-    console.log(`  DATABASE_URL=${JSON.stringify(runtimeUrl)}`);
-    if (!provided) console.log("  DATABASE_RUNTIME_PASSWORD=<read from .komanda-runtime-password>");
-    console.log("");
+    console.log("Append to your .env (secrets redacted here on purpose):\n");
+    console.log(`  DATABASE_URL=${redact(runtimeUrl)}`);
+    console.log(
+      `  DATABASE_RUNTIME_PASSWORD=${
+        provided ? "<already set>" : "<generated, see file below>"
+      }`,
+    );
+    console.log(`\n    Full ready-to-paste lines: ${credentialsPath} (mode 0600)\n`);
   } finally {
     client.release();
     await pool.end();
