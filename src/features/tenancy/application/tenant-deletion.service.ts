@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   catalogSearchEntries,
   publicSearchTenants,
@@ -11,6 +11,7 @@ import {
   discountItems,
   discounts,
   billingDocuments,
+  printJobAttempts,
   tenantPrintJobs,
   cashRegisterMovements,
   mpFinancialRecords,
@@ -60,6 +61,10 @@ export class TenantDeletionService {
     const tenantId = context.tenantId;
 
     await withTenantTransaction(context, async (tx) => {
+      // audit_events rejects every mutation unless the transaction opts in explicitly.
+      // The flag is transaction-local, so append-only stays enforced everywhere else.
+      await tx.execute(sql`select set_config('app.allow_audit_purge', 'on', true)`);
+
       // 1. Search projections
       await tx.delete(catalogSearchEntries).where(eq(catalogSearchEntries.tenantId, tenantId));
       await tx.delete(publicSearchTenants).where(eq(publicSearchTenants.tenantId, tenantId));
@@ -76,6 +81,9 @@ export class TenantDeletionService {
 
       // 4. Billing, Print jobs, Cash & MP records
       await tx.delete(billingDocuments).where(eq(billingDocuments.tenantId, tenantId));
+      // print_job_attempts has restrict FKs into print_jobs and print_agents,
+      // so its rows must go first.
+      await tx.delete(printJobAttempts).where(eq(printJobAttempts.tenantId, tenantId));
       await tx.delete(tenantPrintJobs).where(eq(tenantPrintJobs.tenantId, tenantId));
       await tx.delete(cashRegisterMovements).where(eq(cashRegisterMovements.tenantId, tenantId));
       await tx.delete(mpFinancialRecords).where(eq(mpFinancialRecords.tenantId, tenantId));

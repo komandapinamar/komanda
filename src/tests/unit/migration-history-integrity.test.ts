@@ -92,4 +92,25 @@ describe("migration history integrity", () => {
       'CONSTRAINT "cash_register_movements_location_fk"',
     );
   });
+
+  it("gates the append-only audit trigger behind an explicit purge opt-in", () => {
+    const auditPurgeMigration = readMigration(
+      "0020_allow_audit_purge_for_tenant_erasure.sql",
+    );
+
+    expect(auditPurgeMigration).toContain(
+      "CREATE OR REPLACE FUNCTION reject_audit_event_mutation()",
+    );
+    expect(auditPurgeMigration).toContain(
+      "current_setting('app.allow_audit_purge', true)",
+    );
+    expect(auditPurgeMigration).toContain(
+      "RAISE EXCEPTION 'audit_events is append-only",
+    );
+    // 0000 must stay byte-for-byte canonical, so the function is redefined in a
+    // later migration instead of being edited in place.
+    expect(readMigration("0000_initial_schema.sql")).toContain(
+      "CREATE OR REPLACE FUNCTION reject_audit_event_mutation()",
+    );
+  });
 });
