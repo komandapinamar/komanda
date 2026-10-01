@@ -120,34 +120,6 @@
       "when": 1790005000000,
       "tag": "0016_add_outbox_delivery_leases",
       "breakpoints": true
-    },
-    {
-      "idx": 17,
-      "version": "7",
-      "when": 1790006000000,
-      "tag": "0017_add_verification_required_payment_status",
-      "breakpoints": true
-    },
-    {
-      "idx": 18,
-      "version": "7",
-      "when": 1790007000000,
-      "tag": "0018_add_sanitized_analytics_views",
-      "breakpoints": true
-    },
-    {
-      "idx": 19,
-      "version": "7",
-      "when": 1790008000000,
-      "tag": "0019_grant_print_agent_pairings",
-      "breakpoints": true
-    },
-    {
-      "idx": 20,
-      "version": "7",
-      "when": 1790009000000,
-      "tag": "0020_repair_outbox_delivery_leases",
-      "breakpoints": true
     }
   ]
 }
