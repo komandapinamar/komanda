@@ -6,7 +6,6 @@ type Member = {
   id: string;
   email: string;
   role: "owner" | "admin" | "employee";
-  password?: string | null;
   createdAt?: Date | string;
 };
 
@@ -23,7 +22,6 @@ export function MemberManager({
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"admin" | "employee">("employee");
   const [error, setError] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   async function addMember(event: FormEvent) {
     event.preventDefault();
@@ -91,12 +89,6 @@ export function MemberManager({
     }
   }
 
-  function copyPassword(id: string, text: string) {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  }
-
   const inputClass =
     "rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-(--color-accent-tertiary) focus:outline-none";
 
@@ -122,7 +114,9 @@ export function MemberManager({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Contraseña</label>
+          <label className="text-xs font-medium text-zinc-400">
+            Contraseña inicial
+          </label>
           <div className="relative flex items-center">
             <input
               required
@@ -142,6 +136,11 @@ export function MemberManager({
               {showPassword ? "Ocultar" : "Mostrar"}
             </button>
           </div>
+          <p className="text-xs text-zinc-500">
+            Se usa solo si el email todavía no existe en Komanda. Si la persona ya
+            tiene una cuenta, conserva su contraseña y no se modifica ninguna
+            cuenta existente.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -167,14 +166,13 @@ export function MemberManager({
             <tr className="border-b border-zinc-800 bg-zinc-900/60 text-left text-zinc-400">
               <th className="px-4 py-3 font-medium">Email</th>
               <th className="px-4 py-3 font-medium">Rol</th>
-              <th className="px-4 py-3 font-medium">Contraseña</th>
               <th className="px-4 py-3 font-medium text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/60">
             {members.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-zinc-500">
+                <td colSpan={3} className="px-4 py-6 text-center text-zinc-500">
                   No hay miembros registrados aún.
                 </td>
               </tr>
@@ -198,24 +196,6 @@ export function MemberManager({
                         <option value="admin">Admin</option>
                         <option value="employee">Employee</option>
                       </select>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {member.password ? (
-                      <div className="flex items-center gap-2">
-                        <code className="rounded border border-zinc-800 bg-zinc-950 px-2 py-0.5 font-mono text-xs text-amber-300">
-                          {member.password}
-                        </code>
-                        <button
-                          type="button"
-                          onClick={() => copyPassword(member.id, member.password!)}
-                          className="text-xs text-zinc-400 hover:text-zinc-200"
-                        >
-                          {copiedId === member.id ? "Copiado!" : "Copiar"}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-zinc-500 font-mono">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">

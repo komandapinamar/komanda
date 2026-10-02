@@ -148,6 +148,13 @@
       "when": 1790009000000,
       "tag": "0020_allow_audit_purge_for_tenant_erasure",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790010000000,
+      "tag": "0021_purge_user_password_plain",
+      "breakpoints": true
     }
   ]
 }

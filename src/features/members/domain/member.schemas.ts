@@ -4,6 +4,9 @@ export const RoleSchema = z.enum(["owner", "admin", "employee"]);
 
 export const AddMemberSchema = z.object({
   email: z.string().email(),
+  // Required so that a brand new identity can be created in one request. It is
+  // discarded when the email already identifies somebody: adding a membership
+  // must never change another tenant's credentials.
   password: z.string().min(8).max(128),
   role: RoleSchema,
 });
@@ -29,6 +32,5 @@ export type MemberOutput = {
   email: string;
   role: "owner" | "admin" | "employee";
   status: "active" | "revoked";
-  password?: string | null;
   createdAt: Date;
 };

@@ -48,6 +48,39 @@ export class MemberRepository {
     return user ?? null;
   }
 
+  async findIdentityByNormalizedEmail(
+    normalizedEmail: string,
+  ): Promise<{ id: string; email: string; status: string } | null> {
+    const [identity] = await this.transaction
+      .select({
+        id: users.id,
+        email: users.email,
+        status: users.status,
+      })
+      .from(users)
+      .where(eq(users.normalizedEmail, normalizedEmail))
+      .limit(1);
+    return identity ?? null;
+  }
+
+  async createIdentity(input: {
+    id: string;
+    email: string;
+    normalizedEmail: string;
+    passwordHash: string;
+  }): Promise<void> {
+    await this.transaction.insert(users).values({
+      id: input.id,
+      email: input.email,
+      normalizedEmail: input.normalizedEmail,
+      passwordHash: input.passwordHash,
+      // Only a bcrypt digest is persisted. Komanda has no password recovery
+      // flow that needs a retrievable secret, so a plaintext column must never
+      // be reintroduced here.
+      status: "active",
+    });
+  }
+
   async findByUserId(userId: string): Promise<{ id: string; status: string } | null> {
     const [membership] = await this.transaction
       .select({ id: tenantMemberships.id, status: tenantMemberships.status })
