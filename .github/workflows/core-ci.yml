@@ -41,6 +41,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:unit
+      - run: npm run test:architecture
+      - run: npm run test:security
       - run: npm audit --audit-level=high
 
   postgres-integration:
