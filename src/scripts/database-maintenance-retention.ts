@@ -6,8 +6,6 @@ export type MaintenanceRetentionOptions = {
   storefrontEventsRetentionDays?: number;
   outboxEventsRetentionDays?: number;
   expiredSessionsRetentionDays?: number;
-  orderEventsRetentionDays?: number;
-  auditEventsRetentionDays?: number;
   printJobsRetentionDays?: number;
   abandonedCartsRetentionDays?: number;
   batchSize?: number;
@@ -20,8 +18,7 @@ export type MaintenanceResult = {
   outboxEventsPruned: number;
   idempotencyRecordsPruned: number;
   userSessionsPruned: number;
-  orderEventsPruned: number;
-  auditEventsPruned: number;
+  printJobAttemptsPruned: number;
   printJobsPruned: number;
   abandonedCartLinesPruned: number;
   abandonedCartsPruned: number;
@@ -98,8 +95,6 @@ export async function runDatabaseMaintenanceRetention(
     storefrontEventsRetentionDays: options?.storefrontEventsRetentionDays ?? 90,
     outboxEventsRetentionDays: options?.outboxEventsRetentionDays ?? 7,
     expiredSessionsRetentionDays: options?.expiredSessionsRetentionDays ?? 30,
-    orderEventsRetentionDays: options?.orderEventsRetentionDays ?? 90,
-    auditEventsRetentionDays: options?.auditEventsRetentionDays ?? 180,
     printJobsRetentionDays: options?.printJobsRetentionDays ?? 30,
     abandonedCartsRetentionDays: options?.abandonedCartsRetentionDays ?? 14,
     batchSize: options?.batchSize ?? 2000,
@@ -163,24 +158,31 @@ export async function runDatabaseMaintenanceRetention(
       [cfg.expiredSessionsRetentionDays],
     );
 
-    const orderEventsPruned = await prune(
-      "order_events",
-      "order_events",
-      "occurred_at < now() - ($1 || ' days')::interval",
-      [cfg.orderEventsRetentionDays],
-    );
-
-    const auditEventsPruned = await prune(
-      "audit_events",
-      "audit_events",
-      "occurred_at < now() - ($1 || ' days')::interval",
-      [cfg.auditEventsRetentionDays],
+    // Terminal print jobs: prune child print_job_attempts first to preserve
+    // foreign key restrict constraints.
+    const printJobAttemptsPruned = await prune(
+      "print_job_attempts",
+      "print_job_attempts",
+      `EXISTS (
+         SELECT 1 FROM print_jobs j
+         WHERE j.tenant_id = print_job_attempts.tenant_id
+           AND j.id = print_job_attempts.print_job_id
+           AND j.status IN ('printed', 'failed', 'cancelled')
+           AND coalesce(j.updated_at, j.created_at) < now() - ($1 || ' days')::interval
+       )`,
+      [cfg.printJobsRetentionDays],
     );
 
     const printJobsPruned = await prune(
       "print_jobs",
       "print_jobs",
-      "status IN ('printed', 'failed', 'cancelled') AND coalesce(updated_at, created_at) < now() - ($1 || ' days')::interval",
+      `status IN ('printed', 'failed', 'cancelled')
+         AND coalesce(updated_at, created_at) < now() - ($1 || ' days')::interval
+         AND NOT EXISTS (
+           SELECT 1 FROM print_job_attempts a
+           WHERE a.tenant_id = print_jobs.tenant_id
+             AND a.print_job_id = print_jobs.id
+         )`,
       [cfg.printJobsRetentionDays],
     );
 
@@ -237,8 +239,7 @@ export async function runDatabaseMaintenanceRetention(
       outboxEventsPruned,
       idempotencyRecordsPruned,
       userSessionsPruned,
-      orderEventsPruned,
-      auditEventsPruned,
+      printJobAttemptsPruned,
       printJobsPruned,
       abandonedCartLinesPruned,
       abandonedCartsPruned,

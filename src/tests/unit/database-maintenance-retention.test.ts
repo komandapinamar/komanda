@@ -63,7 +63,7 @@ describe("runBatchedDelete", () => {
   it("binds the batch size as the final parameter and scopes the delete by ctid", async () => {
     const { client, calls } = fakeClient([1]);
     await runBatchedDelete(client, {
-      table: "order_events",
+      table: "storefront_item_events",
       predicate: "occurred_at < now() - ($1 || ' days')::interval",
       params: [90],
       batchSize: 2000,
@@ -72,7 +72,7 @@ describe("runBatchedDelete", () => {
     });
 
     const [first] = calls;
-    expect(first?.text).toContain("DELETE FROM order_events AS target");
+    expect(first?.text).toContain("DELETE FROM storefront_item_events AS target");
     expect(first?.text).toContain("USING batch");
     expect(first?.text).toContain("WHERE target.ctid = batch.ctid");
     expect(first?.params).toEqual([90, 2000]);
