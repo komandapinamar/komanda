@@ -155,6 +155,13 @@
       "when": 1790010000000,
       "tag": "0021_purge_user_password_plain",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790011000000,
+      "tag": "0022_enumerate_runtime_grants_and_default_privileges",
+      "breakpoints": true
     }
   ]
 }

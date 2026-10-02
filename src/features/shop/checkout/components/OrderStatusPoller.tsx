@@ -2,28 +2,45 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import ClearCartOnSuccess from "./ClearCartOnSuccess";
+import { orderTrackingPath, orderTrackingUrl } from "./order-tracking";
 
 type OrderData = {
   orderId: string;
+  tenantId?: string | null;
   purchaseNumber: string;
   fulfillmentStatus: string;
   paymentStatus: string;
   pickupPin?: string | null;
   estimatedWaitMinutes?: number | null;
   estimatedReadyAt?: string | null;
+  hasCustomerPhone?: boolean;
 };
 
-export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
+export function OrderStatusPoller({
+  paymentId,
+  trackingBaseUrl,
+}: {
+  paymentId: string;
+  trackingBaseUrl: string;
+}) {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [status, setStatus] = useState<"polling" | "completed" | "timeout" | "error">("polling");
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
     let attempts = 0;
+    let consecutiveFailures = 0;
     const maxAttempts = 100;
+    const maxConsecutiveFailures = 5;
+
+    const stop = () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
 
     const poll = async () => {
       if (!mountedRef.current) return;
@@ -36,14 +53,24 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
         const data = await response.json() as {
           status: string;
           orderId: string | null;
+          tenantId?: string | null;
           purchaseNumber: string | null;
           fulfillmentStatus: string | null;
           paymentStatus: string | null;
           pickupPin?: string | null;
           estimatedWaitMinutes?: number | null;
           estimatedReadyAt?: string | null;
+          hasCustomerPhone?: boolean;
         };
         if (!mountedRef.current) return;
+        consecutiveFailures = 0;
+
+        if (data.status === "not_found") {
+          setStatus("error");
+          stop();
+          return;
+        }
+
         if (data.status === "completed" && data.orderId) {
           setOrder((prev) => {
             if (data.fulfillmentStatus === "ready" && prev?.fulfillmentStatus !== "ready") {
@@ -57,27 +84,33 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
             }
             return {
               orderId: data.orderId!,
+              tenantId: data.tenantId ?? null,
               purchaseNumber: data.purchaseNumber ?? "",
               fulfillmentStatus: data.fulfillmentStatus ?? "",
               paymentStatus: data.paymentStatus ?? "",
               pickupPin: data.pickupPin ?? null,
               estimatedWaitMinutes: data.estimatedWaitMinutes ?? null,
               estimatedReadyAt: data.estimatedReadyAt ?? null,
+              hasCustomerPhone: Boolean(data.hasCustomerPhone),
             };
           });
           setStatus("completed");
           if (data.fulfillmentStatus === "delivered" || data.fulfillmentStatus === "cancelled") {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            stop();
           }
         } else if (attempts >= maxAttempts) {
           setStatus("timeout");
-          if (intervalRef.current) clearInterval(intervalRef.current);
+          stop();
         }
       } catch {
         if (!mountedRef.current) return;
-        if (attempts >= maxAttempts) {
+        consecutiveFailures++;
+        if (consecutiveFailures >= maxConsecutiveFailures) {
           setStatus("error");
-          if (intervalRef.current) clearInterval(intervalRef.current);
+          stop();
+        } else if (attempts >= maxAttempts) {
+          setStatus("timeout");
+          stop();
         }
       }
     };
@@ -87,9 +120,41 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
 
     return () => {
       mountedRef.current = false;
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      stop();
     };
   }, [paymentId]);
+
+  // A new paymentId remounts this component (see the `key` on the caller), so
+  // the previous order's PIN and QR can never linger here.
+
+  useEffect(() => {
+    if (!order?.tenantId || !order?.orderId) {
+      // Nothing to render: the QR block is guarded by the same condition.
+      return;
+    }
+
+    let cancelled = false;
+    const trackingUrl = orderTrackingUrl(trackingBaseUrl, order.tenantId, order.orderId);
+
+    QRCode.toDataURL(trackingUrl, {
+      margin: 1,
+      width: 200,
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUri) => {
+        if (!cancelled) setQrDataUrl(dataUri);
+      })
+      .catch(() => {
+        // Leave qrDataUrl null: the plain tracking link renders instead.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order?.tenantId, order?.orderId, trackingBaseUrl]);
 
   if (status === "polling") {
     return (
@@ -166,6 +231,11 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
         <div className="mb-6 rounded-sm bg-zinc-800 border border-zinc-700 p-4 text-zinc-300">
           <p className="font-semibold text-lg">Pedido entregado. ¡Muchas gracias por tu compra!</p>
         </div>
+      ) : order.fulfillmentStatus === "cancelled" ? (
+        <div className="mb-6 rounded-sm bg-red-500/10 border border-red-500/50 p-4 text-red-300">
+          <p className="font-bold text-xl uppercase tracking-wide">Pedido cancelado</p>
+          <p className="mt-1 text-sm">Este pedido ya no está activo. Si pagaste, te devolvemos el importe.</p>
+        </div>
       ) : (
         <h1 className="text-3xl font-bold">Pago confirmado</h1>
       )}
@@ -180,7 +250,7 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
         </p>
       ) : null}
 
-      {order.pickupPin ? (
+      {order.pickupPin && order.fulfillmentStatus !== "cancelled" ? (
         <div className="mt-5 rounded-sm border-2 border-dashed border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)]/10 p-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-accent-secondary)]">
             Código PIN de Retiro
@@ -191,6 +261,47 @@ export function OrderStatusPoller({ paymentId }: { paymentId: string }) {
           <p className="mt-2 text-xs opacity-80">
             Mostrá o decí este código en la caja para retirar tu pedido.
           </p>
+        </div>
+      ) : null}
+
+      {order.fulfillmentStatus === "cancelled" ? null : order.hasCustomerPhone ? (
+        <div className="mt-5 flex items-start gap-3 rounded-sm border border-[var(--color-accent-secondary)]/40 bg-[var(--color-accent-secondary)]/5 p-3.5 text-sm opacity-90">
+          <span className="text-xl" aria-hidden>📲</span>
+          <p>
+            Guardá este código: el local te va a avisar por teléfono cuando tu pedido esté listo para retirar.
+          </p>
+        </div>
+      ) : null}
+
+      {order.tenantId && order.orderId ? (
+        <div className="mt-5 flex flex-col items-center rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)]/5 p-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent-secondary)]">
+            Código QR de seguimiento en vivo
+          </p>
+          <p className="mt-1 text-xs opacity-75">
+            Escaneá con tu celular para seguir el estado de tu pedido en tiempo real
+          </p>
+          {qrDataUrl ? (
+            <div className="mt-3 inline-block rounded bg-white p-2.5 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element -- inlined data: URL; next/image cannot fetch it and would need a remote loader */}
+              <img
+                src={qrDataUrl}
+                alt={`QR de seguimiento para compra #${order.purchaseNumber}`}
+                width={176}
+                height={176}
+                decoding="async"
+                className="h-44 w-44"
+              />
+            </div>
+          ) : null}
+          <a
+            href={orderTrackingPath(order.tenantId, order.orderId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 text-xs underline opacity-80 hover:opacity-100"
+          >
+            Abrir página de seguimiento
+          </a>
         </div>
       ) : null}
 

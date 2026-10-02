@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import {
@@ -17,10 +17,15 @@ import type {
   OfficialCartLine,
 } from "@/types/types";
 import OfficialCartSkeleton from "@/features/shop/checkout/components/skeleton/Skeleton";
+import {
+  buildCheckoutPayload,
+  normalizeOptionalPhone,
+} from "@/features/shop/checkout/components/checkout-payload";
 
 const initialFormValues: CheckoutFormValues = {
   customer: {
     name: "",
+    phone: "",
   },
   notes: "",
 };
@@ -178,6 +183,9 @@ export default function CheckoutPayPage() {
     tenantSlug,
   } = useCart();
   const [formValues, setFormValues] = useState(initialFormValues);
+  const [showNotes, setShowNotes] = useState(false);
+  const [pendingNotesClear, setPendingNotesClear] = useState<string | null>(null);
+  const submittingRef = useRef(false);
   const [officialCart, setOfficialCart] = useState<OfficialCart | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
   const [isLoadingCart, setIsLoadingCart] = useState(false);
@@ -309,12 +317,26 @@ export default function CheckoutPayPage() {
       return;
     }
 
-    const payload = {
+    const customerName = formValues.customer.name.trim();
+    if (!customerName) {
+      setSubmitError("Ingresá tu nombre para poder entregarte el pedido.");
+      return;
+    }
+
+    const customerPhone = normalizeOptionalPhone(formValues.customer.phone);
+    const orderNotes = formValues.notes.trim();
+
+    // Synchronous re-entry guard: isSubmitting only disables the button on the
+    // next render, so a double tap could otherwise start two payment sessions.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
+    const payload = buildCheckoutPayload({
       cartId: officialCart.id,
-      customer: formValues.customer,
-      notes: formValues.notes || undefined,
       cartVersion: officialCart.version,
-    };
+      customer: { name: customerName, phone: customerPhone },
+      notes: orderNotes,
+    });
 
     setIsSubmitting(true);
 
@@ -322,12 +344,12 @@ export default function CheckoutPayPage() {
       const session = await createPaymentSession(tenantSlug, payload);
       window.location.assign(session.initPoint);
     } catch (error) {
+      submittingRef.current = false;
       setSubmitError(
         error instanceof Error
           ? error.message
           : "No se pudo continuar con el pedido.",
       );
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -410,18 +432,21 @@ export default function CheckoutPayPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6"
+          className="space-y-5 rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6"
         >
           <div>
             <h2 className="text-2xl font-bold">Tus datos</h2>
-            <h3 className="text-sm text-white">Te llamaremos por este nombre.</h3>
+            <h3 className="text-sm opacity-80">Te llamaremos por este nombre para entregarte el pedido.</h3>
           </div>
 
-          <div className="grid gap-4">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold">Nombre</span>
+          <div className="space-y-4">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-semibold">Nombre *</span>
               <input
                 required
+                type="text"
+                autoComplete="name"
+                placeholder="Ej: Juan"
                 value={formValues.customer.name}
                 onChange={(event) =>
                   setFormValues((current) => ({
@@ -432,39 +457,122 @@ export default function CheckoutPayPage() {
                     },
                   }))
                 }
-                className="w-full rounded-sm border border-[var(--color-accent-secondary)] bg-transparent px-3 py-2"
+                className="w-full rounded-sm border border-[var(--color-accent-secondary)] bg-transparent px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-secondary)]"
               />
+            </label>
+
+            <label className="block space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Número de celular</span>
+                <span className="text-xs opacity-60">Opcional</span>
+              </div>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="Ej: 11 2345 6789"
+                value={formValues.customer.phone ?? ""}
+                onChange={(event) =>
+                  setFormValues((current) => ({
+                    ...current,
+                    customer: {
+                      ...current.customer,
+                      phone: event.target.value,
+                    },
+                  }))
+                }
+                className="w-full rounded-sm border border-[var(--color-accent-secondary)]/70 bg-transparent px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-secondary)]"
+              />
+              <p className="text-xs opacity-70">
+                Opcional. Si lo dejás, el local te puede avisar por teléfono cuando tu pedido esté listo.
+              </p>
             </label>
           </div>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold">Notas del pedido</span>
-            <textarea
-              rows={4}
-              value={formValues.notes}
-              onChange={(event) =>
-                setFormValues((current) => ({
-                  ...current,
-                  notes: event.target.value,
-                }))
-              }
-              className="w-full rounded-sm border border-[var(--color-accent-secondary)] bg-transparent px-3 py-2"
-              placeholder="Ej: sin cebolla"
-            />
-          </label>
+          <div>
+            {!showNotes ? (
+              <button
+                type="button"
+                onClick={() => setShowNotes(true)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium opacity-85 hover:opacity-100 hover:underline transition-opacity"
+              >
+                <span>+ Agregar nota o aclaración al pedido</span>
+              </button>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Notas del pedido (opcional)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = formValues.notes.trim();
+                      if (current.length > 0) {
+                        setPendingNotesClear(current);
+                        return;
+                      }
+                      setShowNotes(false);
+                    }}
+                    className="text-xs opacity-60 hover:opacity-100 underline"
+                  >
+                    Quitar nota
+                  </button>
+                </div>
+                <textarea
+                  rows={3}
+                  value={formValues.notes}
+                  onChange={(event) =>
+                    setFormValues((current) => ({
+                      ...current,
+                      notes: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-sm border border-[var(--color-accent-secondary)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-secondary)]"
+                  placeholder="Ej: sin cebolla, aderezos aparte..."
+                />
+                {pendingNotesClear ? (
+                  <div className="rounded-sm border border-red-500/50 bg-red-500/10 p-3 text-sm">
+                    <p className="font-medium">Vas a descartar esta nota:</p>
+                    <p className="mt-1 opacity-90">&laquo;{pendingNotesClear}&raquo;</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNotes(false);
+                          setFormValues((current) => ({ ...current, notes: "" }));
+                          setPendingNotesClear(null);
+                        }}
+                        className="rounded-sm border border-current px-3 py-1.5 font-semibold"
+                      >
+                        Quitar de todos modos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingNotesClear(null)}
+                        className="px-3 py-1.5 opacity-75 hover:opacity-100"
+                      >
+                        Mantener la nota
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
 
           {submitError ? (
-            <p className="text-sm text-red-700">{submitError}</p>
+            <p className="text-sm text-red-500 font-medium">{submitError}</p>
           ) : null}
 
           <button
             type="submit"
             disabled={!officialCart || isSubmitting || isLoadingCart}
-            className="rounded-sm bg-[var(--color-accent-secondary)] px-5 py-3 font-semibold w-full text-center text-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-sm bg-[var(--color-accent-secondary)] px-5 py-3 font-semibold w-full text-center text-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-50 transition-opacity"
           >
             {isSubmitting ? "Procesando pedido..." : "Pagar con Mercado Pago"}
           </button>
-          <h1 className="text-xl color-red font-bold text-center">⚠️ Importante: redirigirse a esta pagina luego del pago</h1>
+          <p className="text-center text-xs opacity-70">
+            Después de pagar vas a volver automáticamente a esta pantalla para ver el estado de tu pedido.
+          </p>
         </form>
       </div>
     </main>
