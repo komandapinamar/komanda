@@ -13,6 +13,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:architecture": "vitest run --project architecture",
+    "test:security": "vitest run --project security",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:contracts": "vitest run --project contract",
