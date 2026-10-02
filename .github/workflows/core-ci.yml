@@ -122,10 +122,10 @@ jobs:
       SESSION_SECRET: test-session-secret-key-32-chars-long
       KOMANDA_PUBLIC_BASE_URL: http://localhost:3000
       NEXT_PUBLIC_API_URL: http://localhost:3000
-      MERCADOPAGO_CLIENT_ID: "3514416644027736"
-      MERCADOPAGO_CLIENT_SECRET: vtmRyWI1Tu3VyuXpjvuu9f14Mhal7MJr
+      MERCADOPAGO_CLIENT_ID: "test-client-id"
+      MERCADOPAGO_CLIENT_SECRET: test-client-secret
       MERCADOPAGO_REDIRECT_URI: http://localhost:3000/api/v1/integrations/mercadopago/oauth/callback
-      MERCADOPAGO_WEBHOOK_SECRET: 68901b2db3ef0044f78a4b8b8144cfb8ddffd95f0058c918ee1e1455d9047f16
+      MERCADOPAGO_WEBHOOK_SECRET: test-webhook-secret-key-32-chars-long
     defaults:
       run:
         working-directory: src
