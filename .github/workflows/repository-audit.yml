@@ -1,0 +1,58 @@
+name: Repository Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "audit/reports/**"
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Full repository audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: audit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: audit/package-lock.json
+
+      - run: npm ci
+
+      - name: Run deterministic security and quality checks
+        run: npm run static
+
+      - name: Run semantic AI review
+        if: ${{ secrets.OPENAI_API_KEY != '' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AUDIT_MODEL: ${{ vars.AUDIT_MODEL }}
+        run: npm run ai
+
+      - name: Build consolidated report
+        run: npm run report
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-audit
+          path: audit/reports/
+          retention-days: 30
