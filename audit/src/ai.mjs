@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import OpenAI from "openai";
 
 if (!process.env.OPENAI_API_KEY) {
@@ -8,10 +8,11 @@ if (!process.env.OPENAI_API_KEY) {
   process.exit(0);
 }
 
-const root = process.cwd().replace(/\/audit$/, "");
+const root = process.cwd().replace(/\\audit$/, "");
 const cfg = JSON.parse(readFileSync("config.json", "utf8"));
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const model = process.env.AUDIT_MODEL || "gpt-5.6-luna";
+const model = process.env.AUDIT_MODEL;
+if (!model) throw new Error("AUDIT_MODEL must be configured.");
 
 const files = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
   .split("\n").filter(Boolean)
@@ -19,44 +20,45 @@ const files = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
   .filter(f => !/node_modules|\.next|dist|coverage|test-artifacts/.test(f));
 
 const findings = [];
+const chunks = (text, size) => {
+  const out = [];
+  for (let i = 0; i < text.length; i += size) out.push({ text: text.slice(i, i + size), offset: i });
+  return out;
+};
+
 for (const file of files) {
-  const path = join(root, file);
   let code;
-  try { code = readFileSync(path, "utf8"); } catch { continue; }
-  if (Buffer.byteLength(code) > cfg.maxFileBytes) continue;
+  try { code = readFileSync(join(root, file), "utf8"); } catch { continue; }
+  for (const part of chunks(code, cfg.chunkChars)) {
+    const prompt = `Audit this production multi-tenant food-commerce code chunk.
 
-  const prompt = `You are auditing a production multi-tenant food-commerce system. Review the file below in repository context.
-
-Find only concrete, actionable issues. Focus on:
+Find only concrete, actionable issues:
 - security: auth bypass, tenant isolation, injection, secrets, SSRF, CSRF, unsafe deserialization, insecure crypto, payment/webhook flaws
 - correctness: bugs, race conditions, invalid state transitions, missing error handling
-- code smells: duplication, dead code, excessive coupling, misleading abstractions
+- architecture: layer violations, unsafe coupling, cross-tenant data flow
 - performance: N+1 queries, unbounded work, missing pagination/timeouts
 - maintainability/testing gaps that create material risk
 
-Do not report style preferences. Do not invent missing context. If uncertain, omit the finding.
+Do not report style preferences. Do not invent missing context. If uncertain, omit it.
 
 Return JSON only:
 {"findings":[{"severity":"CRITICAL|HIGH|MEDIUM|LOW","category":"security|correctness|architecture|performance|maintainability|testing","title":"...","line":1,"evidence":"brief exact evidence","why":"impact","recommendation":"specific fix","confidence":0.0}]}
 
 FILE: ${file}
+CHUNK OFFSET: ${part.offset}
 
 CODE:
-${code}`;
+${part.text}`;
 
-  const response = await client.responses.create({
-    model,
-    input: prompt,
-    text: { format: { type: "json_object" } }
-  });
-
-  try {
-    const parsed = JSON.parse(response.output_text);
-    for (const f of (parsed.findings ?? []).slice(0, cfg.maxAiFindingsPerChunk)) {
-      findings.push({ ...f, file });
-    }
-  } catch {
-    // Keep the audit usable even if a model response is malformed.
+    const response = await client.responses.create({
+      model,
+      input: prompt,
+      text: { format: { type: "json_object" } }
+    });
+    try {
+      const parsed = JSON.parse(response.output_text);
+      for (const f of (parsed.findings ?? []).slice(0, cfg.maxAiFindingsPerChunk)) findings.push({ ...f, file });
+    } catch {}
   }
 }
 
