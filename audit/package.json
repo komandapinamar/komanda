@@ -1,0 +1,13 @@
+{
+  "name": "komanda-repository-audit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "static": "node src/static.mjs",
+    "ai": "node src/ai.mjs",
+    "report": "node src/report.mjs"
+  },
+  "dependencies": {
+    "openai": "^6.0.0"
+  }
+}
