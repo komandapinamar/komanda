@@ -37,6 +37,7 @@ export type MobileTenantSummary = {
   slug: string;
   status: "onboarding" | "active" | "suspended";
   role: Role;
+  preset?: TenantPreset;
   primaryLocation: TenantLocationSummary | null;
 };
 
@@ -171,6 +172,7 @@ export class SessionService {
         slug: membership.tenantSlug,
         status: membership.tenantStatus,
         role: membership.role,
+        preset: membership.tenantPreset ?? "gastronomy",
         primaryLocation,
       });
     }
