@@ -55,13 +55,24 @@ export const createDirectOrderSchema = z
 
 const directOrderItemSchema = z
   .object({
-    kind: z.enum(["item", "combo"]),
-    resourceId: z.string().uuid(),
+    kind: z.enum(["item", "combo"]).default("item"),
+    resourceId: z.string().uuid().optional(),
+    catalogItemId: z.string().uuid().optional(),
     quantity: z.number().int().positive().max(50),
     optionIds: z.array(z.string().uuid()).max(50).default([]),
     note: z.string().trim().max(500).optional(),
   })
-  .strict();
+  .refine(
+    (item) => Boolean(item.resourceId || item.catalogItemId),
+    { message: "resourceId or catalogItemId is required" },
+  )
+  .transform((item) => ({
+    kind: item.kind,
+    resourceId: (item.resourceId ?? item.catalogItemId) as string,
+    quantity: item.quantity,
+    optionIds: item.optionIds,
+    note: item.note,
+  }));
 
 export const createDirectOrderSchemaFromItems = z
   .object({
