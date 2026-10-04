@@ -65,7 +65,7 @@ type Combo = {
   items: { itemId: string; itemName: string; quantity: number }[];
 };
 
-type Props = {
+export type Props = {
   tenantId: string;
   initialCategories: Category[];
   initialItems: Item[];
@@ -273,27 +273,29 @@ export function CatalogEditor({
           </button>
         </div>
       ) : null}
-      <nav
-        className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
-        aria-label="Secciones del catálogo"
-      >
-        {(
-          [
-            ["menu", "Menú"],
-            ["addons", "Adicionales"],
-            ["combos", "Combos"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setTab(value)}
-            className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      {!isExpress ? (
+        <nav
+          className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
+          aria-label="Secciones del catálogo"
+        >
+          {(
+            [
+              ["menu", "Menú"],
+              ["addons", "Adicionales"],
+              ["combos", "Combos"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       {tab === "menu" ? (
         <section className="grid gap-6 lg:grid-cols-[230px_1fr]">
@@ -574,7 +576,7 @@ function ItemModal({
         trackStock: isExpress && trackStock,
         stockQuantity: isExpress && trackStock ? Number(stock) || 0 : 0,
         status: item?.status ?? "draft",
-        addonGroupIds: selectedGroups,
+        addonGroupIds: isExpress ? [] : selectedGroups,
         ...(item ? { version: item.version } : {}),
       };
       const saved = await mutate<Item>(
@@ -732,40 +734,42 @@ function ItemModal({
               value={video}
               onChange={setVideo}
             />
-            <div>
-              <p className="mb-2 text-sm font-semibold">
-                Adicionales disponibles
-              </p>
-              {groups.filter((group) => group.status !== "archived").length ? (
-                <div className="space-y-2">
-                  {groups
-                    .filter((group) => group.status !== "archived")
-                    .map((group) => (
-                      <label
-                        key={group.id}
-                        className="flex items-center gap-2 text-sm text-zinc-300"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedGroups.includes(group.id)}
-                          onChange={(event) =>
-                            setSelectedGroups((current) =>
-                              event.target.checked
-                                ? [...current, group.id]
-                                : current.filter((id) => id !== group.id),
-                            )
-                          }
-                        />
-                        {group.name}
-                      </label>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">
-                  Creá grupos desde la pestaña Adicionales.
+            {!isExpress ? (
+              <div>
+                <p className="mb-2 text-sm font-semibold">
+                  Adicionales disponibles
                 </p>
-              )}
-            </div>
+                {groups.filter((group) => group.status !== "archived").length ? (
+                  <div className="space-y-2">
+                    {groups
+                      .filter((group) => group.status !== "archived")
+                      .map((group) => (
+                        <label
+                          key={group.id}
+                          className="flex items-center gap-2 text-sm text-zinc-300"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedGroups.includes(group.id)}
+                            onChange={(event) =>
+                              setSelectedGroups((current) =>
+                                event.target.checked
+                                  ? [...current, group.id]
+                                  : current.filter((id) => id !== group.id),
+                              )
+                            }
+                          />
+                          {group.name}
+                        </label>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    Creá grupos desde la pestaña Adicionales.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
         <footer className="mt-6 flex justify-end gap-3 border-t border-zinc-800 pt-4">
