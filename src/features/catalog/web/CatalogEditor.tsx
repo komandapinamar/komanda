@@ -353,7 +353,7 @@ export function CatalogEditor({
             <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
-                  Menú
+                  {isExpress ? "Catálogo" : "Menú"}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold">
                   {categories.find((category) => category.id === categoryId)
@@ -385,10 +385,24 @@ export function CatalogEditor({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-4xl text-zinc-700">
-                          {isExpress && item.genericIcon
-                            ? item.genericIcon.slice(0, 1)
-                            : "🍽"}
+                        <div className="flex h-full items-center justify-center text-4xl text-zinc-600">
+                          {isExpress ? (
+                            <svg
+                              className="h-12 w-12 text-zinc-600"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+                              />
+                            </svg>
+                          ) : (
+                            "🍽"
+                          )}
                         </div>
                       )}
                       {item.videoUrl ? (
