@@ -25,6 +25,9 @@ import type { MercadoPagoTokens } from "@/features/payments/infrastructure/merca
 export class PaymentSessionCartUnavailableError extends Error {}
 export class PaymentSessionConflictError extends Error {}
 export class PaymentSessionProviderUnavailableError extends Error {}
+export class OrderingNotSupportedError extends Error {
+  name = "OrderingNotSupportedError";
+}
 
 const optionalTrimmedString = z.preprocess(
   (value) =>
@@ -357,6 +360,13 @@ export class PaymentSessionService {
   }): Promise<PaymentSessionResponse> {
     const request = createPaymentSessionSchema.parse(input.body);
     const tenant = await this.tenants.resolve(input.tenantSlug);
+
+    if (tenant.preset === "express_retail") {
+      throw new OrderingNotSupportedError(
+        "El comercio opera en modo autoservicio presencial. Los pedidos web no están habilitados.",
+      );
+    }
+
     const correlationId = input.correlationId ?? randomUUID();
     const prepared = await this.prepare({
       tenant,
@@ -432,6 +442,12 @@ export class PaymentSessionService {
     idempotencyKey: string;
     correlationId: string;
   }): Promise<PreparedPaymentSession> {
+    if (input.tenant.preset === "express_retail") {
+      throw new OrderingNotSupportedError(
+        "El comercio opera en modo autoservicio presencial. Los pedidos web no están habilitados.",
+      );
+    }
+
     return withTenantTransaction(
       publicContext(input.tenant, input.correlationId),
       async (transaction) => {

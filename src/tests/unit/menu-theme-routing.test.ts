@@ -53,10 +53,12 @@ function createMockCatalog(overrides?: {
   categories?: CatalogResult["categories"];
   tenantName?: string;
   tenantSlug?: string;
+  preset?: "gastronomy" | "express_retail";
 }): CatalogResult {
   const theme = overrides?.menuTheme ?? "reels";
   const slug = overrides?.tenantSlug ?? "mi-resto";
   const name = overrides?.tenantName ?? "Mi Resto";
+  const preset = overrides?.preset ?? "gastronomy";
   return {
     tenant: {
       name,
@@ -64,9 +66,11 @@ function createMockCatalog(overrides?: {
       currency: "ARS",
       menuTheme: theme,
       orderingAvailable: true,
+      preset,
     },
     menuTheme: theme,
     orderingAvailable: true,
+    preset,
     revision: 1,
     categories: overrides?.categories ?? [],
   };

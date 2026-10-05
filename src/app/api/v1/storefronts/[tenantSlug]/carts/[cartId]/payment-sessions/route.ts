@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import {
+  OrderingNotSupportedError,
   PaymentSessionCartUnavailableError,
   PaymentSessionConflictError,
   PaymentSessionProviderUnavailableError,
@@ -32,6 +33,18 @@ function paymentSessionErrorResponse(error: unknown, correlationId: string) {
     error instanceof PaymentSessionCartUnavailableError
   ) {
     return nonDisclosingNotFound(correlationId);
+  }
+
+  if (error instanceof OrderingNotSupportedError) {
+    return problemResponse({
+      status: 422,
+      title: "Ordering not supported",
+      code: "ORDERING_NOT_SUPPORTED",
+      detail:
+        error.message ||
+        "El comercio opera en modo autoservicio presencial. Los pedidos web no están habilitados.",
+      correlationId,
+    });
   }
 
   if (error instanceof ZodError) {

@@ -12,6 +12,7 @@ import {
   tenantLocations,
   tenantSettings,
   tenants,
+  type TenantPreset,
 } from "@/db/schema";
 import { alias } from "drizzle-orm/pg-core";
 import {
@@ -31,6 +32,7 @@ export type PublicTenant = {
   slug: string;
   currency: string;
   locationId: string;
+  preset: TenantPreset;
 };
 
 export type PublicDirectoryTenant = {
@@ -147,6 +149,7 @@ export class PublicTenantService {
       slug: tenant.resolved.slug,
       currency: tenant.resolved.defaultCurrency,
       locationId: tenant.location.id,
+      preset: (tenant.resolved.preset ?? "gastronomy") as TenantPreset,
     };
   }
 
@@ -263,9 +266,11 @@ export class PublicTenantService {
           currency: tenant.currency,
           menuTheme,
           orderingAvailable: eligibility.orderingAvailable,
+          preset: tenant.preset,
         },
         menuTheme,
         orderingAvailable: eligibility.orderingAvailable,
+        preset: tenant.preset,
         revision: Math.max(
           1,
           ...categories.map(({ version }) => version),
