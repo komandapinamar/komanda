@@ -169,6 +169,13 @@
       "when": 1791328224321,
       "tag": "0023_add_discount_applicable_tender",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791329100000,
+      "tag": "0024_add_storefront_cash_orders",
+      "breakpoints": true
     }
   ]
 }
