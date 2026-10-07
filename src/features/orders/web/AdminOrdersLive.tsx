@@ -147,7 +147,9 @@ type TenantOrderResponse = {
   discountTotal: string;
   total: string;
   currency: string;
+  tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
@@ -159,6 +161,15 @@ type TenantOrderEvent = {
   orderId: string;
   sequence: string;
 };
+
+function isCashPending(order: AdminDashboardOrder): boolean {
+  return (
+    order.tender === "cash" &&
+    order.paymentStatus === "pending" &&
+    order.status !== "cancelled" &&
+    order.status !== "delivered"
+  );
+}
 
 function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
   return {
@@ -186,13 +197,180 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
     discountTotal: order.discountTotal,
     total: order.total,
     currency: order.currency,
+    tender: order.tender ?? null,
     pickupPin: order.pickupPin ?? null,
+    paymentExpiresAt: order.paymentExpiresAt ?? null,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     version: order.version,
   };
+}
+
+type CollectCashResult = {
+  orderId: string;
+  paymentStatus: string;
+  paidAt?: string;
+  version?: number;
+};
+
+function CollectCashDialog({
+  order,
+  tenantId,
+  onClose,
+  onCollected,
+}: {
+  order: AdminDashboardOrder;
+  tenantId: string;
+  onClose: () => void;
+  onCollected: (orderId: string, version?: number) => void;
+}) {
+  const [authMethod, setAuthMethod] = useState<"pickup_pin" | "account_auth">(
+    "pickup_pin",
+  );
+  const [pin, setPin] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canConfirm =
+    !isSubmitting && (authMethod === "account_auth" || /^\d{4}$/.test(pin));
+
+  const confirm = async () => {
+    if (!canConfirm) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/v1/tenants/${tenantId}/orders/${order.id}/collect-cash`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            authMethod,
+            ...(authMethod === "pickup_pin" ? { authCode: pin } : {}),
+          }),
+        },
+      );
+      if (!response.ok) {
+        const problem = (await response.json().catch(() => null)) as {
+          code?: string;
+          detail?: string;
+        } | null;
+        const message =
+          problem?.code === "INVALID_PICKUP_PIN"
+            ? "El PIN ingresado es incorrecto."
+            : problem?.code === "NO_OPEN_CASH_SHIFT"
+              ? "No hay un turno de caja abierto."
+              : problem?.detail || "No se pudo registrar el cobro.";
+        setError(message);
+        setIsSubmitting(false);
+        return;
+      }
+      const result = (await response.json()) as CollectCashResult;
+      onCollected(order.id, result.version);
+      onClose();
+    } catch {
+      setError("Error de conexión. Intente nuevamente.");
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
+        <h3 className="text-lg font-bold">
+          Cobrar en efectivo — Compra #{order.purchaseNumber}
+        </h3>
+        <p className="mt-3 rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-center">
+          <span className="block text-xs uppercase tracking-widest text-amber-500">
+            Total a cobrar en efectivo
+          </span>
+          <span className="mt-1 block font-mono text-2xl font-black text-amber-400">
+            ${order.total} {order.currency}
+          </span>
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMethod("pickup_pin");
+              setError(null);
+            }}
+            className={`rounded-sm border px-3 py-2 text-sm font-semibold ${
+              authMethod === "pickup_pin"
+                ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                : "border-[var(--color-accent-secondary)]/40 opacity-75"
+            }`}
+          >
+            PIN del pedido
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMethod("account_auth");
+              setError(null);
+            }}
+            className={`rounded-sm border px-3 py-2 text-sm font-semibold ${
+              authMethod === "account_auth"
+                ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                : "border-[var(--color-accent-secondary)]/40 opacity-75"
+            }`}
+          >
+            Confirmar con mi cuenta
+          </button>
+        </div>
+
+        {authMethod === "pickup_pin" ? (
+          <input
+            value={pin}
+            onChange={(event) => {
+              const next = event.target.value.replace(/\D/g, "").slice(0, 4);
+              setPin(next);
+              setError(null);
+            }}
+            inputMode="numeric"
+            placeholder="PIN de 4 dígitos"
+            className="mt-4 w-full rounded-sm border border-[var(--color-accent-secondary)]/50 bg-transparent px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] outline-none"
+          />
+        ) : (
+          <p className="mt-4 rounded-sm border border-[var(--color-accent-secondary)]/20 p-3 text-sm opacity-80">
+            Se autorizará el cobro con tu cuenta de usuario de Komanda
+            actualmente autenticada.
+          </p>
+        )}
+
+        {error ? (
+          <p className="mt-3 rounded-sm border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={confirm}
+            disabled={!canConfirm}
+            className="flex-1 rounded-sm bg-amber-500 px-4 py-3 font-bold text-zinc-950 disabled:opacity-50"
+          >
+            {isSubmitting ? "Procesando..." : "Confirmar cobro"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-sm border border-[var(--color-accent-secondary)]/40 px-4 py-3 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminOrdersLive({
@@ -205,6 +383,23 @@ export default function AdminOrdersLive({
   const [transitioningOrderId, setTransitioningOrderId] = useState<string | null>(
     null,
   );
+  const [collectingOrder, setCollectingOrder] =
+    useState<AdminDashboardOrder | null>(null);
+
+  const handleCollected = (orderId: string, version?: number) => {
+    setOrders((current) =>
+      current.map((candidate) =>
+        candidate.id === orderId
+          ? {
+              ...candidate,
+              paymentStatus: "paid" as const,
+              version: version ?? candidate.version,
+            }
+          : candidate,
+      ),
+    );
+    setLastUpdatedAt(new Date().toISOString());
+  };
 
   useEffect(() => {
     setOrders(initialOrders);
@@ -339,10 +534,16 @@ export default function AdminOrdersLive({
         </div>
       ) : (
         <div className="mt-6 grid gap-4">
-          {orders.map((order) => (
+          {orders.map((order) => {
+            const cashPending = isCashPending(order);
+            return (
             <article
               key={order.id}
-              className="rounded-sm border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)] p-5"
+              className={`rounded-sm border p-5 ${
+                cashPending
+                  ? "border-amber-500 bg-amber-500/5"
+                  : "border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]"
+              }`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-3">
@@ -358,6 +559,11 @@ export default function AdminOrdersLive({
                     <span className="rounded-full border border-[var(--color-accent-secondary)]/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]">
                       {sourceLabel(order.source)}
                     </span>
+                    {cashPending ? (
+                      <span className="rounded-full border border-amber-500 bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-amber-400">
+                        Pendiente de pago - Efectivo
+                      </span>
+                    ) : null}
                   </div>
 
                   <div>
@@ -368,7 +574,10 @@ export default function AdminOrdersLive({
 
                   <div className="text-sm opacity-85">
                     <p className="text-base font-extrabold uppercase">
-                      Estado: {statusLabel(order.status)}
+                      Estado:{" "}
+                      {cashPending
+                        ? "Esperando pago en caja"
+                        : statusLabel(order.status)}
                     </p>
                     {order.paymentStatus ? (
                       <p>Pago: {order.paymentStatus}</p>
@@ -439,18 +648,43 @@ export default function AdminOrdersLive({
                   ) : null}
                 </div>
 
-                <div className="shrink-0">
-                  <TenantTransitionButton
-                    order={order}
-                    disabled={transitioningOrderId === order.id}
-                    onTransition={transitionTenantOrder}
-                  />
+                <div className="shrink-0 lg:w-56">
+                  {cashPending ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setCollectingOrder(order)}
+                        className="w-full rounded-sm bg-amber-500 px-4 py-3 text-sm font-bold text-zinc-950"
+                      >
+                        Cobrar en efectivo
+                      </button>
+                      <p className="text-center text-xs opacity-70">
+                        El pedido no se prepara hasta confirmar el cobro.
+                      </p>
+                    </div>
+                  ) : (
+                    <TenantTransitionButton
+                      order={order}
+                      disabled={transitioningOrderId === order.id}
+                      onTransition={transitionTenantOrder}
+                    />
+                  )}
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {collectingOrder ? (
+        <CollectCashDialog
+          order={collectingOrder}
+          tenantId={tenantId}
+          onClose={() => setCollectingOrder(null)}
+          onCollected={handleCollected}
+        />
+      ) : null}
     </section>
   );
 }

@@ -133,7 +133,9 @@ export type AdminDashboardOrder = {
   discountTotal: string;
   total: string;
   currency: string;
+  tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt?: string | null;
   createdAt: string;
