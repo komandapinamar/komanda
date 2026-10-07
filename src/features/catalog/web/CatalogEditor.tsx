@@ -893,7 +893,7 @@ function AddonPanel({
                     Elegir entre {group.minSelected} y {group.maxSelected}
                   </p>
                   <ul className="mt-3 space-y-1 text-sm text-zinc-300">
-                    {group.options.map((option) => (
+                    {(group.options ?? []).map((option) => (
                       <li key={option.id} className="flex justify-between">
                         <span>{option.name}</span>
                         <span className="text-zinc-500">
