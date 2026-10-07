@@ -103,7 +103,6 @@ export default async function TenantSettingsPage({
   return (
     <main className="mx-auto max-w-4xl space-y-10 px-4 py-8 sm:px-6">
       <header className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Administración</p>
         <h1 className="text-2xl font-semibold tracking-tight">Configuración</h1>
         <p className="text-sm text-zinc-400">Los datos básicos y conexiones de tu negocio.</p>
       </header>

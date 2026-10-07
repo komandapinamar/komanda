@@ -28,7 +28,7 @@ export default async function TenantAdminLayout({
     <TenantPresetProvider preset={authority.membership.tenantPreset ?? "gastronomy"}>
       <div className="min-h-dvh bg-black text-zinc-100">
         <header className="border-b border-zinc-800 bg-zinc-900">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
+          <div className="mx-auto flex items-center justify-between gap-6 px-6 py-4">
             <div>
               <p className="tracking-tighter text-2xl font-thin">
                   Komanda Business

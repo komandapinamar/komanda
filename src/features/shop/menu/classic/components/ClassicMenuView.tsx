@@ -80,14 +80,6 @@ export default function ClassicMenuView({
         <header className="space-y-2 text-[var(--color-accent-secondary)]">
           {isExpressRetail ? (
             <div className="flex flex-col gap-2">
-              <div>
-                <span
-                  data-testid="storefront-preset-badge"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-400"
-                >
-                  🛍️ Tienda Express · Autoservicio
-                </span>
-              </div>
               <h2 className="text-xl font-light tracking-tighter sm:text-xl">Komanda</h2>
               <h1 className="text-3xl font-black sm:text-4xl">Vidriera Digital y Precios</h1>
               <p

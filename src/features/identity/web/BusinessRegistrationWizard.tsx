@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { LocationPicker } from "@/features/location/web/LocationPicker";
 import type { LocationAddress } from "@/features/location/application/location.schemas";
-
 type Preset = "gastronomy" | "express_retail";
 
 function generateSlug(text: string): string {
@@ -423,12 +422,14 @@ export default function BusinessRegistrationWizard({
       </div>
 
       {/* Login link */}
-      <div className="mt-8 text-center text-xs text-[var(--color-accent-tertiary)]/70">
-        ¿Ya tenés una cuenta en Komanda?{" "}
-        <Link href="/login" className="font-semibold text-[var(--color-accent-tertiary)] underline hover:opacity-80">
-          Iniciá sesión acá
-        </Link>
-      </div>
+      {!authenticatedEmail && (
+          <div className="mt-8 text-center text-xs text-[var(--color-accent-tertiary)]/70">
+            ¿Ya tenés una cuenta en Komanda?{" "}
+            <Link href="/login" className="font-semibold text-[var(--color-accent-tertiary)] underline hover:opacity-80">
+              Iniciá sesión acá
+            </Link>
+          </div>
+      )}
     </div>
   );
 }
