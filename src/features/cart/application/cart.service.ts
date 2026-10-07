@@ -118,6 +118,7 @@ export class CartService {
         discountType: string;
         discountValue: string;
         savingsAmount: string;
+        tenderRestriction?: string;
       } | null = null;
 
       if (request.discountCode) {
@@ -148,6 +149,9 @@ export class CartService {
               discountType: discount.discountType,
               discountValue: discount.discountValue,
               savingsAmount: calcResult.discountTotal,
+              ...(discount.applicableTender === "cash"
+                ? { tenderRestriction: "cash" }
+                : {}),
             };
           }
         }
@@ -228,6 +232,9 @@ export class CartService {
               discountType: discount.discountType,
               discountValue: discount.discountValue,
               savingsAmount: calcResult.discountTotal,
+              ...(discount.applicableTender === "cash"
+                ? { tenderRestriction: "cash" }
+                : {}),
             },
           });
         }
@@ -322,6 +329,9 @@ export class CartService {
           discountType: discount.discountType,
           discountValue: discount.discountValue,
           savingsAmount: calcResult.discountTotal,
+          ...(discount.applicableTender === "cash"
+            ? { tenderRestriction: "cash" }
+            : {}),
         },
       });
 

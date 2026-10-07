@@ -288,6 +288,7 @@ export class CreateOrderService {
             lines: linesForDiscount,
             coupon: discount,
             now: new Date(),
+            tender: request.tender === "cash" ? "cash" : "posnet",
           });
 
           if (calcResult.isEligible) {
@@ -300,8 +301,16 @@ export class CreateOrderService {
               discountType: discount.discountType,
               discountValue: discount.discountValue,
               savingsAmount: calcResult.discountTotal,
+              ...(discount.applicableTender === "cash"
+                ? { tenderRestriction: "cash" }
+                : {}),
             };
           } else {
+            if (calcResult.ineligibilityReason === "COUPON_TENDER_MISMATCH") {
+              throw new OrderConflictError(
+                "Este cupón de descuento es exclusivo para pagos en efectivo en mostrador.",
+              );
+            }
             throw new OrderConflictError("El código de descuento no es aplicable a este pedido.");
           }
         } else {

@@ -165,6 +165,7 @@ export class CartRepository {
       discountType: string;
       discountValue: string;
       savingsAmount: string;
+      tenderRestriction?: string;
     } | null;
     expiresAt: Date;
     lines: Array<{
@@ -279,6 +280,7 @@ export class CartRepository {
         discountType: string;
         discountValue: string;
         savingsAmount: string;
+        tenderRestriction?: string;
       };
     },
   ) {

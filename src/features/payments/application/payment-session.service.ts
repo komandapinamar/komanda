@@ -15,6 +15,11 @@ import {
   PaymentAttemptIdempotencyConflictError,
 } from "@/features/payments/infrastructure/integration.repository";
 import {
+  CouponTenderMismatchError,
+  evaluateCouponEligibility,
+} from "@/features/discounts/domain/discount.rules";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
+import {
   PublicTenantService,
   type PublicTenant,
 } from "@/features/tenancy/application/public-tenant.service";
@@ -508,6 +513,34 @@ export class PaymentSessionService {
 
         if (cart.lines.length === 0 || !positiveMoney(cart.total)) {
           throw new PaymentSessionConflictError("Cart is not payable.");
+        }
+
+        if (cart.appliedDiscountCodeId) {
+          const discount = await new DiscountRepository(
+            transaction,
+            input.tenant.id,
+          ).findById(cart.appliedDiscountCodeId);
+
+          if (discount) {
+            const applicableSubtotalCents = cart.lines.reduce(
+              (sum, line) => sum + moneyToCents(line.lineTotal),
+              0,
+            );
+            const eligibility = evaluateCouponEligibility(
+              discount,
+              applicableSubtotalCents,
+              this.now(),
+              "mercadopago",
+            );
+            if (!eligibility.isEligible) {
+              if (eligibility.ineligibilityReason === "COUPON_TENDER_MISMATCH") {
+                throw new CouponTenderMismatchError();
+              }
+              throw new PaymentSessionConflictError(
+                `El cupón aplicado ya no es válido (${eligibility.ineligibilityReason}). Quitá el cupón y reintentá.`,
+              );
+            }
+          }
         }
 
         for (const line of cart.lines) {

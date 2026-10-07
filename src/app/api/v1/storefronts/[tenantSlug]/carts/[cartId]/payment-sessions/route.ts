@@ -7,6 +7,7 @@ import {
   PaymentSessionService,
 } from "@/features/payments/application/payment-session.service";
 import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
+import { CouponTenderMismatchError } from "@/features/discounts/domain/discount.rules";
 import {
   IdempotencyConflictError,
   IdempotencyInProgressError,
@@ -33,6 +34,16 @@ function paymentSessionErrorResponse(error: unknown, correlationId: string) {
     error instanceof PaymentSessionCartUnavailableError
   ) {
     return nonDisclosingNotFound(correlationId);
+  }
+
+  if (error instanceof CouponTenderMismatchError) {
+    return problemResponse({
+      status: 422,
+      title: "Coupon tender mismatch",
+      code: "COUPON_TENDER_MISMATCH",
+      detail: error.message,
+      correlationId,
+    });
   }
 
   if (error instanceof OrderingNotSupportedError) {

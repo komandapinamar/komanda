@@ -10,6 +10,7 @@ import {
 } from "@/features/shop/cart/services/cart.service";
 import DiscountCouponInput from "@/features/shop/cart/components/DiscountCouponInput";
 import { createPaymentSession } from "@/features/shop/payments/payment-session.client";
+import { createCashOrder } from "@/features/shop/payments/cash-order.client";
 import type {
   CartLine,
   CheckoutFormValues,
@@ -38,6 +39,23 @@ function formatCurrency(value: number, currency = "ARS") {
   }).format(value);
 }
 
+export function computeDisplayTotals(
+  officialCart: Pick<
+    OfficialCart,
+    "appliedDiscount" | "discountTotal" | "total" | "subtotal"
+  >,
+  paymentMethod: "cash" | "mercadopago",
+): { discountTotal: number; total: number; suppressedCouponCode: string | null } {
+  const coupon = officialCart.appliedDiscount;
+  const isSuppressed =
+    paymentMethod === "mercadopago" && coupon?.tenderRestriction === "cash";
+  return {
+    discountTotal: isSuppressed ? 0 : officialCart.discountTotal,
+    total: isSuppressed ? officialCart.subtotal : officialCart.total,
+    suppressedCouponCode: isSuppressed && coupon ? coupon.code : null,
+  };
+}
+
 function doesGlobalCartMatchOfficialCart(
   items: CartLine[],
   cartId: string | null,
@@ -64,15 +82,19 @@ function doesGlobalCartMatchOfficialCart(
 
 function OfficialCartSummary({
   officialCart,
+  paymentMethod,
   onApplyDiscount,
   onRemoveDiscount,
   disabled = false,
 }: {
   officialCart: OfficialCart;
+  paymentMethod: "cash" | "mercadopago";
   onApplyDiscount?: (code: string) => Promise<{ success: boolean; error?: string }>;
   onRemoveDiscount?: () => Promise<void>;
   disabled?: boolean;
 }) {
+  const display = computeDisplayTotals(officialCart, paymentMethod);
+
   return (
     <section className="rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-4">
       <div className="mb-4">
@@ -125,13 +147,40 @@ function OfficialCartSummary({
           </div>
         ) : null}
 
+        {display.suppressedCouponCode ? (
+          <div
+            role="status"
+            data-testid="coupon-tender-notice"
+            className="rounded-sm border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-300"
+          >
+            <p>
+              El cupón {display.suppressedCouponCode} no aplica para pagos
+              digitales: es exclusivo para pagos en efectivo en mostrador.
+            </p>
+            <p className="mt-1 opacity-90">
+              Elegí &quot;Efectivo en mostrador&quot; para usarlo, o quitá el
+              cupón para continuar con Mercado Pago.
+            </p>
+            {onRemoveDiscount ? (
+              <button
+                type="button"
+                onClick={() => void onRemoveDiscount()}
+                disabled={disabled}
+                className="mt-2 rounded-sm border border-amber-400/60 px-3 py-1 font-semibold text-amber-200 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+              >
+                Quitar cupón
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between text-sm">
-          <span className={officialCart.discountTotal > 0 ? "opacity-75" : ""}>
-            Subtotal {officialCart.discountTotal > 0 ? "original" : ""}
+          <span className={display.discountTotal > 0 ? "opacity-75" : ""}>
+            Subtotal {display.discountTotal > 0 ? "original" : ""}
           </span>
           <span
             className={
-              officialCart.discountTotal > 0
+              display.discountTotal > 0
                 ? "line-through opacity-60 text-sm"
                 : ""
             }
@@ -140,7 +189,7 @@ function OfficialCartSummary({
           </span>
         </div>
 
-        {officialCart.discountTotal > 0 ? (
+        {display.discountTotal > 0 ? (
           <div className="flex items-center justify-between text-sm font-semibold text-emerald-400">
             <span>
               Descuento{" "}
@@ -149,7 +198,7 @@ function OfficialCartSummary({
                 : ""}
             </span>
             <span>
-              -{formatCurrency(officialCart.discountTotal, officialCart.currency)}
+              -{formatCurrency(display.discountTotal, officialCart.currency)}
             </span>
           </div>
         ) : null}
@@ -158,12 +207,12 @@ function OfficialCartSummary({
           <span>Total final</span>
           <span
             className={
-              officialCart.discountTotal > 0
+              display.discountTotal > 0
                 ? "text-xl font-extrabold text-emerald-400"
                 : ""
             }
           >
-            {formatCurrency(officialCart.total, officialCart.currency)}
+            {formatCurrency(display.total, officialCart.currency)}
           </span>
         </div>
       </div>
@@ -175,7 +224,9 @@ export default function CheckoutPayPage() {
   const router = useRouter();
   const {
     applyOfficialCart,
+    backupCart,
     cartId,
+    clearCart,
     isHydrated,
     items,
     snapshot,
@@ -183,6 +234,7 @@ export default function CheckoutPayPage() {
     tenantSlug,
   } = useCart();
   const [formValues, setFormValues] = useState(initialFormValues);
+  const [paymentMethod, setPaymentMethod] = useState<"mercadopago" | "cash">("mercadopago");
   const [showNotes, setShowNotes] = useState(false);
   const [pendingNotesClear, setPendingNotesClear] = useState<string | null>(null);
   const submittingRef = useRef(false);
@@ -257,7 +309,7 @@ export default function CheckoutPayPage() {
       return;
     }
 
-    if (snapshot.length === 0) {
+  if (snapshot.length === 0 && !isSubmitting) {
       setOfficialCart(null);
       setCartError("Tu carrito esta vacio.");
       return;
@@ -331,18 +383,56 @@ export default function CheckoutPayPage() {
     if (submittingRef.current) return;
     submittingRef.current = true;
 
-    const payload = buildCheckoutPayload({
-      cartId: officialCart.id,
-      cartVersion: officialCart.version,
-      customer: { name: customerName, phone: customerPhone },
-      notes: orderNotes,
-    });
-
     setIsSubmitting(true);
 
     try {
-      const session = await createPaymentSession(tenantSlug, payload);
-      window.location.assign(session.initPoint);
+      if (paymentMethod === "cash") {
+        const order = await createCashOrder(tenantSlug, {
+          cartId: officialCart.id,
+          cartVersion: officialCart.version,
+          customer: {
+            name: customerName,
+            phone: customerPhone,
+          },
+          notes: orderNotes || undefined,
+        });
+
+        const targetTenantId = order.tenantId;
+        if (!targetTenantId || !order.orderId) {
+          submittingRef.current = false;
+          setIsSubmitting(false);
+          setSubmitError(
+            "No pudimos confirmar el número de pedido. Revisá tu carrito e intentá nuevamente.",
+          );
+          return;
+        }
+
+        // El PIN es la única prueba de identidad del comensal: se guarda en
+        // sessionStorage (no en la URL) para no filtrarlo en historial o logs.
+        try {
+          window.sessionStorage.setItem(
+            `komanda.cash-pin.${order.orderId}`,
+            order.pickupPin,
+          );
+        } catch {
+          // Ignore storage failures; fallback to queryless status page.
+        }
+
+        backupCart();
+        clearCart();
+        const statusUrl = `/orders/status/${encodeURIComponent(targetTenantId)}/${encodeURIComponent(order.orderId)}`;
+        router.push(statusUrl);
+      } else {
+        const payload = buildCheckoutPayload({
+          cartId: officialCart.id,
+          cartVersion: officialCart.version,
+          customer: { name: customerName, phone: customerPhone },
+          notes: orderNotes,
+        });
+
+        const session = await createPaymentSession(tenantSlug, payload);
+        window.location.assign(session.initPoint);
+      }
     } catch (error) {
       submittingRef.current = false;
       setSubmitError(
@@ -410,6 +500,7 @@ export default function CheckoutPayPage() {
         {!isLoadingCart && officialCart ? (
           <OfficialCartSummary
             officialCart={officialCart}
+            paymentMethod={paymentMethod}
             onApplyDiscount={handleApplyDiscountInCheckout}
             onRemoveDiscount={handleRemoveDiscountInCheckout}
             disabled={isSubmitting}
@@ -559,6 +650,49 @@ export default function CheckoutPayPage() {
             )}
           </div>
 
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Medio de pago</h3>
+              <p className="text-xs opacity-75">Seleccioná cómo vas a abonar tu pedido.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("mercadopago")}
+                className={`rounded-sm border p-3.5 text-left transition-colors ${
+                  paymentMethod === "mercadopago"
+                    ? "border-emerald-500 bg-emerald-500/15 font-semibold text-emerald-300"
+                    : "border-[var(--color-accent-secondary)]/50 opacity-75 hover:opacity-100 hover:border-[var(--color-accent-secondary)]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Mercado Pago</span>
+                  {paymentMethod === "mercadopago" && (
+                    <span className="text-xs font-bold text-emerald-400">✓ Seleccionado</span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs opacity-80">Tarjeta, débito o dinero en cuenta.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cash")}
+                className={`rounded-sm border p-3.5 text-left transition-colors ${
+                  paymentMethod === "cash"
+                    ? "border-amber-500 bg-amber-500/15 font-semibold text-amber-300"
+                    : "border-[var(--color-accent-secondary)]/50 opacity-75 hover:opacity-100 hover:border-[var(--color-accent-secondary)]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Efectivo en mostrador</span>
+                  {paymentMethod === "cash" && (
+                    <span className="text-xs font-bold text-amber-400">✓ Seleccionado</span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs opacity-80">Abonás en caja al retirar con un código PIN.</p>
+              </button>
+            </div>
+          </div>
+
           {submitError ? (
             <p className="text-sm text-red-500 font-medium">{submitError}</p>
           ) : null}
@@ -568,10 +702,16 @@ export default function CheckoutPayPage() {
             disabled={!officialCart || isSubmitting || isLoadingCart}
             className="rounded-sm bg-[var(--color-accent-secondary)] px-5 py-3 font-semibold w-full text-center text-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-50 transition-opacity"
           >
-            {isSubmitting ? "Procesando pedido..." : "Pagar con Mercado Pago"}
+            {isSubmitting
+              ? "Procesando pedido..."
+              : paymentMethod === "cash"
+                ? "Confirmar pedido en efectivo"
+                : "Pagar con Mercado Pago"}
           </button>
           <p className="text-center text-xs opacity-70">
-            Después de pagar vas a volver automáticamente a esta pantalla para ver el estado de tu pedido.
+            {paymentMethod === "cash"
+              ? "Vas a recibir un código PIN para abonar en mostrador cuando retires tu pedido."
+              : "Después de pagar vas a volver automáticamente a esta pantalla para ver el estado de tu pedido."}
           </p>
         </form>
       </div>

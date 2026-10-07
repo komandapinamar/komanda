@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { cashRegisterMovements } from "@/db/schema";
+import { cashRegisterMovements, cashShifts } from "@/db/schema";
 import {
   assertFulfillmentTransition,
   type FulfillmentStatus,
@@ -13,6 +14,7 @@ import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import {
   InvalidPickupPinError,
+  NoOpenCashShiftError,
   OrderConflictError,
   OrderNotFoundError,
 } from "./order-errors";
@@ -21,6 +23,7 @@ export const transitionOrderSchema = z
   .object({
     fulfillmentStatus: z.enum(["preparing", "ready", "delivered", "cancelled"]),
     pickupPin: z.string().trim().optional(),
+    reason: z.string().trim().min(1).optional(),
   })
   .strict();
 
@@ -45,6 +48,27 @@ export class TransitionOrderService {
         nextStatus,
         current.source,
       );
+
+      if (
+        current.source === "storefront_cash" &&
+        current.paymentStatus !== "paid" &&
+        nextStatus !== "cancelled"
+      ) {
+        throw new OrderTransitionError(
+          "No se puede avanzar el pedido de Storefront hasta confirmar su cobro en caja.",
+        );
+      }
+
+      if (
+        nextStatus === "cancelled" &&
+        current.tender === "cash" &&
+        current.paymentStatus === "paid" &&
+        current.source !== "admin_direct"
+      ) {
+        throw new OrderConflictError(
+          "Utilice el endpoint de devolución de efectivo (/refund-cash) para cancelar una orden cobrada.",
+        );
+      }
 
       if (
         nextStatus === "delivered" &&
@@ -82,10 +106,29 @@ export class TransitionOrderService {
       }
 
       if (shouldRefundCash) {
+        const [openShift] = await transaction
+          .select()
+          .from(cashShifts)
+          .where(
+            and(
+              eq(cashShifts.tenantId, input.context.tenantId),
+              eq(cashShifts.status, "open"),
+              eq(cashShifts.locationId, current.locationId),
+            ),
+          )
+          .limit(1);
+
+        if (!openShift) {
+          throw new NoOpenCashShiftError(
+            "No existe un turno de caja abierto en la sucursal de la orden para registrar la devolución.",
+          );
+        }
+
         try {
           await transaction.insert(cashRegisterMovements).values({
             tenantId: input.context.tenantId,
             locationId: current.locationId,
+            shiftId: openShift.id,
             orderId: current.id,
             type: "cancellation_withdrawal",
             amount: current.total,
@@ -123,6 +166,7 @@ export class TransitionOrderService {
         orderId: input.orderId,
         fromStatus: current.fulfillmentStatus,
         toStatus: nextStatus,
+        reason: request.reason,
       });
       const order = await repository.findById(input.orderId);
       if (!order) {
@@ -136,6 +180,7 @@ export class TransitionOrderService {
         metadata: {
           fromStatus: current.fulfillmentStatus,
           toStatus: nextStatus,
+          ...(request.reason ? { reason: request.reason } : {}),
         },
       });
       await appendOutboxEvent(transaction, input.context, {
@@ -148,6 +193,7 @@ export class TransitionOrderService {
           toStatus: nextStatus,
           paymentStatus: order.paymentStatus,
           version: order.version,
+          ...(request.reason ? { reason: request.reason } : {}),
         },
       });
       return order;

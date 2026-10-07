@@ -138,7 +138,7 @@ type TenantOrderResponse = {
   id: string;
   purchaseNumber: string | number;
   fulfillmentStatus: OrderStatus;
-  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded" | "verification_required";
   customer?: Record<string, unknown>;
   notes: string | null;
   source: AdminDashboardOrder["source"];

@@ -3,6 +3,7 @@ import type { DiscountRow } from "@/features/discounts/infrastructure/discount.r
 
 export const DiscountTypeSchema = z.enum(["percentage", "fixed_amount"]);
 export const DiscountScopeSchema = z.enum(["global", "category", "item"]);
+export const ApplicableTenderSchema = z.enum(["all", "cash"]);
 
 export type DiscountStatus =
   | "active"
@@ -36,6 +37,7 @@ export const CreateDiscountSchema = z
     startsAt: z.coerce.date().optional(),
     endsAt: z.coerce.date().optional().nullable(),
     scope: DiscountScopeSchema.default("global"),
+    applicableTender: ApplicableTenderSchema.default("all"),
     targetCategoryIds: z.array(z.string().uuid()).default([]),
     targetItemIds: z.array(z.string().uuid()).default([]),
     isActive: z.boolean().default(true),
@@ -107,6 +109,7 @@ export const UpdateDiscountSchema = z
     startsAt: z.coerce.date().optional(),
     endsAt: z.coerce.date().optional().nullable(),
     scope: DiscountScopeSchema.optional(),
+    applicableTender: ApplicableTenderSchema.optional(),
     targetCategoryIds: z.array(z.string().uuid()).optional(),
     targetItemIds: z.array(z.string().uuid()).optional(),
     isActive: z.boolean().optional(),
@@ -142,6 +145,7 @@ export type DiscountOutput = {
   startsAt: Date;
   endsAt: Date | null;
   scope: "global" | "category" | "item";
+  applicableTender: "all" | "cash";
   targetCategoryIds: string[];
   targetItemIds: string[];
   isActive: boolean;
@@ -200,6 +204,7 @@ export function formatDiscountOutput(
     startsAt: discount.startsAt,
     endsAt: discount.endsAt,
     scope: discount.scope,
+    applicableTender: discount.applicableTender,
     targetCategoryIds: discount.targetCategoryIds ?? [],
     targetItemIds: discount.targetItemIds ?? [],
     isActive: discount.isActive,
