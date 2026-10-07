@@ -15,6 +15,11 @@ import {
   PaymentAttemptIdempotencyConflictError,
 } from "@/features/payments/infrastructure/integration.repository";
 import {
+  CouponTenderMismatchError,
+  evaluateCouponEligibility,
+} from "@/features/discounts/domain/discount.rules";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
+import {
   PublicTenantService,
   type PublicTenant,
 } from "@/features/tenancy/application/public-tenant.service";
@@ -25,6 +30,9 @@ import type { MercadoPagoTokens } from "@/features/payments/infrastructure/merca
 export class PaymentSessionCartUnavailableError extends Error {}
 export class PaymentSessionConflictError extends Error {}
 export class PaymentSessionProviderUnavailableError extends Error {}
+export class OrderingNotSupportedError extends Error {
+  name = "OrderingNotSupportedError";
+}
 
 const optionalTrimmedString = z.preprocess(
   (value) =>
@@ -357,6 +365,13 @@ export class PaymentSessionService {
   }): Promise<PaymentSessionResponse> {
     const request = createPaymentSessionSchema.parse(input.body);
     const tenant = await this.tenants.resolve(input.tenantSlug);
+
+    if (tenant.preset === "express_retail") {
+      throw new OrderingNotSupportedError(
+        "El comercio opera en modo autoservicio presencial. Los pedidos web no están habilitados.",
+      );
+    }
+
     const correlationId = input.correlationId ?? randomUUID();
     const prepared = await this.prepare({
       tenant,
@@ -432,6 +447,12 @@ export class PaymentSessionService {
     idempotencyKey: string;
     correlationId: string;
   }): Promise<PreparedPaymentSession> {
+    if (input.tenant.preset === "express_retail") {
+      throw new OrderingNotSupportedError(
+        "El comercio opera en modo autoservicio presencial. Los pedidos web no están habilitados.",
+      );
+    }
+
     return withTenantTransaction(
       publicContext(input.tenant, input.correlationId),
       async (transaction) => {
@@ -492,6 +513,34 @@ export class PaymentSessionService {
 
         if (cart.lines.length === 0 || !positiveMoney(cart.total)) {
           throw new PaymentSessionConflictError("Cart is not payable.");
+        }
+
+        if (cart.appliedDiscountCodeId) {
+          const discount = await new DiscountRepository(
+            transaction,
+            input.tenant.id,
+          ).findById(cart.appliedDiscountCodeId);
+
+          if (discount) {
+            const applicableSubtotalCents = cart.lines.reduce(
+              (sum, line) => sum + moneyToCents(line.lineTotal),
+              0,
+            );
+            const eligibility = evaluateCouponEligibility(
+              discount,
+              applicableSubtotalCents,
+              this.now(),
+              "mercadopago",
+            );
+            if (!eligibility.isEligible) {
+              if (eligibility.ineligibilityReason === "COUPON_TENDER_MISMATCH") {
+                throw new CouponTenderMismatchError();
+              }
+              throw new PaymentSessionConflictError(
+                `El cupón aplicado ya no es válido (${eligibility.ineligibilityReason}). Quitá el cupón y reintentá.`,
+              );
+            }
+          }
         }
 
         for (const line of cart.lines) {

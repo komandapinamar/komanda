@@ -100,6 +100,10 @@ export function MemberManager({
         </p>
       ) : null}
 
+      <h1 className="text-2xl font-semibold tracking-tight">
+        Miembros de tu equipo.
+      </h1>
+
       <form onSubmit={addMember} className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-zinc-400">Email</label>

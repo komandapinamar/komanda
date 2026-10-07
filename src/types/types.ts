@@ -75,6 +75,7 @@ export type AppliedDiscountInfo = {
   discountType: "percentage" | "fixed_amount";
   discountValue: string;
   savingsAmount?: string | number;
+  tenderRestriction?: string;
 };
 
 export type OfficialCart = {
@@ -96,7 +97,7 @@ export type CustomerInfo = {
   phone?: string;
 };
 
-export type OrderSource = "mercadopago_webhook" | "admin_direct";
+export type OrderSource = "mercadopago_webhook" | "admin_direct" | "storefront_cash";
 
 export type CheckoutFormValues = {
   customer: CustomerInfo;
@@ -132,7 +133,9 @@ export type AdminDashboardOrder = {
   discountTotal: string;
   total: string;
   currency: string;
+  tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt?: string | null;
   createdAt: string;

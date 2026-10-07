@@ -271,14 +271,19 @@ export class CatalogRepository {
       .insert(addonGroups)
       .values({ ...input.group, tenantId: this.tenantId })
       .returning();
-    await this.transaction.insert(addonOptions).values(
-      input.options.map((option) => ({
-        ...option,
-        tenantId: this.tenantId,
-        groupId: group!.id,
-      })),
-    );
-    return group!;
+    const createdOptions = input.options.length
+      ? await this.transaction
+          .insert(addonOptions)
+          .values(
+            input.options.map((option) => ({
+              ...option,
+              tenantId: this.tenantId,
+              groupId: group!.id,
+            })),
+          )
+          .returning()
+      : [];
+    return { ...group!, options: createdOptions };
   }
 
   async updateAddonGroup(
@@ -327,6 +332,18 @@ export class CatalogRepository {
           groupId: id,
         })),
       );
+      const activeOptions = await this.transaction
+        .select()
+        .from(addonOptions)
+        .where(
+          and(
+            eq(addonOptions.tenantId, this.tenantId),
+            eq(addonOptions.groupId, id),
+            ne(addonOptions.status, "archived"),
+          ),
+        )
+        .orderBy(asc(addonOptions.sortOrder), asc(addonOptions.name));
+      return { ...group, options: activeOptions };
     }
     return group;
   }

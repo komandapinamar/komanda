@@ -9,6 +9,7 @@ import {
   type CustomerDocType,
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
+import type { OrderSource } from "@/features/orders/infrastructure/order.repository";
 
 export class BillingRepository {
   constructor(
@@ -112,7 +113,7 @@ export class BillingRepository {
     ];
 
     if (sourceFilter && sourceFilter !== "all") {
-      conditions.push(eq(tenantOrders.source, sourceFilter as "mercadopago_webhook" | "admin_direct"));
+      conditions.push(eq(tenantOrders.source, sourceFilter as OrderSource));
     }
 
     const [orderSummary] = await this.transaction
@@ -169,7 +170,7 @@ export class BillingRepository {
     ];
 
     if (sourceFilter && sourceFilter !== "all") {
-      conditions.push(eq(tenantOrders.source, sourceFilter as "mercadopago_webhook" | "admin_direct"));
+      conditions.push(eq(tenantOrders.source, sourceFilter as OrderSource));
     }
 
     const rows = await this.transaction
@@ -203,7 +204,7 @@ export class BillingRepository {
     ];
 
     if (input.source && input.source !== "all") {
-      conditions.push(eq(tenantOrders.source, input.source as "mercadopago_webhook" | "admin_direct"));
+      conditions.push(eq(tenantOrders.source, input.source as OrderSource));
     }
 
     if (input.categoryId) {

@@ -10,7 +10,8 @@ export type TenantAdminNavItem = {
   activePaths?: readonly string[];
 };
 
-function matchesCurrentPath(pathname: string, href: string) {
+function matchesCurrentPath(pathname: string | null, href: string) {
+  if (!pathname) return false;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

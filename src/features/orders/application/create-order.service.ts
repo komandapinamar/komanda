@@ -55,13 +55,24 @@ export const createDirectOrderSchema = z
 
 const directOrderItemSchema = z
   .object({
-    kind: z.enum(["item", "combo"]),
-    resourceId: z.string().uuid(),
+    kind: z.enum(["item", "combo"]).default("item"),
+    resourceId: z.string().uuid().optional(),
+    catalogItemId: z.string().uuid().optional(),
     quantity: z.number().int().positive().max(50),
     optionIds: z.array(z.string().uuid()).max(50).default([]),
     note: z.string().trim().max(500).optional(),
   })
-  .strict();
+  .refine(
+    (item) => Boolean(item.resourceId || item.catalogItemId),
+    { message: "resourceId or catalogItemId is required" },
+  )
+  .transform((item) => ({
+    kind: item.kind,
+    resourceId: (item.resourceId ?? item.catalogItemId) as string,
+    quantity: item.quantity,
+    optionIds: item.optionIds,
+    note: item.note,
+  }));
 
 export const createDirectOrderSchemaFromItems = z
   .object({
@@ -277,6 +288,7 @@ export class CreateOrderService {
             lines: linesForDiscount,
             coupon: discount,
             now: new Date(),
+            tender: request.tender === "cash" ? "cash" : "posnet",
           });
 
           if (calcResult.isEligible) {
@@ -289,8 +301,16 @@ export class CreateOrderService {
               discountType: discount.discountType,
               discountValue: discount.discountValue,
               savingsAmount: calcResult.discountTotal,
+              ...(discount.applicableTender === "cash"
+                ? { tenderRestriction: "cash" }
+                : {}),
             };
           } else {
+            if (calcResult.ineligibilityReason === "COUPON_TENDER_MISMATCH") {
+              throw new OrderConflictError(
+                "Este cupón de descuento es exclusivo para pagos en efectivo en mostrador.",
+              );
+            }
             throw new OrderConflictError("El código de descuento no es aplicable a este pedido.");
           }
         } else {

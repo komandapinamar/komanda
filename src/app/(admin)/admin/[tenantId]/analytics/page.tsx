@@ -6,7 +6,7 @@ import { canAccess } from "@/lib/authorization/permissions";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { AnalyticsService } from "@/features/analytics/application/analytics.service";
 import type { DashboardAnalyticsData } from "@/features/analytics/web/analytics-types";
-import AnalyticsDashboardLive from "@/features/analytics/web/AnalyticsDashboardLive";
+import { AnalyticsShell } from "@/features/tenancy/web/shells/analytics-shell";
 
 export default async function TenantAnalyticsPage({
   params,
@@ -46,10 +46,9 @@ export default async function TenantAnalyticsPage({
 
   return (
     <main className="mx-auto space-y-8 px-6 py-10">
-      <AnalyticsDashboardLive
+      <AnalyticsShell
         tenantId={tenantId}
         initialData={initialData as DashboardAnalyticsData}
-        tenantPreset={authority.membership.tenantPreset ?? "gastronomy"}
       />
     </main>
   );

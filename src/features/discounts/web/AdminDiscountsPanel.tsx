@@ -65,6 +65,7 @@ export function AdminDiscountsPanel({
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [scope, setScope] = useState<"global" | "category" | "item">("global");
+  const [applicableTender, setApplicableTender] = useState<"all" | "cash">("all");
   const [formError, setFormError] = useState<string | null>(null);
 
   const resetForm = () => {
@@ -78,6 +79,7 @@ export function AdminDiscountsPanel({
     setStartsAt("");
     setEndsAt("");
     setScope("global");
+    setApplicableTender("all");
     setFormError(null);
   };
 
@@ -95,6 +97,7 @@ export function AdminDiscountsPanel({
         discountValue: discountValue.trim(),
         minOrderAmount: minOrderAmount.trim() || "0",
         scope,
+        applicableTender,
         targetCategoryIds: [],
         targetItemIds: [],
         isActive: true,
@@ -208,7 +211,7 @@ export function AdminDiscountsPanel({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl justify-center items-center align-center">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -333,6 +336,11 @@ export function AdminDiscountsPanel({
                         {discount.code}
                       </div>
                       <div className="text-xs text-zinc-400">{discount.name}</div>
+                      {discount.applicableTender === "cash" ? (
+                        <span className="mt-1 inline-block rounded-full border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+                          Exclusivo Efectivo
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 font-medium text-emerald-400">
                       {discount.discountType === "percentage"
@@ -549,6 +557,29 @@ export function AdminDiscountsPanel({
                     className="w-full rounded-sm border border-zinc-800 bg-zinc-950 px-3 py-2 text-zinc-100 focus:border-zinc-500 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="applicableTender"
+                  className="block text-xs font-medium text-zinc-400 mb-1"
+                  title="Incentivá pagos en efectivo para ahorrar comisiones de cobro online"
+                >
+                  Medio de Pago requerido
+                </label>
+                <select
+                  id="applicableTender"
+                  value={applicableTender}
+                  onChange={(e) => setApplicableTender(e.target.value as "all" | "cash")}
+                  title="Incentivá pagos en efectivo para ahorrar comisiones de cobro online"
+                  className="w-full rounded-sm border border-zinc-800 bg-zinc-950 px-3 py-2 text-zinc-100 focus:border-zinc-500 focus:outline-none"
+                >
+                  <option value="all">Todos los medios</option>
+                  <option value="cash">Solo Efectivo</option>
+                </select>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Incentivá pagos en efectivo para ahorrar comisiones de cobro online
+                </p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">

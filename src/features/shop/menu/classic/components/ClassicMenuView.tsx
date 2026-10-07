@@ -5,12 +5,14 @@ import OrderProductCard from "@/features/shop/order/components/OrderProductCard"
 import OrderShell from "@/features/shop/order/components/OrderShell";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
 import type { Category, MenuItem } from "@/types/types";
+import type { TenantPreset } from "@/db/schema/platform";
 
 export interface ClassicMenuViewProps {
   categories: Category[];
   items: MenuItem[];
   tenantSlug?: string;
   orderingAvailable?: boolean;
+  preset?: TenantPreset;
 }
 
 export default function ClassicMenuView({
@@ -18,7 +20,10 @@ export default function ClassicMenuView({
   items,
   tenantSlug,
   orderingAvailable = true,
+  preset = "gastronomy",
 }: ClassicMenuViewProps) {
+  const isExpressRetail = preset === "express_retail";
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -69,19 +74,34 @@ export default function ClassicMenuView({
   }));
 
   return (
-    <OrderShell>
+    <OrderShell showCart={!isExpressRetail}>
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
       <main className="space-y-6 p-4 bg-[var(--color-accent-primary)] min-h-[100dvh]">
         <header className="space-y-2 text-[var(--color-accent-secondary)]">
-          <h2 className="text-xl font-light tracking-tighter sm:text-xl">Komanda</h2>
-          <h1 className="text-3xl font-black sm:text-4xl">Nuestro menu</h1>
-          <p className="max-w-2xl text-sm opacity-80 sm:text-base">
-            Selecciona categorias y agregá productos al carrito.
-          </p>
-          {!orderingAvailable && (
-            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-300">
-              Pedidos online no disponibles temporalmente. Podés consultar la carta.
+          {isExpressRetail ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-light tracking-tighter sm:text-xl">Komanda</h2>
+              <h1 className="text-3xl font-black sm:text-4xl">Vidriera Digital y Precios</h1>
+              <p
+                data-testid="storefront-express-legend"
+                className="max-w-2xl text-sm opacity-80 sm:text-base"
+              >
+                Consultá precios y disponibilidad de productos. Las compras se realizan de manera presencial en tienda mediante nuestras terminales de autoservicio o caja.
+              </p>
             </div>
+          ) : (
+            <>
+              <h2 className="text-xl font-light tracking-tighter sm:text-xl">Komanda</h2>
+              <h1 className="text-3xl font-black sm:text-4xl">Nuestro menu</h1>
+              <p className="max-w-2xl text-sm opacity-80 sm:text-base">
+                Selecciona categorias y agregá productos al carrito.
+              </p>
+              {!orderingAvailable && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-300">
+                  Pedidos online no disponibles temporalmente. Podés consultar la carta.
+                </div>
+              )}
+            </>
           )}
         </header>
 
@@ -119,7 +139,11 @@ export default function ClassicMenuView({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {section.items.length > 0 ? (
                   section.items.map((item: MenuItem) => (
-                    <OrderProductCard key={item.documentId} item={item} />
+                    <OrderProductCard
+                      key={item.documentId}
+                      item={item}
+                      interactive={!isExpressRetail && orderingAvailable}
+                    />
                   ))
                 ) : (
                   <div className="rounded-sm border border-dashed border-[var(--color-accent-secondary)]/50 p-4 text-sm text-[var(--color-accent-secondary)]/75">
