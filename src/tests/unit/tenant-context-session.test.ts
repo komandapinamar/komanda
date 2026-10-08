@@ -166,6 +166,7 @@ describe("revocable session service", () => {
           tenantStatus: "active" as const,
           tenantName: "Pizzeria Uno",
           tenantSlug: "pizzeria-uno",
+          tenantPreset: "gastronomy" as const,
         },
         {
           id: "mem-2",
@@ -202,6 +203,7 @@ describe("revocable session service", () => {
           tenantStatus: "active" as const,
           tenantName: "Pizzeria Dos",
           tenantSlug: "pizzeria-dos",
+          tenantPreset: "express_retail" as const,
         },
       ]),
       findActivePrimaryLocation: vi.fn(async (tenantId: string) => {
@@ -233,6 +235,7 @@ describe("revocable session service", () => {
       slug: "pizzeria-uno",
       status: "active",
       role: "admin",
+      preset: "gastronomy",
       primaryLocation: {
         id: "loc-1",
         name: "Sucursal Centro",
@@ -246,6 +249,7 @@ describe("revocable session service", () => {
       slug: "pizzeria-dos",
       status: "active",
       role: "employee",
+      preset: "express_retail",
       primaryLocation: null,
     });
   });
