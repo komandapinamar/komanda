@@ -9,6 +9,7 @@ export interface DiscountCouponInputProps {
   onApply: (code: string) => Promise<{ success: boolean; error?: string }>;
   onRemove: () => Promise<void>;
   disabled?: boolean;
+  appearance?: "default" | "ticket";
 }
 
 export function DiscountCouponInput({
@@ -17,6 +18,7 @@ export function DiscountCouponInput({
   onApply,
   onRemove,
   disabled = false,
+  appearance = "default",
 }: DiscountCouponInputProps) {
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,13 +66,13 @@ export function DiscountCouponInput({
     return (
       <div
         data-testid="applied-discount-badge"
-        className="flex items-center justify-between rounded-sm border border-emerald-600/40 bg-emerald-950/20 px-3 py-2 text-xs text-emerald-400"
+        className={`flex items-center justify-between rounded-sm border border-emerald-600/40 px-3 py-2 text-xs ${appearance === "ticket" ? "bg-emerald-50 text-emerald-800" : "bg-emerald-950/20 text-emerald-400"}`}
       >
         <div className="flex items-center gap-2">
           <span className="font-mono font-bold tracking-wider">
             {appliedDiscount.code}
           </span>
-          <span className="rounded-full bg-emerald-800/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${appearance === "ticket" ? "bg-emerald-100 text-emerald-800" : "bg-emerald-800/40 text-emerald-300"}`}>
             {formattedBenefit}
           </span>
         </div>
@@ -79,7 +81,7 @@ export function DiscountCouponInput({
           aria-label="Quitar cupón"
           onClick={handleRemove}
           disabled={isSubmitting || disabled}
-          className="ml-2 font-bold text-red-400 hover:text-red-300 transition disabled:opacity-50"
+          className={`ml-2 font-bold transition disabled:opacity-50 ${appearance === "ticket" ? "text-red-700 hover:text-red-900" : "text-red-400 hover:text-red-300"}`}
         >
           ✕
         </button>
@@ -100,7 +102,7 @@ export function DiscountCouponInput({
             if (error) setError(null);
           }}
           disabled={isSubmitting || disabled}
-          className="flex-1 rounded-sm border border-[var(--color-accent-secondary)]/40 bg-transparent px-3 py-1.5 text-xs text-[var(--color-accent-secondary)] placeholder:text-[var(--color-accent-secondary)]/50 focus:border-[var(--color-accent-secondary)] focus:outline-none"
+          className="min-w-0 flex-1 rounded-sm border border-[var(--color-accent-secondary)]/40 bg-transparent px-3 py-1.5 text-xs text-[var(--color-accent-secondary)] placeholder:text-[var(--color-accent-secondary)]/50 focus:border-[var(--color-accent-secondary)] focus:outline-none"
         />
         <button
           data-testid="apply-discount-btn"

@@ -25,6 +25,7 @@ import {
 } from "@/features/tenancy/application/public-tenant.service";
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
+import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
 import type { MercadoPagoTokens } from "@/features/payments/infrastructure/mercadopago-oauth.client";
 
 export class PaymentSessionCartUnavailableError extends Error {}
@@ -55,8 +56,13 @@ const createPaymentSessionSchema = z
           z.string().trim().email().optional(),
         ),
         phone: optionalTrimmedString,
+        whatsappReadyOptIn: z.boolean().optional(),
       })
-      .strict(),
+      .strict()
+      .refine(customer => !customer.whatsappReadyOptIn || !!normalizeWhatsAppRecipient(customer.phone), {
+        message: "Ingresá un celular válido para recibir avisos por WhatsApp.",
+        path: ["phone"],
+      }),
     notes: optionalTrimmedString,
     cartVersion: z.number().int().positive().optional(),
   })

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ClearCartOnSuccess from "@/features/shop/checkout/components/ClearCartOnSuccess";
 import { OrderStatusPoller } from "@/features/shop/checkout/components/OrderStatusPoller";
+import { publicBaseUrl } from "@/lib/config/public-site";
 
 type SuccessPageProps = {
   searchParams: Promise<{
@@ -19,7 +20,7 @@ export default async function CheckoutPaySuccessPage({ searchParams }: SuccessPa
   const paymentId = getSingleValue(resolvedSearchParams.payment_id)?.trim() ?? "";
   // Canonical origin: the QR must survive being photographed and scanned later,
   // so it cannot be composed from the browser's location.
-  const trackingBaseUrl = process.env.KOMANDA_PUBLIC_BASE_URL?.trim() ?? "";
+  const trackingBaseUrl = publicBaseUrl();
 
   return (
     <main className="min-h-[100dvh] bg-[var(--color-accent-primary)] p-6 text-[var(--color-accent-secondary)]">

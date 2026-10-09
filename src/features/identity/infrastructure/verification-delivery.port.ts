@@ -1,3 +1,5 @@
+import { publicBaseUrl } from "@/lib/config/public-site";
+
 export type VerificationDelivery = {
   deliver(input: {
     email: string;
@@ -141,7 +143,7 @@ export function verificationDeliveryFromEnvironment(): VerificationDelivery {
   if (delivery === "resend") {
     return new ResendVerificationDelivery(
       process.env.IDENTITY_VERIFICATION_RESEND_KEY ?? "",
-      process.env.KOMANDA_PUBLIC_BASE_URL ?? "",
+      publicBaseUrl(),
       process.env.IDENTITY_VERIFICATION_FROM_EMAIL ?? "invitations@komanda.com",
     );
   }
@@ -150,7 +152,7 @@ export function verificationDeliveryFromEnvironment(): VerificationDelivery {
     return new HttpVerificationDelivery(
       process.env.IDENTITY_VERIFICATION_HTTP_ENDPOINT ?? "",
       process.env.IDENTITY_VERIFICATION_HTTP_TOKEN ?? "",
-      process.env.KOMANDA_PUBLIC_BASE_URL ?? "",
+      publicBaseUrl(),
     );
   }
 

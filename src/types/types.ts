@@ -95,6 +95,7 @@ export type CustomerInfo = {
   name: string;
   email?: string;
   phone?: string;
+  whatsappReadyOptIn?: boolean;
 };
 
 export type OrderSource = "mercadopago_webhook" | "admin_direct" | "storefront_cash";

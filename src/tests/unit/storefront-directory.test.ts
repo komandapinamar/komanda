@@ -7,14 +7,14 @@ import {
 } from "@/features/directory/utils/directory-maps";
 
 describe("buildStorefrontUrl", () => {
-  const originalEnv = process.env.STOREFRONT_ROOT_DOMAIN;
+  const originalEnv = process.env.NEXT_PUBLIC_SITE_URL;
 
   afterEach(() => {
-    process.env.STOREFRONT_ROOT_DOMAIN = originalEnv;
+    process.env.NEXT_PUBLIC_SITE_URL = originalEnv;
   });
 
   it("builds localhost subdomain URL with port for local development", () => {
-    process.env.STOREFRONT_ROOT_DOMAIN = "localhost";
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
     const url = buildStorefrontUrl("chikenstop", {
       host: "localhost:3000",
       protocol: "http",
@@ -23,7 +23,7 @@ describe("buildStorefrontUrl", () => {
   });
 
   it("preserves custom local ports from host header", () => {
-    process.env.STOREFRONT_ROOT_DOMAIN = "localhost";
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
     const url = buildStorefrontUrl("burger-place", {
       host: "127.0.0.1:8080",
       protocol: "http",
@@ -32,7 +32,7 @@ describe("buildStorefrontUrl", () => {
   });
 
   it("builds production subdomain URL using https and root domain", () => {
-    process.env.STOREFRONT_ROOT_DOMAIN = "komanda.app";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://komanda.app";
     const url = buildStorefrontUrl("chikenstop", {
       host: "komanda.app",
       protocol: "https",
@@ -40,8 +40,8 @@ describe("buildStorefrontUrl", () => {
     expect(url).toBe("https://chikenstop.komanda.app");
   });
 
-  it("builds staging subdomain URL using configured root domain", () => {
-    process.env.STOREFRONT_ROOT_DOMAIN = "staging.komanda.app";
+  it("builds staging subdomain URL using the configured public site host", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://staging.komanda.app";
     const url = buildStorefrontUrl("demo-store", {
       host: "staging.komanda.app",
       protocol: "https",
@@ -49,8 +49,17 @@ describe("buildStorefrontUrl", () => {
     expect(url).toBe("https://demo-store.staging.komanda.app");
   });
 
+  it("accepts a protocol-less public site URL and normalizes the host", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "komanda.app";
+    const url = buildStorefrontUrl("chikenstop", {
+      host: "komanda.app",
+      protocol: "https",
+    });
+    expect(url).toBe("https://chikenstop.komanda.app");
+  });
+
   it("handles normalized slugs properly without trailing slashes", () => {
-    process.env.STOREFRONT_ROOT_DOMAIN = "komanda.app";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://komanda.app";
     const url = buildStorefrontUrl("tenant-mock", {
       host: "komanda.app",
     });

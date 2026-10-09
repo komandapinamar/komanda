@@ -205,11 +205,6 @@ export default function BusinessRegistrationWizard({
                       <span className="text-base font-semibold text-[var(--color-accent-tertiary)]">
                         Gastronomía (Komanda POS)
                       </span>
-                      {preset === "gastronomy" && (
-                        <span className="rounded-full bg-[var(--color-accent-tertiary)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--color-accent-primary)] uppercase">
-                          Seleccionado
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-[var(--color-accent-tertiary)]/70 leading-relaxed">
                       Restaurantes, cafeterías y locales de comida con menú digital QR y gestión de pedidos.
@@ -242,11 +237,6 @@ export default function BusinessRegistrationWizard({
                       <span className="text-base font-semibold text-[var(--color-accent-tertiary)]">
                         Autoservicio & Retail (Komanda Kiosk)
                       </span>
-                      {preset === "express_retail" && (
-                        <span className="rounded-full bg-[var(--color-accent-tertiary)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--color-accent-primary)] uppercase">
-                          Seleccionado
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-[var(--color-accent-tertiary)]/70 leading-relaxed">
                       Kioscos, minimarkets y locales comerciales con venta rápida o autoservicio.
@@ -294,7 +284,7 @@ export default function BusinessRegistrationWizard({
                     <span className="text-[11px] text-[var(--color-accent-tertiary)]/50">Se autogenera del nombre</span>
                   </div>
                   <div className="flex items-center rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] px-3 py-2 text-sm focus-within:border-[var(--color-accent-tertiary)]/50">
-                    <span className="text-xs text-[var(--color-accent-tertiary)]/50 select-none">komanda.app/</span>
+                    <span className="text-xs text-[var(--color-accent-tertiary)]/50 select-none">ka.ar/</span>
                     <input
                       id="slug"
                       type="text"
@@ -314,7 +304,7 @@ export default function BusinessRegistrationWizard({
                 onClick={() => setStep(2)}
                 className="w-full rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Continuar a Ubicación →
+                Continuar a Ubicación
               </button>
             </div>
           )}
@@ -327,8 +317,8 @@ export default function BusinessRegistrationWizard({
               </div>
               <LocationPicker initialValue={location} onConfirm={(value) => { setLocation(value); setErrorMessage(null); }} error={errorMessage} />
               <div className="flex items-center gap-3 pt-2">
-                <button type="button" onClick={() => setStep(1)} className="rounded-xl border border-[var(--color-accent-tertiary)]/20 px-4 py-3 text-sm font-semibold text-[var(--color-accent-tertiary)]">← Volver</button>
-                <button type="button" disabled={!location} onClick={() => setStep(3)} className="flex-1 rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40">Continuar a Datos de Cuenta →</button>
+                <button type="button" onClick={() => setStep(1)} className="rounded-xl border border-[var(--color-accent-tertiary)]/20 px-4 py-3 text-sm font-semibold text-[var(--color-accent-tertiary)]">Volver</button>
+                <button type="button" disabled={!location} onClick={() => setStep(3)} className="flex-1 rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40">Continuar a Datos de Cuenta</button>
               </div>
             </div>
           )}
@@ -405,7 +395,7 @@ export default function BusinessRegistrationWizard({
                   onClick={() => setStep(1)}
                   className="rounded-xl border border-[var(--color-accent-tertiary)]/20 px-4 py-3 text-sm font-semibold text-[var(--color-accent-tertiary)] hover:bg-[var(--color-accent-tertiary)]/10 transition-colors"
                 >
-                  ← Volver
+                  Volver
                 </button>
 
                 <button
