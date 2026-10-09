@@ -11,6 +11,7 @@ import { OrderRepository } from "@/features/orders/infrastructure/order.reposito
 import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
+import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import {
   InvalidPickupPinError,
@@ -189,6 +190,20 @@ export class TransitionOrderService {
           ...(request.reason ? { reason: request.reason } : {}),
         },
       });
+      const customer = (order.customer ?? {}) as Record<string, unknown>;
+      if (
+        nextStatus === "ready" && order.paymentStatus === "paid" &&
+        (order.source === "storefront_cash" || order.source === "mercadopago_webhook") &&
+        customer.whatsappReadyOptIn === true &&
+        normalizeWhatsAppRecipient(typeof customer.phone === "string" ? customer.phone : null)
+      ) {
+        await appendOutboxEvent(transaction, input.context, {
+          aggregateType: "order",
+          aggregateId: order.id,
+          eventType: "order.whatsapp_ready",
+          payload: { orderId: order.id },
+        });
+      }
       return order;
     });
   }

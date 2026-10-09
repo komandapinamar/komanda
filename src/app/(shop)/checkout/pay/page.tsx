@@ -22,11 +22,13 @@ import {
   buildCheckoutPayload,
   normalizeOptionalPhone,
 } from "@/features/shop/checkout/components/checkout-payload";
+import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
 
 const initialFormValues: CheckoutFormValues = {
   customer: {
     name: "",
     phone: "",
+    whatsappReadyOptIn: false,
   },
   notes: "",
 };
@@ -376,6 +378,10 @@ export default function CheckoutPayPage() {
     }
 
     const customerPhone = normalizeOptionalPhone(formValues.customer.phone);
+    if (formValues.customer.whatsappReadyOptIn && !normalizeWhatsAppRecipient(customerPhone)) {
+      setSubmitError("Ingresá un celular argentino válido para recibir avisos por WhatsApp.");
+      return;
+    }
     const orderNotes = formValues.notes.trim();
 
     // Synchronous re-entry guard: isSubmitting only disables the button on the
@@ -393,6 +399,7 @@ export default function CheckoutPayPage() {
           customer: {
             name: customerName,
             phone: customerPhone,
+            whatsappReadyOptIn: formValues.customer.whatsappReadyOptIn === true,
           },
           notes: orderNotes || undefined,
         });
@@ -426,7 +433,7 @@ export default function CheckoutPayPage() {
         const payload = buildCheckoutPayload({
           cartId: officialCart.id,
           cartVersion: officialCart.version,
-          customer: { name: customerName, phone: customerPhone },
+          customer: { name: customerName, phone: customerPhone, whatsappReadyOptIn: formValues.customer.whatsappReadyOptIn === true },
           notes: orderNotes,
         });
 
@@ -477,7 +484,7 @@ export default function CheckoutPayPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex flex-col gap-3 rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase">Checkout seguro</p>
+            <p className="text-sm uppercase">Komanda Checkout</p>
             <h1 className="text-3xl font-bold">Revision final del pedido</h1>
             <p className="mt-2 text-sm text-white">
               Revisa los productos y el monto final antes de continuar.
@@ -575,8 +582,20 @@ export default function CheckoutPayPage() {
                 className="w-full rounded-sm border border-[var(--color-accent-secondary)]/70 bg-transparent px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-secondary)]"
               />
               <p className="text-xs opacity-70">
-                Opcional. Si lo dejás, el local te puede avisar por teléfono cuando tu pedido esté listo.
+                Opcional. El local puede llamarte cuando tu pedido esté listo.
               </p>
+            </label>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={formValues.customer.whatsappReadyOptIn === true}
+                onChange={event => setFormValues(current => ({
+                  ...current,
+                  customer: { ...current.customer, whatsappReadyOptIn: event.target.checked },
+                }))}
+                className="mt-1"
+              />
+              <span>Quiero recibir un aviso por WhatsApp cuando mi pedido esté listo. Es opcional y requiere un celular argentino válido.</span>
             </label>
           </div>
 

@@ -57,6 +57,9 @@ describe("Story 2.5: transition-order reason capture without cash movements", ()
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockOrderRepo.findById.mockReset();
+    mockOrderRepo.transition.mockReset();
+    mockTx.select.mockReset();
   });
 
   it("accepts an optional reason in the schema", () => {
@@ -124,14 +127,18 @@ describe("Story 2.5: transition-order reason capture without cash movements", ()
     );
   });
 
-  it("blocks advancing an unpaid storefront_cash order (AD-3 server-side)", async () => {
+  it.each([
+    ["storefront_cash", "approved", "ready"],
+    ["admin_direct", "approved", "ready"],
+    ["admin_direct", "ready", "delivered"],
+  ])("blocks unpaid cash orders from %s moving from %s to %s", async (source, status, nextStatus) => {
     const current = {
       id: orderId,
       tenantId,
       locationId: "loc-1",
-      fulfillmentStatus: "approved",
+      fulfillmentStatus: status,
       paymentStatus: "pending",
-      source: "storefront_cash",
+      source,
       tender: "cash",
       pickupPin: "5821",
       version: 1,
@@ -153,11 +160,34 @@ describe("Story 2.5: transition-order reason capture without cash movements", ()
         context,
         orderId,
         expectedVersion: 1,
-        body: { fulfillmentStatus: "ready" },
+        body: { fulfillmentStatus: nextStatus },
       }),
     ).rejects.toThrow(OrderTransitionError);
 
     expect(mockOrderRepo.transition).not.toHaveBeenCalled();
+  });
+
+  it.each(["storefront_cash", "admin_direct", "mercadopago_webhook"])("advances a paid %s order through ready and then delivered", async (source) => {
+    const current = {
+      id: orderId,
+      fulfillmentStatus: "approved",
+      paymentStatus: "paid",
+      source,
+      tender: source === "mercadopago_webhook" ? null : "cash",
+      version: 1,
+    };
+    const ready = { ...current, fulfillmentStatus: "ready", version: 2 };
+    const delivered = { ...ready, fulfillmentStatus: "delivered", version: 3 };
+    mockOrderRepo.findById.mockResolvedValueOnce(current).mockResolvedValueOnce(ready).mockResolvedValueOnce(ready).mockResolvedValueOnce(delivered);
+    mockOrderRepo.transition.mockResolvedValueOnce(ready).mockResolvedValueOnce(delivered);
+    const context = { tenantId, correlationId: "corr-1", source: "administrative", actor: { kind: "user", userId: "u1", role: "admin", membershipId: "m1" } } as TenantContext;
+    const service = new TransitionOrderService();
+    await expect(service.transition({ context, orderId, expectedVersion: 1, body: { fulfillmentStatus: "ready" } })).resolves.toEqual(ready);
+    await expect(service.transition({ context, orderId, expectedVersion: 2, body: { fulfillmentStatus: "delivered" } })).resolves.toEqual(delivered);
+    expect(mockOrderRepo.transition).toHaveBeenNthCalledWith(1, expect.objectContaining({ nextStatus: "ready", expectedVersion: 1 }));
+    expect(mockOrderRepo.transition).toHaveBeenNthCalledWith(2, expect.objectContaining({ nextStatus: "delivered", expectedVersion: 2 }));
+    expect(mockTx.insert).not.toHaveBeenCalled();
+    expect(appendOutboxEvent).toHaveBeenCalledTimes(2);
   });
 
   it("blocks generic cancel of a PAID storefront_cash order (must use refund-cash)", async () => {
@@ -194,5 +224,76 @@ describe("Story 2.5: transition-order reason capture without cash movements", ()
     ).rejects.toThrow(OrderConflictError);
 
     expect(mockOrderRepo.transition).not.toHaveBeenCalled();
+  });
+
+  it("cancels a paid direct cash order without an open shift and records the withdrawal", async () => {
+    const current = {
+      id: orderId,
+      tenantId,
+      locationId: "loc-1",
+      fulfillmentStatus: "approved",
+      paymentStatus: "paid",
+      source: "admin_direct",
+      tender: "cash",
+      pickupPin: null,
+      version: 1,
+      total: "4500.00",
+      discountSnapshot: null,
+    };
+    const updated = { ...current, fulfillmentStatus: "cancelled", paymentStatus: "refunded", version: 2 };
+    mockOrderRepo.findById.mockResolvedValueOnce(current).mockResolvedValueOnce(updated);
+    mockOrderRepo.transition.mockResolvedValueOnce(updated);
+    mockTx.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }) }),
+    });
+    const values = vi.fn().mockResolvedValue([]);
+    mockTx.insert.mockReturnValue({ values });
+    const context = {
+      tenantId,
+      correlationId: "corr-1",
+      source: "administrative",
+      actor: { kind: "user", userId: "u1", role: "ADMIN", membershipId: "m1" },
+    } as unknown as TenantContext;
+
+    await new TransitionOrderService().transition({
+      context,
+      orderId,
+      expectedVersion: 1,
+      body: { fulfillmentStatus: "cancelled" },
+    });
+
+    expect(mockOrderRepo.transition).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentStatus: "refunded" }),
+    );
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId, orderId, type: "cancellation_withdrawal", shiftId: null }),
+    );
+  });
+
+  it("queues a ready WhatsApp event only for an opted-in, paid storefront customer", async () => {
+    const current = {
+      id: orderId, tenantId, locationId: "loc-1", fulfillmentStatus: "preparing",
+      paymentStatus: "paid", source: "storefront_cash", tender: "cash",
+      pickupPin: null, version: 1, total: "4500.00", discountSnapshot: null,
+      customer: { name: "Ana", phone: "1123456789", whatsappReadyOptIn: true },
+    };
+    const updated = { ...current, fulfillmentStatus: "ready", version: 2 };
+    mockOrderRepo.findById.mockResolvedValueOnce(current).mockResolvedValueOnce(updated);
+    mockOrderRepo.transition.mockResolvedValueOnce(updated);
+    const context = { tenantId, correlationId: "corr-1", source: "administrative",
+      actor: { kind: "user", userId: "u1", role: "ADMIN", membershipId: "m1" } } as unknown as TenantContext;
+
+    await new TransitionOrderService().transition({ context, orderId, expectedVersion: 1, body: { fulfillmentStatus: "ready" } });
+    expect(appendOutboxEvent).toHaveBeenCalledWith(mockTx, context,
+      expect.objectContaining({ eventType: "order.whatsapp_ready", payload: { orderId } }));
+
+    vi.clearAllMocks();
+    const withoutConsent = { ...current, customer: { ...current.customer, whatsappReadyOptIn: false } };
+    mockOrderRepo.findById.mockResolvedValueOnce(withoutConsent).mockResolvedValueOnce({ ...updated, customer: withoutConsent.customer });
+    mockOrderRepo.transition.mockResolvedValueOnce(updated);
+    await new TransitionOrderService().transition({ context, orderId, expectedVersion: 1, body: { fulfillmentStatus: "ready" } });
+    expect(appendOutboxEvent).toHaveBeenCalledTimes(1);
+    expect(appendOutboxEvent).not.toHaveBeenCalledWith(mockTx, context,
+      expect.objectContaining({ eventType: "order.whatsapp_ready" }));
   });
 });

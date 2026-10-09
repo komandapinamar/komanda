@@ -99,6 +99,16 @@ Password recovery sends single-use reset links through Resend. Configure
 `IDENTITY_VERIFICATION_RESEND_KEY`, `IDENTITY_VERIFICATION_FROM_EMAIL` and
 `NEXT_PUBLIC_SITE_URL` on the application runtime.
 
+Optional ready-order WhatsApp notifications require a Meta WhatsApp Business
+Cloud API token (`KOMANDA_WHATSAPP_ACCESS_TOKEN`), phone number ID
+(`KOMANDA_WHATSAPP_PHONE_NUMBER_ID`) and an approved `es_AR` template
+(`KOMANDA_WHATSAPP_READY_TEMPLATE`) whose body has one text placeholder for the
+purchase number. Configure `CRON_SECRET` on the application and the same value
+in the repository's GitHub Actions secrets, plus a `KOMANDA_PUBLIC_BASE_URL`
+Actions secret. The `dispatch-ready-whatsapp` workflow invokes the protected
+endpoint every five minutes; without this schedule, opted-in messages stay in
+the outbox queue. Failed deliveries retry up to five times.
+
 # Infrasture and use cases
 
 This project is intended to be used in any part of the ticketing process: kitchen, app/client menu, in the storefronts.
