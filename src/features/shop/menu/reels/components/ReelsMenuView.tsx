@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect } from "react";
+import MenuViewToolbar from "../../MenuViewToolbar";
 import type { Category, MenuItem } from "@/types/types";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
 import ReelFeedContainer from "./ReelFeedContainer";
@@ -11,6 +12,7 @@ import ProductModifierSheet from "./ProductModifierSheet";
 import CartPanel from "@/features/shop/cart/components/CartPanel";
 import { useOptionalCart } from "@/features/shop/cart/context/cart.context";
 import { useReelsMediaLifecycle } from "../hooks/useReelsMediaLifecycle";
+import { useBrowserChromeOffset } from "../hooks/useBrowserChromeOffset";
 
 export interface ReelsMenuViewProps {
   categories: Category[];
@@ -29,6 +31,7 @@ export default function ReelsMenuView({
   const itemCount = cartContext?.itemCount ?? 0;
   const subtotal = cartContext?.subtotal ?? 0;
   const addItem = cartContext?.addItem;
+  const chromeOffset = useBrowserChromeOffset();
 
   const [selectedItemForModifiers, setSelectedItemForModifiers] =
     useState<MenuItem | null>(null);
@@ -80,7 +83,7 @@ export default function ReelsMenuView({
     initialCategoryId,
   });
 
-  const handleItemLike = useCallback(
+  const handleAddToCart = useCallback(
     (item: MenuItem) => {
       if (item.hasOptions) {
         setSelectedItemForModifiers(item);
@@ -119,29 +122,6 @@ export default function ReelsMenuView({
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
 
       <ReelFeedContainer>
-        {/* Scrim gradient top for nav readability */}
-        <div
-          data-testid="reel-scrim-top"
-          className="absolute top-0 left-0 right-0 h-[140px] pointer-events-none z-20"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
-          }}
-        />
-
-        {/* Floating top category bar */}
-        <ReelsCategoryNav
-          categories={categories}
-          activeCategoryId={activeCategoryId}
-          onSelectCategory={setActiveCategoryId}
-        />
-
-        {!orderingAvailable ? (
-          <div className="absolute top-16 left-4 right-4 z-30 rounded-md bg-amber-500/90 px-3 py-1.5 text-center text-xs font-bold text-black shadow">
-            Pedidos online no disponibles temporalmente.
-          </div>
-        ) : null}
-
         {/* Reels vertical feed */}
         {items.length > 0 ? (
           items.map((item, index) => {
@@ -153,7 +133,7 @@ export default function ReelsMenuView({
                 categoryId={categoryId}
                 hasCartItems={itemCount > 0}
                 withCart={itemCount > 0}
-                onLike={handleItemLike}
+                onAddToCart={handleAddToCart}
                 onOpenModifiers={(it) => setSelectedItemForModifiers(it)}
                 itemRef={(el) =>
                   registerReelElement(item.documentId, el, {
@@ -181,6 +161,37 @@ export default function ReelsMenuView({
         )}
       </ReelFeedContainer>
 
+      {/* Persistent top UI layer: never scrolls away with the feed */}
+      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+        <div className="relative w-full h-full md:max-w-md md:h-[92vh] md:overflow-hidden md:rounded-[40px]">
+          {/* Scrim gradient top for nav readability */}
+          <div
+            data-testid="reel-scrim-top"
+            className="absolute top-0 left-0 right-0 h-[140px] pointer-events-none z-20"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
+            }}
+          />
+
+          <div className="absolute top-4 left-4 right-4 z-40">
+            <MenuViewToolbar mode="reels">
+              <ReelsCategoryNav
+                categories={categories}
+                activeCategoryId={activeCategoryId}
+                onSelectCategory={setActiveCategoryId}
+              />
+            </MenuViewToolbar>
+          </div>
+
+          {!orderingAvailable ? (
+            <div className="absolute top-20 left-4 right-4 z-30 rounded-md bg-amber-500/90 px-3 py-1.5 text-center text-xs font-bold text-black shadow">
+              Pedidos online no disponibles temporalmente.
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {/* Floating contextual checkout bar */}
       <FloatingCartBar
         itemCount={itemCount}
@@ -199,43 +210,42 @@ export default function ReelsMenuView({
       ) : null}
 
       {/* Cart Drawer with CartPanel */}
-      {isCartOpen ? (
+      <div
+        data-testid="reels-cart-drawer"
+        aria-hidden={!isCartOpen}
+        inert={!isCartOpen}
+        className={`fixed inset-0 z-50 flex flex-col justify-end transition-[opacity,bottom] duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          isCartOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        style={{
+          bottom: `calc(${chromeOffset}px + env(safe-area-inset-bottom, 0px))`,
+        }}
+      >
+        {/* Backdrop */}
+        <button
+          type="button"
+          data-testid="reels-cart-backdrop"
+          aria-label="Cerrar carrito"
+          onClick={handleCloseCart}
+          className={`absolute inset-0 bg-black/70 transition-opacity duration-500 ${
+            isCartOpen ? "opacity-100 backdrop-blur-sm" : "opacity-0"
+          }`}
+        />
+
+        {/* Drawer content */}
         <div
-          data-testid="reels-cart-drawer"
-          className="fixed inset-0 z-50 flex flex-col justify-end"
+          className={`relative z-10 w-full max-w-md mx-auto h-[85dvh] p-2 flex flex-col overflow-hidden transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform ${
+            isCartOpen ? "translate-y-0" : "translate-y-full"
+          }`}
         >
-          {/* Backdrop */}
-          <button
-            type="button"
-            data-testid="reels-cart-backdrop"
-            aria-label="Cerrar carrito"
-            onClick={handleCloseCart}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-          />
 
-          {/* Drawer content */}
-          <div className="relative z-10 w-full max-w-md mx-auto h-[85vh] rounded-t-2xl bg-[#13151D] border-t border-white/16 p-2 flex flex-col overflow-hidden shadow-2xl">
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1.5 w-14 rounded-full bg-white/20" />
-            </div>
-            <div className="flex items-center justify-between px-4 pb-3 pt-2 text-white">
-              <h2 className="text-lg font-bold">Tu carrito</h2>
-              <button
-                type="button"
-                data-testid="reels-cart-close-btn"
-                onClick={handleCloseCart}
-                className="text-sm font-semibold text-neutral-400 hover:text-white"
-              >
-                Cerrar
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1">
-              <CartPanel />
-            </div>
+          <div className="min-h-0 flex-1">
+            {cartContext ? <CartPanel /> : null}
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

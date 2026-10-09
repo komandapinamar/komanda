@@ -1,50 +1,34 @@
 "use client";
 
-import { useState, useCallback, type MouseEvent } from "react";
+import { useCallback, useState, type MouseEvent } from "react";
 import type { MenuItem } from "@/types/types";
 import { formatReelPrice } from "./ReelOverlay";
 
 export interface ReelActionRailProps {
   item: MenuItem;
-  onLike?: () => void;
-  isLiked?: boolean;
-  showHeart?: boolean;
+  onAddToCart?: () => void;
+  isInCart?: boolean;
+  quantity?: number;
+  showBurst?: boolean;
   onOpenInfo?: () => void;
 }
 
 export default function ReelActionRail({
   item,
-  onLike,
-  isLiked: externalIsLiked = false,
-  showHeart: externalShowHeart = false,
+  onAddToCart,
+  isInCart = false,
+  quantity = 0,
+  showBurst = false,
   onOpenInfo,
 }: ReelActionRailProps) {
-  const [internalIsLiked, setInternalIsLiked] = useState(false);
-  const [internalShowHeart, setInternalShowHeart] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
-  const isLiked = externalIsLiked || internalIsLiked;
-  const showHeart = externalShowHeart || internalShowHeart;
-
-  const handleLikeClick = useCallback(
+  const handleAddClick = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
-
-      // Trigger visual feedback
-      setInternalIsLiked(true);
-      setInternalShowHeart(true);
-
-      setTimeout(() => {
-        setInternalShowHeart(false);
-      }, 650);
-
-      setTimeout(() => {
-        setInternalIsLiked(false);
-      }, 800);
-
-      onLike?.();
+      onAddToCart?.();
     },
-    [onLike]
+    [onAddToCart]
   );
 
   const handleInfoClick = useCallback(
@@ -69,38 +53,43 @@ export default function ReelActionRail({
 
   return (
     <>
-      {/* Micro-animation CSS keyframes for heartPop */}
+      {/* Micro-animation CSS keyframes for cart burst */}
       <style>{`
-        @keyframes heartPop {
+        @keyframes cartPop {
           0% { transform: scale(0.3); opacity: 0; }
           35% { transform: scale(1.35); opacity: 1; }
           70% { transform: scale(1.1); opacity: 1; }
           100% { transform: scale(1.4); opacity: 0; }
         }
-        .animate-heart-pop {
-          animation: heartPop 650ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        .animate-cart-pop {
+          animation: cartPop 650ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
       `}</style>
 
-      {/* Floating heart burst animation (centered, 650ms, pointer-events: none) */}
-      {showHeart ? (
+      {/* Floating cart burst animation (centered, 650ms, pointer-events: none) */}
+      {showBurst ? (
         <div
-          data-testid="reel-heart-pop"
+          data-testid="reel-cart-pop"
           className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center"
           aria-hidden="true"
         >
           <div
-            className="animate-heart-pop drop-shadow-[0_10px_25px_rgba(255,42,85,0.6)]"
-            style={{ filter: "drop-shadow(0 10px 25px rgba(255, 42, 85, 0.6))" }}
+            className="animate-cart-pop drop-shadow-[0_10px_25px_rgba(255,77,45,0.6)]"
+            style={{ filter: "drop-shadow(0 10px 25px rgba(255, 77, 45, 0.6))" }}
           >
             <svg
               width="100"
               height="100"
               viewBox="0 0 24 24"
-              fill="#ff2a55"
-              className="text-[#ff2a55]"
+              fill="none"
+              stroke="#ff4d2d"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              <circle cx="9" cy="21" r="1" fill="#ff4d2d" stroke="none" />
+              <circle cx="20" cy="21" r="1" fill="#ff4d2d" stroke="none" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
           </div>
         </div>
@@ -111,28 +100,46 @@ export default function ReelActionRail({
         data-testid="reel-action-rail"
         className="flex flex-col gap-4 items-center z-25 select-none"
       >
-        {/* Like / Pedir Button */}
+        {/* Add to cart button (state persists while item is in cart) */}
         <button
           type="button"
-          data-testid="action-btn-like"
-          data-liked={String(isLiked)}
-          aria-label={`Agregar ${item.name} al carrito`}
-          onClick={handleLikeClick}
-          className={`w-[50px] h-[50px] rounded-full flex flex-col items-center justify-center border transition-all duration-200 cursor-pointer shadow-lg active:scale-90 ${
-            isLiked
-              ? "bg-[#ff2a55] border-[#ff2a55] text-white shadow-[0_4px_20px_rgba(255,42,85,0.5)] scale-105"
+          data-testid="action-btn-add"
+          data-in-cart={String(isInCart)}
+          aria-label={
+            isInCart
+              ? `${item.name} en el carrito (${quantity})`
+              : `Agregar ${item.name} al carrito`
+          }
+          onClick={handleAddClick}
+          className={`relative w-[50px] h-[50px] rounded-full flex flex-col items-center justify-center border transition-all duration-200 cursor-pointer shadow-lg active:scale-90 ${
+            isInCart
+              ? "bg-[#ff4d2d] border-[#ff4d2d] text-white shadow-[0_4px_20px_rgba(255,77,45,0.5)] scale-105"
               : "bg-[rgba(18,20,29,0.65)] backdrop-blur-md border-white/20 text-white hover:bg-[rgba(25,28,40,0.8)]"
           }`}
         >
+          {isInCart && quantity > 0 ? (
+            <span
+              data-testid="action-cart-badge"
+              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-white text-black text-[11px] font-black leading-5 text-center shadow"
+            >
+              {quantity}
+            </span>
+          ) : null}
           <svg
             className="w-6 h-6 transition-transform"
             viewBox="0 0 24 24"
-            fill="currentColor"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            <circle cx="9" cy="21" r="1" fill="currentColor" stroke="none" />
+            <circle cx="20" cy="21" r="1" fill="currentColor" stroke="none" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
           </svg>
           <span
-            data-testid="action-like-label"
+            data-testid="action-add-label"
             className="text-[10px] font-bold tracking-tight leading-none mt-0.5"
           >
             +1

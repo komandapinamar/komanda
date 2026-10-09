@@ -241,7 +241,13 @@ export function CartProvider({
   );
 
   const applyOfficialCart = useCallback((cart: OfficialCart) => {
-    setItems(officialCartToLines(cart));
+    setItems((currentItems) => officialCartToLines(cart).map((line) => ({
+      ...line,
+      item: {
+        ...line.item,
+        videoUrl: currentItems.find(({ item }) => item.documentId === line.item.documentId)?.item.videoUrl,
+      },
+    })));
     setCartId(cart.id);
     setDiscountTotal(cart.discountTotal ?? 0);
     setAppliedDiscount(cart.appliedDiscount ?? null);

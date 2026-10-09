@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, type MouseEvent } from "react";
 import type { MenuItem, ProductModifierGroup, ProductModifierOption } from "@/types/types";
 import { formatReelPrice } from "./ReelOverlay";
+import { useBrowserChromeOffset } from "../hooks/useBrowserChromeOffset";
 
 export interface ProductModifierSheetProps {
   item: MenuItem;
@@ -28,6 +29,7 @@ export default function ProductModifierSheet({
   onConfirm,
   onClose,
 }: ProductModifierSheetProps) {
+  const chromeOffset = useBrowserChromeOffset();
   // Use item's modifier groups or fall back to default sauces if empty
   const groups: ProductModifierGroup[] = useMemo(() => {
     if (item.modifierGroups && item.modifierGroups.length > 0) {
@@ -130,7 +132,10 @@ export default function ProductModifierSheet({
   return (
     <div
       data-testid="product-modifier-overlay"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm pointer-events-auto select-none"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm pointer-events-auto select-none transition-[bottom] duration-200"
+      style={{
+        bottom: `calc(${chromeOffset}px + env(safe-area-inset-bottom, 0px))`,
+      }}
       onClick={onClose}
     >
       <div

@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getPublicCatalog } from "@/features/shop/menu/services/menu.service";
-import { PublicTenantService } from "@/features/tenancy/application/public-tenant.service";
+import { PublicTenantService, PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
 import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
 import { PublicDirectoryView } from "@/features/directory/web/PublicDirectoryView";
 
@@ -28,8 +27,15 @@ export default async function Home() {
   let catalog;
   try {
     catalog = await getPublicCatalog(tenantSlug);
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof PublicTenantNotFoundError) {
+      notFound();
+    }
+    throw error;
+  }
+
+  if (catalog.orderingAvailable !== false && catalog.categories.length > 0) {
+    redirect("/order");
   }
 
   return (
@@ -46,18 +52,10 @@ export default async function Home() {
             <span className="inline-block rounded-lg bg-black/10 px-4 py-2 text-sm font-semibold text-black">
               Pedidos online no disponibles temporalmente. Consultá nuestra carta.
             </span>
-          ) : catalog.categories.length > 0 ? (
-            `${catalog.categories.length} categorías disponibles para pedir.`
           ) : (
             "El menú todavía se está preparando."
           )}
         </p>
-        <Link
-          href="/order"
-          className="rounded-full border-4 border-black bg-[var(--color-accent-primary)] px-12 py-5 text-3xl font-black uppercase tracking-tighter text-[var(--color-accent-secondary)] shadow-[0_10px_0_0_black]"
-        >
-          Ver menú
-        </Link>
       </section>
     </main>
   );

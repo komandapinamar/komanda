@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { MenuItem } from "@/types/types";
 import ReelMedia from "./ReelMedia";
 import ReelOverlay from "./ReelOverlay";
@@ -16,7 +16,7 @@ export interface ReelItemProps {
   videoRef?: React.Ref<HTMLVideoElement>;
   itemRef?: React.Ref<HTMLDivElement>;
   actionRailSlot?: React.ReactNode;
-  onLike?: (item: MenuItem) => void;
+  onAddToCart?: (item: MenuItem) => void;
   onOpenModifiers?: (item: MenuItem) => void;
   onOpenInfo?: (item: MenuItem) => void;
 }
@@ -29,7 +29,7 @@ export default function ReelItem({
   videoRef,
   itemRef,
   actionRailSlot,
-  onLike,
+  onAddToCart,
   onOpenModifiers,
   onOpenInfo,
 }: ReelItemProps) {
@@ -37,32 +37,37 @@ export default function ReelItem({
   const isCartActive = hasCartItems || withCart;
   const cartContext = useOptionalCart();
 
-  const [showHeart, setShowHeart] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const quantityInCart = useMemo(() => {
+    if (!cartContext) return 0;
+    return (
+      cartContext.items.find(
+        (cartLine) => cartLine.item.documentId === item.documentId
+      )?.quantity ?? 0
+    );
+  }, [cartContext, item.documentId]);
+
+  const [showBurst, setShowBurst] = useState(false);
 
   const handleAction = useCallback(() => {
     if (item.hasOptions) {
       if (onOpenModifiers) {
         onOpenModifiers(item);
-      } else if (onLike) {
-        onLike(item);
+      } else if (onAddToCart) {
+        onAddToCart(item);
       }
       return;
     }
 
-    // Simple item
-    if (onLike) {
-      onLike(item);
+    if (onAddToCart) {
+      onAddToCart(item);
     } else if (cartContext) {
       cartContext.addItem(item);
     }
 
-    // Heart burst animation & button elastic feedback
-    setShowHeart(true);
-    setIsLiked(true);
-    setTimeout(() => setShowHeart(false), 650);
-    setTimeout(() => setIsLiked(false), 800);
-  }, [cartContext, item, onLike, onOpenModifiers]);
+    // Cart burst animation feedback (state itself persists in the cart)
+    setShowBurst(true);
+    setTimeout(() => setShowBurst(false), 650);
+  }, [cartContext, item, onAddToCart, onOpenModifiers]);
 
   const handleTap = useDoubleTap(
     (event) => {
@@ -79,9 +84,10 @@ export default function ReelItem({
   const resolvedActionRail = actionRailSlot ?? (
     <ReelActionRail
       item={item}
-      onLike={handleAction}
-      isLiked={isLiked}
-      showHeart={showHeart}
+      onAddToCart={handleAction}
+      isInCart={quantityInCart > 0}
+      quantity={quantityInCart}
+      showBurst={showBurst}
       onOpenInfo={() => onOpenInfo?.(item)}
     />
   );

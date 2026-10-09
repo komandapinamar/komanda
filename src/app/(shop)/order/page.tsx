@@ -11,10 +11,19 @@ import type { TenantPreset } from "@/db/schema/platform";
 
 export const dynamic = "force-dynamic";
 
-export default async function Order() {
+interface OrderPageProps {
+  searchParams?: Promise<{ view?: string | string[] }>;
+}
+
+export default async function Order({
+  searchParams,
+}: OrderPageProps = {}) {
   const rawTenantSlug = (await headers()).get("x-komanda-tenant-slug");
   const tenantSlug = rawTenantSlug?.trim();
   if (!tenantSlug) notFound();
+
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const listView = resolvedSearchParams.view === "list";
 
   let catalog;
   try {
@@ -35,7 +44,7 @@ export default async function Order() {
   const preset: TenantPreset =
     catalog.preset ?? catalog.tenant?.preset ?? "gastronomy";
 
-  if (menuTheme === "reels" && preset !== "express_retail") {
+  if (menuTheme === "reels" && !listView && preset !== "express_retail") {
     return (
       <ReelsMenuView
         categories={categories}
@@ -53,6 +62,7 @@ export default async function Order() {
       tenantSlug={tenantSlug}
       orderingAvailable={orderingAvailable}
       preset={preset}
+      showReelsLink={menuTheme === "reels" && preset !== "express_retail"}
     />
   );
 }
