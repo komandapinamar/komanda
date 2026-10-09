@@ -6,6 +6,7 @@ import type {
   CustomerInfo,
   OrderStatus,
 } from "@/types/types";
+import { nextOrderStatus, orderStage, type OrderStage } from "./order-workflow";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
@@ -31,6 +32,8 @@ function sourceLabel(source: string | null) {
     return "Pago Mercado Pago";
   }
 
+  if (source === "storefront_cash") return "Menú online · Efectivo";
+
   return "Origen no disponible";
 }
 
@@ -46,26 +49,6 @@ function statusLabel(status: OrderStatus) {
     case "cancelled":
       return "Cancelado";
   }
-}
-
-function nextStatus(status: OrderStatus): OrderStatus | null {
-  switch (status) {
-    case "approved":
-    case "preparing":
-      return "ready";
-    case "ready":
-      return "delivered";
-    case "delivered":
-    case "cancelled":
-      return null;
-  }
-}
-
-function nextStatusLabel(status: OrderStatus) {
-  const next = nextStatus(status);
-  if (next === "ready") return "Listo para entregar";
-  if (next === "delivered") return "Entregado";
-  return null;
 }
 
 function connectionLabel(state: ConnectionState) {
@@ -101,7 +84,8 @@ function TenantTransitionButton({
   disabled: boolean;
   onTransition: (order: AdminDashboardOrder) => void;
 }) {
-  const label = nextStatusLabel(order.status);
+  const next = nextOrderStatus(order);
+  const label = next === "ready" ? "Marcar listo en cocina" : next === "delivered" ? "Marcar como entregado" : null;
   if (!label) return null;
   return (
     <button
@@ -118,6 +102,7 @@ function TenantTransitionButton({
 type AdminOrdersLiveProps = {
   initialOrders: AdminDashboardOrder[];
   tenantId: string;
+  onOrdersChange?: (orders: AdminDashboardOrder[]) => void;
 };
 
 type TenantOrderLineResponse = {
@@ -357,7 +342,7 @@ function CollectCashDialog({
             disabled={!canConfirm}
             className="flex-1 rounded-sm bg-amber-500 px-4 py-3 font-bold text-zinc-950 disabled:opacity-50"
           >
-            {isSubmitting ? "Procesando..." : "Confirmar cobro"}
+            {isSubmitting ? "Procesando..." : "Marcar como pagado"}
           </button>
           <button
             type="button"
@@ -376,8 +361,13 @@ function CollectCashDialog({
 export default function AdminOrdersLive({
   initialOrders,
   tenantId,
+  onOrdersChange,
 }: AdminOrdersLiveProps) {
   const [orders, setOrders] = useState(initialOrders);
+  const [stageFilter, setStageFilter] = useState<"all" | Exclude<OrderStage, "finished">>("all");
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+  const activeOrders = orders.filter((order) => orderStage(order) !== "finished");
+  const visibleOrders = activeOrders.filter((order) => stageFilter === "all" || orderStage(order) === stageFilter);
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [transitioningOrderId, setTransitioningOrderId] = useState<string | null>(
@@ -404,6 +394,10 @@ export default function AdminOrdersLive({
   useEffect(() => {
     setOrders(initialOrders);
   }, [initialOrders]);
+
+  useEffect(() => {
+    onOrdersChange?.(orders);
+  }, [orders, onOrdersChange]);
 
   useEffect(() => {
     let isActive = true;
@@ -472,9 +466,10 @@ export default function AdminOrdersLive({
 
   const transitionTenantOrder = async (order: AdminDashboardOrder) => {
     if (!order.version) return;
-    const targetStatus = nextStatus(order.status);
+    const targetStatus = nextOrderStatus(order);
     if (!targetStatus) return;
     setTransitioningOrderId(order.id);
+    setTransitionError(null);
     try {
       const response = await fetch(`/api/v1/tenants/${tenantId}/orders/${order.id}`, {
         method: "PATCH",
@@ -484,10 +479,20 @@ export default function AdminOrdersLive({
         },
         body: JSON.stringify({
           fulfillmentStatus: targetStatus,
-          pickupPin: order.pickupPin || undefined,
+          pickupPin: targetStatus === "delivered" ? order.pickupPin || undefined : undefined,
         }),
       });
-      if (!response.ok) throw new Error("Failed to transition order.");
+      if (!response.ok) {
+        const problem = await response.json().catch(() => null) as { detail?: string } | null;
+        if (response.status === 409) {
+          const refresh = await fetch(`/api/v1/tenants/${tenantId}/orders/${order.id}`, { cache: "no-store" });
+          if (refresh.ok) {
+            const latest = toDashboardOrder(await refresh.json() as TenantOrderResponse);
+            setOrders((current) => current.map((candidate) => candidate.id === latest.id ? latest : candidate));
+          }
+        }
+        throw new Error(problem?.detail || "No se pudo actualizar el pedido. Revisá su estado e intentá nuevamente.");
+      }
       const updated = toDashboardOrder((await response.json()) as TenantOrderResponse);
       setOrders((current) =>
         current.map((candidate) =>
@@ -495,6 +500,8 @@ export default function AdminOrdersLive({
         ),
       );
       setLastUpdatedAt(new Date().toISOString());
+    } catch (error) {
+      setTransitionError(error instanceof Error ? error.message : "Error de conexión al actualizar el pedido.");
     } finally {
       setTransitioningOrderId(null);
     }
@@ -506,7 +513,7 @@ export default function AdminOrdersLive({
         <div>
           <h2 className="text-2xl font-bold">Activos</h2>
           <p className="text-sm opacity-75">
-            {orders.length} pedido{orders.length === 1 ? "" : "s"} esperando entrega.
+            {activeOrders.length} pedido{activeOrders.length === 1 ? "" : "s"} esperando entrega.
           </p>
         </div>
 
@@ -525,16 +532,30 @@ export default function AdminOrdersLive({
         </div>
       </div>
 
-      {orders.length === 0 ? (
+      <nav aria-label="Etapas del pedido" className="mt-4 flex flex-wrap gap-2">
+        {([
+          ["all", "Todos"],
+          ["payment", "1. Pago"],
+          ["kitchen", "2. Cocina"],
+          ["delivery", "3. Entrega"],
+        ] as const).map(([stage, label]) => (
+          <button key={stage} type="button" aria-pressed={stageFilter === stage} onClick={() => setStageFilter(stage)} className={`rounded-full border px-4 py-2 text-sm font-semibold ${stageFilter === stage ? "border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)]" : "border-[var(--color-accent-secondary)]/30"}`}>
+            {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})
+          </button>
+        ))}
+      </nav>
+      {transitionError ? <p role="alert" className="mt-4 rounded-sm border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">{transitionError}</p> : null}
+
+      {visibleOrders.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-lg font-semibold">No hay pedidos en proceso.</p>
+          <p className="text-lg font-semibold">No hay pedidos {stageFilter === "all" ? "en proceso" : "en esta etapa"}.</p>
           <p className="mt-2 text-sm opacity-75">
-            Cuando entre un nuevo pedido aprobado va a aparecer aca.
+            Los pedidos se actualizan en vivo: pago → cocina → entrega.
           </p>
         </div>
       ) : (
         <div className="mt-6 grid gap-4">
-          {orders.map((order) => {
+          {visibleOrders.map((order) => {
             const cashPending = isCashPending(order);
             return (
             <article
@@ -575,12 +596,10 @@ export default function AdminOrdersLive({
                   <div className="text-sm opacity-85">
                     <p className="text-base font-extrabold uppercase">
                       Estado:{" "}
-                      {cashPending
-                        ? "Esperando pago en caja"
-                        : statusLabel(order.status)}
+                        {orderStage(order) === "payment" ? "Esperando pago" : statusLabel(order.status)}
                     </p>
                     {order.paymentStatus ? (
-                      <p>Pago: {order.paymentStatus}</p>
+                      <p>Pago: {order.paymentStatus === "paid" ? "Pagado" : order.paymentStatus === "pending" ? "Pendiente" : order.paymentStatus === "verification_required" ? "Requiere verificación" : order.paymentStatus === "refunded" ? "Reembolsado" : "Fallido"}</p>
                     ) : null}
                     <p>Pedido interno: {order.id}</p>
                   </div>
@@ -656,12 +675,14 @@ export default function AdminOrdersLive({
                         onClick={() => setCollectingOrder(order)}
                         className="w-full rounded-sm bg-amber-500 px-4 py-3 text-sm font-bold text-zinc-950"
                       >
-                        Cobrar en efectivo
+                        Marcar como pagado · Efectivo
                       </button>
                       <p className="text-center text-xs opacity-70">
                         El pedido no se prepara hasta confirmar el cobro.
                       </p>
                     </div>
+                  ) : orderStage(order) === "payment" ? (
+                    <p className="text-sm opacity-70">Esperando la confirmación del pago para enviar a cocina.</p>
                   ) : (
                     <TenantTransitionButton
                       order={order}
