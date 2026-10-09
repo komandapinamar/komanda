@@ -1,0 +1,44 @@
+name: Database maintenance retention
+
+# Runs the bounded, batched retention job off-peak so it never competes with
+# checkout, payments or printing. It uses the migration/direct connection
+# because cross-tenant pruning is not available to the runtime role under RLS.
+#
+# Reachability: the runner must be able to open a connection to the database.
+# A Cloud SQL instance with a private IP is only reachable from inside the VPC,
+# so for production prefer an in-VPC runner (for example a Cloud Run Job) that
+# runs the same `npm run db:maintenance:retention` command on this schedule.
+on:
+  schedule:
+    - cron: "30 7 * * *" # 04:30 America/Argentina/Buenos_Aires (UTC-3)
+  workflow_dispatch:
+
+concurrency:
+  group: database-retention
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  retention:
+    name: Prune aged rows
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - name: Run retention
+        env:
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+        run: |
+          test -n "$DATABASE_DIRECT_URL"
+          npm run db:maintenance:retention
