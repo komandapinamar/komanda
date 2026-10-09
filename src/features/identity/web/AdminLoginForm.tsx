@@ -66,6 +66,10 @@ export default function AdminLoginForm() {
         />
       </label>
 
+      <Link href="/forgot-password" className="text-right text-sm text-[var(--color-accent-tertiary)] underline">
+        ¿Olvidaste tu contraseña?
+      </Link>
+
       {message ? (
         <p
           aria-live="polite"

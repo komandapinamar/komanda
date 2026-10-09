@@ -95,6 +95,10 @@ Core uses the environment examples in `src/.env.staging.example` and
 application using `DATABASE_URL` as `komanda_runtime`. The runtime role must never
 be the migration owner and must not have `BYPASSRLS`.
 
+Password recovery sends single-use reset links through Resend. Configure
+`IDENTITY_VERIFICATION_RESEND_KEY`, `IDENTITY_VERIFICATION_FROM_EMAIL` and
+`NEXT_PUBLIC_SITE_URL` on the application runtime.
+
 # Infrasture and use cases
 
 This project is intended to be used in any part of the ticketing process: kitchen, app/client menu, in the storefronts.
