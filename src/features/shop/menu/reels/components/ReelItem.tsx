@@ -107,7 +107,7 @@ export default function ReelItem({
       style={{
         scrollSnapAlign: "start",
         scrollSnapStop: "always",
-        touchAction: "pan-y",
+        touchAction: "manipulation",
       }}
     >
       <ReelMedia

@@ -368,7 +368,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
   });
 
   describe("ReelItem & ReelOverlay Cart Padding Integration", () => {
-    it("applies touch-action: pan-y to not block vertical scroll", () => {
+    it("prevents double-tap zoom while allowing scrolling and pinch zoom", () => {
       const html = renderToStaticMarkup(
         React.createElement(ReelItem, {
           item: mockSimpleItem,
@@ -376,7 +376,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       );
 
       expect(html).toContain('data-testid="reel-item"');
-      expect(html).toContain("touch-action:pan-y");
+      expect(html).toContain("touch-action:manipulation");
     });
 
     it("applies pb-28 to ReelOverlay when cart is active (withCart / hasCartItems)", () => {
