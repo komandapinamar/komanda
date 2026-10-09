@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { PublicDirectoryTenant } from "@/features/tenancy/application/public-tenant.service";
@@ -22,31 +22,91 @@ type Props = {
   tenants: DirectoryTenantItem[];
 };
 
-function checkIsMobile(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent || "";
-  const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-  return mobileRegex.test(ua) || window.innerWidth < 768;
-}
-
-const emptySubscribe = () => () => {};
-
 export function PublicDirectoryView({ tenants }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
-  const isMobile = useSyncExternalStore(emptySubscribe, checkIsMobile, () => false);
-  const [showAppBanner, setShowAppBanner] = useState(true);
+  const headerSlotRef = useRef<HTMLDivElement>(null);
+  const [isPinned, setIsPinned] = useState(false);
+  const [showRegister, setShowRegister] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const autoplayBlocked = useRef(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResultData | null>(null);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.defaultMuted = true;
-      videoRef.current.muted = true;
-      videoRef.current.play().catch(() => {});
+    let lastScrollY = Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop);
+    const onScroll = () => {
+      const scrollY = Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop);
+      const pinned = (headerSlotRef.current?.getBoundingClientRect().top ?? 1) < 0;
+      setIsPinned(pinned);
+      if (!pinned) {
+        setShowRegister(true);
+        lastScrollY = scrollY;
+      } else if (Math.abs(scrollY - lastScrollY) > 8) {
+        setShowRegister(scrollY < lastScrollY);
+        lastScrollY = scrollY;
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    const frame = window.requestAnimationFrame(onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("scroll", onScroll, true);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    video.defaultMuted = true;
+    video.muted = true;
+
+    const play = () => {
+      if (document.hidden || motionPreference.matches || autoplayBlocked.current) return;
+      video.play().catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "NotAllowedError") {
+          autoplayBlocked.current = true;
+        }
+        setVideoPlaying(false);
+      });
+    };
+    const onMotionChange = () => {
+      if (motionPreference.matches) {
+        video.pause();
+        setVideoPlaying(false);
+      } else {
+        play();
+      }
+    };
+    const onVisibilityChange = () => {
+      if (!document.hidden) play();
+    };
+    if (motionPreference.matches) {
+      video.pause();
+    } else {
+      play();
     }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pageshow", play);
+    if (motionPreference.addEventListener) {
+      motionPreference.addEventListener("change", onMotionChange);
+    } else {
+      motionPreference.addListener(onMotionChange);
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pageshow", play);
+      if (motionPreference.removeEventListener) {
+        motionPreference.removeEventListener("change", onMotionChange);
+      } else {
+        motionPreference.removeListener(onMotionChange);
+      }
+    };
   }, []);
 
   // Debounced server search with AbortController (AD-7)
@@ -129,17 +189,22 @@ export function PublicDirectoryView({ tenants }: Props) {
     : fallbackFilteredTenants.length;
 
   return (
-    <div className="relative flex min-h-screen flex-col justify-between overflow-x-hidden text-zinc-100">
+    <div className="relative flex min-h-screen flex-col justify-between overflow-x-clip text-zinc-100">
       {/* Background Video Layer */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[100svh] overflow-hidden bg-cover bg-center bg-[url('/videos/directory-bg-poster.webp')]">
         <video
           ref={videoRef}
           autoPlay
           loop
           muted
           playsInline
+          webkit-playsinline="true"
+          preload="auto"
           poster="/videos/directory-bg-poster.webp"
-          className="h-full w-full object-cover scale-105"
+          onPlaying={() => setVideoPlaying(true)}
+          onPause={() => setVideoPlaying(false)}
+          onError={() => setVideoPlaying(false)}
+          className={`h-full w-full object-cover ${videoPlaying ? "opacity-100" : "opacity-0"}`}
         >
           <source src="/videos/directory-bg.mp4" type="video/mp4" />
           <source src="/videos/directory-bg.webm" type="video/webm" />
@@ -149,56 +214,33 @@ export function PublicDirectoryView({ tenants }: Props) {
       </div>
 
       <div className="flex-1">
-        {/* Mobile Device Banner for Komanda App */}
-        {isMobile && showAppBanner && (
-          <aside
-            aria-label="Descargar Komanda App"
-            className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--color-accent-tertiary)]/20 bg-[var(--color-accent-primary)] px-4 py-2.5 text-xs text-[var(--color-accent-tertiary)] backdrop-blur-md"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-              <span className="font-semibold text-[var(--color-accent-tertiary)]">¿Estás en tu celular?</span>
-              <span className="text-[var(--color-accent-tertiary)]/80">Podés usar Komanda App para una mejor experiencia.</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Link
-                href="/app"
-                className="rounded-full bg-[var(--color-accent-secondary)] px-3 py-1 font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors whitespace-nowrap"
-              >
-                Abrir App
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowAppBanner(false)}
-                className="text-[var(--color-accent-tertiary)]/60 hover:text-[var(--color-accent-tertiary)] px-1"
-                aria-label="Cerrar aviso"
-              >
-                ✕
-              </button>
-            </div>
-          </aside>
-        )}
-
         {/* Top Navigation */}
-        <header className="sticky top-0 z-20 border-b-2 border-white/10 bg-black/60 px-6 py-4 backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Link
-                className="text-2xl font-black tracking-tighter text-white transition hover:text-[var(--color-accent-secondary)] font-semibold"
-                href="/"
+        <div ref={headerSlotRef} className="relative z-30 h-[65px]">
+          <header className={`${isPinned ? "fixed inset-x-0 top-0 z-50" : "relative"} border-b-2 border-white/10 bg-black/60 px-6 py-4 backdrop-blur-md`}>
+            <div className="mx-auto flex max-w-6xl items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Link
+                  className="text-2xl font-black tracking-tighter text-white transition hover:text-[var(--color-accent-secondary)]"
+                  href="/"
+                >
+                  Komanda
+                </Link>
+              </div>
+              <div
+                aria-hidden={isPinned && !showRegister}
+                className={`flex items-center overflow-hidden transition-[max-width,opacity,transform] duration-300 ease-out motion-reduce:transition-none ${isPinned && !showRegister ? "pointer-events-none max-w-0 translate-x-2 opacity-0" : "max-w-48 translate-x-0 opacity-100"}`}
               >
-                Komanda
-              </Link>
+                <Link
+                  href="/register"
+                  tabIndex={isPinned && !showRegister ? -1 : undefined}
+                  className="whitespace-nowrap rounded-lg bg-[var(--color-accent-secondary)] px-4 py-1.5 text-xs font-semibold text-[var(--color-accent-primary)] transition hover:bg-[var(--color-accent-tertiary)] hover:opacity-90"
+                >
+                  Registrar Negocio
+                </Link>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/register"
-                className="rounded-lg bg-[var(--color-accent-secondary)] px-4 py-1.5 text-xs font-semibold text-[var(--color-accent-primary)] transition hover:bg-[var(--color-accent-tertiary)] hover:opacity-90"
-              >
-                Registrar Negocio
-              </Link>
-            </div>
-          </div>
-        </header>
+          </header>
+        </div>
 
         {/* Hero Section */}
         <section className="relative z-10 mx-auto max-w-6xl px-6 pt-20 pb-12 text-center">
