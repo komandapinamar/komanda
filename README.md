@@ -70,7 +70,8 @@ release or a forward fix; the legacy system is not a rollback target.
 # MercadoPago API
 
 Each tenant connects its seller account with OAuth. Payment sessions and signed
-webhooks use the tenant integration and `KOMANDA_PUBLIC_BASE_URL`.
+webhooks use the tenant integration and the public site origin
+(`NEXT_PUBLIC_SITE_URL`, overridable via `KOMANDA_PUBLIC_BASE_URL`).
 
 ## Local Printing
 

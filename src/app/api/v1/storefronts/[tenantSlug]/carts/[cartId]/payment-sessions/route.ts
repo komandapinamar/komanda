@@ -13,6 +13,7 @@ import {
   IdempotencyInProgressError,
 } from "@/lib/idempotency/idempotency.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
+import { publicBaseUrl } from "@/lib/config/public-site";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
 type RouteContext = {
@@ -20,12 +21,7 @@ type RouteContext = {
 };
 
 function baseUrlFromRequest() {
-  const configured = process.env.KOMANDA_PUBLIC_BASE_URL?.trim();
-  if (!configured) {
-    throw new Error("KOMANDA_PUBLIC_BASE_URL is required for payment sessions.");
-  }
-  const url = new URL(configured);
-  return url.origin;
+  return new URL(publicBaseUrl()).origin;
 }
 
 function paymentSessionErrorResponse(error: unknown, correlationId: string) {

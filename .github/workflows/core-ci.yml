@@ -121,7 +121,7 @@ jobs:
       APP_ENCRYPTION_KEY_VERSION: "1"
       SESSION_SECRET: test-session-secret-key-32-chars-long
       KOMANDA_PUBLIC_BASE_URL: http://localhost:3000
-      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
       MERCADOPAGO_CLIENT_ID: "test-client-id"
       MERCADOPAGO_CLIENT_SECRET: test-client-secret
       MERCADOPAGO_REDIRECT_URI: http://localhost:3000/api/v1/integrations/mercadopago/oauth/callback

@@ -1,8 +1,10 @@
+import { storefrontRootDomain } from "@/lib/config/public-site";
+
 export function buildStorefrontUrl(
   slug: string,
   options?: { host?: string | null; protocol?: string | null },
 ): string {
-  const rootDomain = process.env.STOREFRONT_ROOT_DOMAIN?.toLowerCase() || "localhost";
+  const rootDomain = storefrontRootDomain();
   const rawHost = options?.host?.split(",")[0]?.trim() || "";
   const [hostWithoutPort, port] = rawHost.split(":");
   const portSuffix = port ? `:${port}` : "";
