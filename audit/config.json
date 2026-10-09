@@ -1,0 +1,7 @@
+{
+  "include": ["src/**/*.{ts,tsx,mts,js,jsx}", ".github/**/*.yml", ".github/**/*.yaml", "docker-compose.yml", "Dockerfile*", "mise.toml"],
+  "exclude": ["**/node_modules/**", "**/.next/**", "**/dist/**", "**/coverage/**", "**/playwright-report/**", "**/*.test-artifacts/**"],
+  "maxFileBytes": 120000,
+  "chunkChars": 30000,
+  "maxAiFindingsPerChunk": 12
+}
