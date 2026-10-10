@@ -12,6 +12,7 @@ import {
   mediaAssets,
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
+import { mediaPublicUrl } from "@/features/catalog/domain/media-url";
 
 export type CartSelectionCatalog = {
   kind: "item" | "combo";
@@ -75,7 +76,7 @@ export class CartRepository {
             : ("unavailable" as const),
         price: row.resource.price,
         currency: row.resource.currency,
-        imageUrl: row.media?.status === "ready" ? row.media.publicUrl : null,
+        imageUrl: row.media?.status === "ready" ? mediaPublicUrl(this.tenantId, row.media.id) : null,
         addonGroups: [],
       } satisfies CartSelectionCatalog;
     }
@@ -136,7 +137,7 @@ export class CartRepository {
       status: row.resource.status,
       price: row.resource.price,
       currency: row.resource.currency,
-      imageUrl: row.media?.status === "ready" ? row.media.publicUrl : null,
+      imageUrl: row.media?.status === "ready" ? mediaPublicUrl(this.tenantId, row.media.id) : null,
       addonGroups: groups.map((group) => ({
         id: group.id,
         minSelected: group.minSelected,

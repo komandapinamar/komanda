@@ -55,8 +55,6 @@ export function MediaUploader({
     try {
       const result = await catalogFetch<{
         assetId: string;
-        uploadUrl: string;
-        requiredHeaders: Record<string, string>;
       }>(`/api/v1/tenants/${tenantId}/media/uploads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,9 +66,9 @@ export function MediaUploader({
         }),
       });
 
-      const put = await fetch(result.uploadUrl, {
+      const put = await fetch(`/api/v1/tenants/${tenantId}/media/${result.assetId}/content`, {
         method: "PUT",
-        headers: result.requiredHeaders,
+        headers: { "Content-Type": file.type },
         body: file,
       });
       if (!put.ok)

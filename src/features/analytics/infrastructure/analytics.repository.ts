@@ -12,6 +12,7 @@ import {
   tenantOrders,
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
+import { mediaPublicUrl } from "@/features/catalog/domain/media-url";
 import {
   extractCustomerIdentifier,
   type CustomerRecurrenceSummary,
@@ -765,7 +766,9 @@ export class AnalyticsRepository {
           itemId: qItem.itemId,
           productName: info.name,
           categoryName: info.categoryName ?? null,
-          imageUrl: info.mediaUrl ?? null,
+           imageUrl: info.imageAssetId && info.mediaUrl
+             ? mediaPublicUrl(this.tenantId, info.imageAssetId)
+             : null,
           price: info.price,
           qualifiedViews: qItem.viewsCount,
           purchasesCount,
@@ -1118,4 +1121,3 @@ export class AnalyticsRepository {
     };
   }
 }
-
