@@ -10,7 +10,7 @@ name: Database maintenance retention
 # runs the same `npm run db:maintenance:retention` command on this schedule.
 on:
   schedule:
-    - cron: "30 7 * * *" # 04:30 America/Argentina/Buenos_Aires (UTC-3)
+    - cron: "0 15 * * *" # 12:00 America/Argentina/Buenos_Aires (UTC-3)
   workflow_dispatch:
 
 concurrency:
