@@ -14,7 +14,7 @@ export type TenantSettingsView = {
   printingEnabled: boolean;
   menuTheme?: "classic" | "reels";
   preset?: "gastronomy" | "express_retail";
-  slackCashAlertWebhookUrl?: string | null;
+  ownerCashAlertWhatsAppPhone?: string | null;
   currency: string;
   timezone: string;
   version: number;
@@ -31,6 +31,9 @@ const presetLabels: Record<
 
 async function jsonOrThrow(response: Response) {
   if (response.ok) return response.json();
+  if (response.status === 422) {
+    throw new Error("Ingresá un celular argentino válido. Los avisos por WhatsApp solo se habilitan para negocios Express.");
+  }
   if (response.status === 409) {
     throw new Error("La configuración cambió. Recargá antes de guardar.");
   }
@@ -56,7 +59,7 @@ export function TenantSettingsPanel({
     setMessage(null);
     const form = new FormData(event.currentTarget);
     const menuTheme = form.get("menuTheme");
-    const slackWebhook = form.get("slackCashAlertWebhookUrl");
+    const ownerPhone = form.get("ownerCashAlertWhatsAppPhone");
     try {
       const updated = (await jsonOrThrow(
         await fetch(`/api/v1/tenants/${settings.tenantId}/settings`, {
@@ -73,9 +76,9 @@ export function TenantSettingsPanel({
             printingEnabled: form.get("printingEnabled") === "on",
             ...(isExpressRetail
               ? {
-                  slackCashAlertWebhookUrl:
-                    typeof slackWebhook === "string" && slackWebhook.trim().length > 0
-                      ? slackWebhook.trim()
+                  ownerCashAlertWhatsAppPhone:
+                    typeof ownerPhone === "string" && ownerPhone.trim().length > 0
+                      ? ownerPhone.trim()
                       : null,
                 }
               : {}),
@@ -211,16 +214,16 @@ export function TenantSettingsPanel({
         <div className="grid gap-2 border-t border-zinc-800/80 pt-5">
           <label className="grid gap-1">
             <span className="text-sm font-medium text-zinc-200">
-              Webhook de Slack para cobros en efectivo (Komanda Kiosk)
+              WhatsApp para avisos de pedidos en efectivo
             </span>
             <span className="text-xs text-zinc-400">
-              URL de Incoming Webhook para notificar al mostrador cada vez que un cliente elija pagar en efectivo.
+              Ingresá tu celular argentino (por ejemplo, +54 9 11 2345-6789). Al guardar, aceptás recibir avisos de pedidos pendientes de pago por WhatsApp. Dejá el campo vacío y guardá para desactivar los avisos.
             </span>
             <input
-              name="slackCashAlertWebhookUrl"
-              type="url"
-              defaultValue={settings.slackCashAlertWebhookUrl ?? ""}
-              placeholder="https://hooks.slack.com/services/..."
+              name="ownerCashAlertWhatsAppPhone"
+              type="tel"
+              defaultValue={settings.ownerCashAlertWhatsAppPhone ?? ""}
+              placeholder="+54 9 11 2345-6789"
               className={inputClass}
             />
           </label>

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { dispatch } = vi.hoisted(() => ({ dispatch: vi.fn() }));
+const { dispatch, dispatchOwnerCash } = vi.hoisted(() => ({ dispatch: vi.fn(), dispatchOwnerCash: vi.fn() }));
 vi.mock("@/features/orders/application/dispatch-ready-whatsapp.job", () => ({ dispatchReadyWhatsApp: dispatch }));
+vi.mock("@/features/orders/application/dispatch-owner-cash-whatsapp.job", () => ({ dispatchOwnerCashWhatsApp: dispatchOwnerCash }));
 import { POST } from "@/app/api/v1/internal/cron/dispatch-ready-whatsapp/route";
 
 describe("WhatsApp scheduler authorization", () => {
@@ -18,10 +19,11 @@ describe("WhatsApp scheduler authorization", () => {
   it("dispatches when authorized", async () => {
     vi.stubEnv("CRON_SECRET", "private-secret");
     dispatch.mockResolvedValue({ sent: 2, failed: 0 });
+    dispatchOwnerCash.mockResolvedValue({ sent: 1, skipped: 2, failed: 0 });
     const response = await POST(new Request("https://komanda.example/api/v1/internal/cron/dispatch-ready-whatsapp", {
       method: "POST", headers: { Authorization: "Bearer private-secret" },
     }));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ sent: 2, failed: 0 });
+    expect(await response.json()).toEqual({ sent: 2, failed: 0, ownerCash: { sent: 1, skipped: 2, failed: 0 } });
   });
 });
