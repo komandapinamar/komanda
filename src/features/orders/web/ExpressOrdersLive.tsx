@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AdminDashboardOrder } from "@/types/types";
+import AdminOrdersLive from "./AdminOrdersLive";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
@@ -30,7 +31,7 @@ export function ExpressOrdersLive({
   tenantId: string;
   initialOrders: AdminDashboardOrder[];
 }) {
-  const [orders] = useState<AdminDashboardOrder[]>(initialOrders);
+  const [orders, setOrders] = useState<AdminDashboardOrder[]>(initialOrders);
 
   const totalRevenue = orders
     .filter((o) => o.paymentStatus === "paid")
@@ -56,6 +57,8 @@ export function ExpressOrdersLive({
           <p className="mt-2 text-3xl font-bold text-emerald-400">{digitalCount}</p>
         </div>
       </div>
+
+      <AdminOrdersLive tenantId={tenantId} initialOrders={initialOrders} onOrdersChange={setOrders} />
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
         <div className="px-6 py-4 border-b border-zinc-800 flex justify-between items-center">

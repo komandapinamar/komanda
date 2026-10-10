@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PgDialect } from "drizzle-orm/pg-core";
 
 // Mock transaction
 const mockTx = {
@@ -277,7 +278,7 @@ describe("Story 2.3: Endpoint Transaccional de Cobro en Mostrador (collect-cash)
   // 3. Application Service: CollectCashService
   // -------------------------------------------------------------------------
   describe("CollectCashService.collect()", () => {
-    function setupSuccessfulDbMocks(orderOverrides = {}) {
+    function setupSuccessfulDbMocks(orderOverrides = {}, openShift: typeof sampleOpenShiftRow | null = sampleOpenShiftRow) {
       const order = { ...sampleOrderRow, ...orderOverrides };
 
       let selectCallCount = 0;
@@ -292,7 +293,7 @@ describe("Story 2.3: Endpoint Transaccional de Cobro en Mostrador (collect-cash)
                   return Promise.resolve([order]);
                 }
                 // Second select is cashShifts
-                return Promise.resolve([sampleOpenShiftRow]);
+                return Promise.resolve(openShift ? [openShift] : []);
               }),
             })),
           };
@@ -354,6 +355,9 @@ describe("Story 2.3: Endpoint Transaccional de Cobro en Mostrador (collect-cash)
 
       // 3. Verificación de movimiento de caja sale_deposit en cashRegisterMovements (AD-4)
       expect(mockTx.insert).toHaveBeenCalledWith(cashRegisterMovements);
+      expect(mockTx.insert.mock.results[0]?.value?.values).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId, locationId, orderId, type: "sale_deposit", shiftId }),
+      );
       expect(mockAppendTransitionEvent).toHaveBeenCalledWith({
         orderId,
         fromStatus: sampleOrderRow.fulfillmentStatus,
@@ -432,43 +436,46 @@ describe("Story 2.3: Endpoint Transaccional de Cobro en Mostrador (collect-cash)
       expect(mockTx.insert).toHaveBeenCalled();
     });
 
-    it("Sin turno de caja abierto: rechaza con NoOpenCashShiftError sin alterar la orden", async () => {
-      let selectCallCount = 0;
-      mockTx.select = vi.fn().mockImplementation(() => ({
-        from: vi.fn().mockImplementation(() => {
-          selectCallCount++;
-          return {
-            where: vi.fn().mockImplementation(() => ({
-              limit: vi.fn().mockImplementation(() => {
-                if (selectCallCount === 1) {
-                  return Promise.resolve([sampleOrderRow]);
-                }
-                // No open shift found
-                return Promise.resolve([]);
-              }),
-            })),
-          };
-        }),
-      }));
-
+    it("Sin turno abierto en la sucursal: cobra, asienta el ingreso sin turno y despacha cocina", async () => {
+      setupSuccessfulDbMocks({}, null);
       const service = new CollectCashService(() => fixedNow);
+      const result = await service.collect({
+        context: operatorContext,
+        orderId,
+        idempotencyKey: "00000000-0000-4000-8000-000000000003",
+        body: { authMethod: "pickup_pin", authCode: "5821" },
+      });
 
-      await expect(
-        service.collect({
-          context: operatorContext,
-          orderId,
-          idempotencyKey: "00000000-0000-4000-8000-000000000003",
-          body: {
-            authMethod: "pickup_pin",
-            authCode: "5821",
-          },
-        }),
-      ).rejects.toThrow(NoOpenCashShiftError);
+      expect(result.paymentStatus).toBe("paid");
+      expect(mockTx.insert).toHaveBeenCalledTimes(1);
+      expect(mockTx.insert.mock.results[0]?.value?.values).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId, locationId, orderId, type: "sale_deposit", shiftId: null }),
+      );
+      expect(mockEnqueueOrderTicketInTransaction).toHaveBeenCalledTimes(1);
+      expect(mockAppendOutboxEvent).toHaveBeenCalledWith(
+        mockTx,
+        operatorContext,
+        expect.objectContaining({ eventType: "order.paid" }),
+      );
+    });
 
-      // Regla NEVER: No debe insertar en caja ni encolar comandas
-      expect(mockTx.update).not.toHaveBeenCalled();
-      expect(mockTx.insert).not.toHaveBeenCalled();
-      expect(mockEnqueueOrderTicketInTransaction).not.toHaveBeenCalled();
+    it("Un turno abierto en otra sucursal no se vincula al cobro", async () => {
+      // The location-filtered shift lookup returns no matching row.
+      setupSuccessfulDbMocks({}, null);
+      await new CollectCashService(() => fixedNow).collect({
+        context: operatorContext,
+        orderId,
+        idempotencyKey: "00000000-0000-4000-8000-000000000016",
+        body: { authMethod: "account_auth" },
+      });
+      const shiftSelect = mockTx.select.mock.results[1]?.value;
+      const shiftWhere = shiftSelect.from.mock.results[0]?.value.where.mock.calls[0]?.[0];
+      const query = new PgDialect().sqlToQuery(shiftWhere);
+      expect(query.sql).toContain('"cash_shifts"."location_id"');
+      expect(query.params).toContain(locationId);
+      expect(mockTx.insert.mock.results[0]?.value?.values).toHaveBeenCalledWith(
+        expect.objectContaining({ locationId, shiftId: null }),
+      );
     });
 
     it("PIN de cobro incorrecto: rechaza con InvalidPickupPinError sin alterar la orden", async () => {

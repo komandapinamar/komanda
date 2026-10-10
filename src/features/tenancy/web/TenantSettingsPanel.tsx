@@ -227,15 +227,13 @@ export function TenantSettingsPanel({
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-zinc-800/80 pt-5 text-sm text-zinc-400">
-        <span>Moneda: <strong className="font-medium text-zinc-200">{settings.currency}</strong></span>
-        <span>Ventas: <strong className="font-medium text-zinc-200">{settings.salesEnabled ? "activas" : "deshabilitadas"}</strong></span>
         <label className="flex items-center gap-2">
           <input
             name="printingEnabled"
             type="checkbox"
             defaultChecked={settings.printingEnabled}
           />
-          <span>Habilitar impresión</span>
+          <span>Habilitar impresión por Komanda Desktop</span>
         </label>
       </div>
       <button className="w-fit rounded-md bg-[var(--color-accent-secondary)] px-5 py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors">

@@ -7,6 +7,7 @@ export type CreateCashOrderPayload = {
   customer: {
     name: string;
     phone?: string;
+    whatsappReadyOptIn?: boolean;
   };
   notes?: string;
   cartVersion?: number;
@@ -30,6 +31,7 @@ export async function createCashOrder(
         customer: {
           name: payload.customer.name.trim(),
           phone: payload.customer.phone?.trim() || undefined,
+          ...(payload.customer.whatsappReadyOptIn === true ? { whatsappReadyOptIn: true } : {}),
         },
         notes: payload.notes?.trim() || undefined,
         cartVersion: payload.cartVersion,

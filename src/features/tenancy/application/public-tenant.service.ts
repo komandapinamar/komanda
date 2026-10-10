@@ -289,12 +289,15 @@ export class PublicTenantService {
                 videoMedia?.status === "ready" ? (videoMedia.publicUrl ?? null) : null,
               addonGroups: itemGroups
                 .filter(({ itemId }) => itemId === item.id)
-                .map(({ addonGroupId }) => {
-                  const group = groups.find(({ id }) => id === addonGroupId)!;
-                  return {
-                    ...group,
-                    options: options.filter(({ groupId }) => groupId === group.id),
-                  };
+                .flatMap(({ addonGroupId }) => {
+                  const group = groups.find(({ id }) => id === addonGroupId);
+                  if (!group) return [];
+                  return [
+                    {
+                      ...group,
+                      options: options.filter(({ groupId }) => groupId === group.id),
+                    },
+                  ];
                 }),
             })),
           combos: combos

@@ -10,7 +10,6 @@ import {
 import {
   ForbiddenRoleError,
   InvalidPickupPinError,
-  NoOpenCashShiftError,
   OrderConflictError,
   OrderNotFoundError,
 } from "@/features/orders/application/order-errors";
@@ -115,26 +114,16 @@ export class CollectCashService {
         );
       }
 
-      // 4. Validate open cash shift strictly at the order's location
-      const shiftConditions = [
-        eq(cashShifts.tenantId, context.tenantId),
-        eq(cashShifts.status, "open"),
-      ];
-      if (order.locationId) {
-        shiftConditions.push(eq(cashShifts.locationId, order.locationId));
-      }
-
+      // 4. Associate a shift only when one is open at the order's location.
       const [openShift] = await transaction
         .select()
         .from(cashShifts)
-        .where(and(...shiftConditions))
+        .where(and(
+          eq(cashShifts.tenantId, context.tenantId),
+          eq(cashShifts.status, "open"),
+          eq(cashShifts.locationId, order.locationId),
+        ))
         .limit(1);
-
-      if (!openShift) {
-        throw new NoOpenCashShiftError(
-          "No existe un turno de caja abierto en la sucursal de la orden para registrar el cobro.",
-        );
-      }
 
       // 5. Authenticate payment collection (AD-6)
       if (request.authMethod === "pickup_pin") {
@@ -178,7 +167,7 @@ export class CollectCashService {
       await transaction.insert(cashRegisterMovements).values({
         tenantId: context.tenantId,
         locationId: order.locationId,
-        shiftId: openShift.id,
+        shiftId: openShift?.id ?? null,
         orderId: order.id,
         type: "sale_deposit",
         amount: order.total,
@@ -214,7 +203,7 @@ export class CollectCashService {
           purchaseNumber: String(order.purchaseNumber),
           total: order.total,
           authMethod: request.authMethod,
-          shiftId: openShift.id,
+          shiftId: openShift?.id ?? null,
         },
       });
 

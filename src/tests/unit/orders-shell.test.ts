@@ -5,7 +5,7 @@ import { TenantPresetProvider } from "@/features/tenancy/web/tenant-preset-conte
 import { OrdersShell } from "@/features/tenancy/web/shells/orders-shell";
 
 describe("OrdersShell OCP", () => {
-  it("renders ExpressOrdersLive for express_retail without kitchen Kanban", () => {
+  it("renders Express sales summaries and the same operational stages as POS", () => {
     const html = renderToString(
       React.createElement(
         TenantPresetProvider,
@@ -20,6 +20,9 @@ describe("OrdersShell OCP", () => {
     expect(html).toContain("Total Facturado");
     expect(html).toContain("Cobros Digitales");
     expect(html).not.toContain("Preparando");
+    expect(html).toContain("1. Pago");
+    expect(html).toContain("2. Cocina");
+    expect(html).toContain("3. Entrega");
   });
 
   it("renders AdminOrdersLive for gastronomy with kitchen statuses", () => {

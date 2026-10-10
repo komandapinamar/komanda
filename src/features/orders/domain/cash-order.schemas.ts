@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
 
 const optionalTrimmedString = z.preprocess(
   (value) =>
@@ -14,8 +15,13 @@ export const createCashOrderSchema = z
       .object({
         name: z.string().trim().min(1, "El nombre del cliente es obligatorio."),
         phone: optionalTrimmedString,
+        whatsappReadyOptIn: z.boolean().optional(),
       })
-      .strict(),
+      .strict()
+      .refine(customer => !customer.whatsappReadyOptIn || !!normalizeWhatsAppRecipient(customer.phone), {
+        message: "Ingresá un celular válido para recibir avisos por WhatsApp.",
+        path: ["phone"],
+      }),
     notes: optionalTrimmedString,
     cartVersion: z.number().int().positive().optional(),
   })

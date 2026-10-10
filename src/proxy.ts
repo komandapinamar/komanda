@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { storefrontRootDomain } from "@/lib/config/public-site";
 
 const TENANT_HINT_HEADER = "x-komanda-tenant-slug";
 
@@ -15,7 +16,7 @@ function slugFromRequest(request: NextRequest) {
   const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host"))
     ?.split(":")[0]
     .toLowerCase();
-  const rootDomain = process.env.STOREFRONT_ROOT_DOMAIN?.toLowerCase();
+  const rootDomain = storefrontRootDomain();
   if (!host || !rootDomain || host === rootDomain || !host.endsWith(`.${rootDomain}`)) {
     return null;
   }

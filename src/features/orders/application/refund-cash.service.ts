@@ -10,7 +10,6 @@ import {
 } from "@/features/orders/domain/refund-cash.schemas";
 import {
   ForbiddenRoleError,
-  NoOpenCashShiftError,
   OrderConflictError,
   OrderNotFoundError,
 } from "@/features/orders/application/order-errors";
@@ -121,26 +120,16 @@ export class RefundCashService {
         );
       }
 
-      // Open cash shift strictly at the order's location
-      const shiftConditions = [
-        eq(cashShifts.tenantId, context.tenantId),
-        eq(cashShifts.status, "open"),
-      ];
-      if (order.locationId) {
-        shiftConditions.push(eq(cashShifts.locationId, order.locationId));
-      }
-
+      // Associate a shift only when one is open at the order's location.
       const [openShift] = await transaction
         .select()
         .from(cashShifts)
-        .where(and(...shiftConditions))
+        .where(and(
+          eq(cashShifts.tenantId, context.tenantId),
+          eq(cashShifts.status, "open"),
+          eq(cashShifts.locationId, order.locationId),
+        ))
         .limit(1);
-
-      if (!openShift) {
-        throw new NoOpenCashShiftError(
-          "No existe un turno de caja abierto en la sucursal de la orden para registrar la devolución.",
-        );
-      }
 
       const now = this.now();
 
@@ -170,7 +159,7 @@ export class RefundCashService {
         .values({
           tenantId: context.tenantId,
           locationId: order.locationId,
-          shiftId: openShift.id,
+          shiftId: openShift?.id ?? null,
           orderId: order.id,
           type: "cancellation_withdrawal",
           amount: order.total,
@@ -207,7 +196,7 @@ export class RefundCashService {
           total: order.total,
           reason: request.reason,
           operatorNote: request.operatorNote,
-          shiftId: openShift.id,
+          shiftId: openShift?.id ?? null,
         },
       });
 

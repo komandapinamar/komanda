@@ -179,6 +179,7 @@ export class CreateCashOrderService {
         customer: {
           name: request.customer.name,
           phone: request.customer.phone ?? undefined,
+          ...(request.customer.whatsappReadyOptIn === true ? { whatsappReadyOptIn: true } : {}),
         },
         notes: request.notes ?? undefined,
         idempotencyKey: input.idempotencyKey,

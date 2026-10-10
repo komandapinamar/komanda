@@ -34,22 +34,8 @@ export default function MobileCartDrawer() {
           />
 
           <div className="absolute inset-x-0 bottom-0 h-[85vh] rounded-t-2xl bg-transparent p-2">
-            <div className="flex h-full flex-col overflow-hidden rounded-t-2xl">
-              <div className="flex justify-center bg-[var(--color-accent-primary)] pt-3">
-                <div className="h-1.5 w-14 rounded-full bg-[var(--color-accent-secondary)]/40" />
-              </div>
-              <div className="flex items-center justify-between bg-[var(--color-accent-primary)] px-4 pb-3 pt-2 text-[var(--color-accent-secondary)]">
-                <h2 className="text-lg font-bold">Tu carrito</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="font-semibold"
-                >
-                  Cerrar
-                </button>
-              </div>
-
-              <div className="min-h-0 flex-1 bg-[var(--color-accent-primary)]">
+            <div className="flex h-full flex-col overflow-hidden">
+              <div className="min-h-0 flex-1">
                 <CartPanel />
               </div>
             </div>

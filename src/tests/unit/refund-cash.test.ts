@@ -224,7 +224,7 @@ describe("Story 3.1: Endpoint Transaccional de Devolución de Efectivo (refund-c
   // 3. Application Service: RefundCashService
   // -------------------------------------------------------------------------
   describe("RefundCashService.refund()", () => {
-    function setupSuccessfulDbMocks(orderOverrides = {}) {
+    function setupSuccessfulDbMocks(orderOverrides = {}, openShift: typeof sampleOpenShiftRow | null = sampleOpenShiftRow) {
       const order = { ...sampleOrderRow, ...orderOverrides };
 
       let selectCallCount = 0;
@@ -239,7 +239,7 @@ describe("Story 3.1: Endpoint Transaccional de Devolución de Efectivo (refund-c
                   return Promise.resolve([order]);
                 }
                 // Second select is cashShifts
-                return Promise.resolve([sampleOpenShiftRow]);
+                return Promise.resolve(openShift ? [openShift] : []);
               }),
             })),
           };
@@ -362,37 +362,27 @@ describe("Story 3.1: Endpoint Transaccional de Devolución de Efectivo (refund-c
       expect(mockMarkRedemptionCancelled).toHaveBeenCalledWith(orderId);
     });
 
-    it("Sin turno de caja abierto: rechaza con NoOpenCashShiftError sin mutaciones", async () => {
-      let selectCallCount = 0;
-      mockTx.select = vi.fn().mockImplementation(() => ({
-        from: vi.fn().mockImplementation(() => {
-          selectCallCount++;
-          return {
-            where: vi.fn().mockImplementation(() => ({
-              limit: vi.fn().mockImplementation(() => {
-                if (selectCallCount === 1) {
-                  return Promise.resolve([sampleOrderRow]);
-                }
-                return Promise.resolve([]);
-              }),
-            })),
-          };
-        }),
-      }));
-
+    it("Sin turno abierto: reembolsa y registra egreso sin turno", async () => {
+      setupSuccessfulDbMocks({}, null);
       const service = new RefundCashService(() => fixedNow);
+      const result = await service.refund({
+        context: operatorContext,
+        orderId,
+        idempotencyKey: "00000000-0000-4000-8000-000000000004",
+        body: { reason: "Motivo" },
+      });
 
-      await expect(
-        service.refund({
-          context: operatorContext,
-          orderId,
-          idempotencyKey: "00000000-0000-4000-8000-000000000004",
-          body: { reason: "Motivo" },
-        }),
-      ).rejects.toThrow(NoOpenCashShiftError);
-
-      expect(mockTx.update).not.toHaveBeenCalled();
-      expect(mockTx.insert).not.toHaveBeenCalled();
+      expect(result.paymentStatus).toBe("refunded");
+      expect(result.cashMovementId).toBe(cashMovementId);
+      expect(mockTx.insert).toHaveBeenCalledTimes(1);
+      expect(mockTx.insert.mock.results[0]?.value?.values).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId, locationId, orderId, type: "cancellation_withdrawal", shiftId: null }),
+      );
+      expect(mockAppendOutboxEvent).toHaveBeenCalledWith(
+        mockTx,
+        operatorContext,
+        expect.objectContaining({ eventType: "order.refunded" }),
+      );
     });
 
     it("Orden impaga (payment_status pending): rechaza con OrderConflictError", async () => {

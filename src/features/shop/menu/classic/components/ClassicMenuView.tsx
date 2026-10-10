@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import MenuViewToolbar, { categoryPillClassName, inactiveCategoryPillClassName } from "../../MenuViewToolbar";
 import OrderProductCard from "@/features/shop/order/components/OrderProductCard";
 import OrderShell from "@/features/shop/order/components/OrderShell";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
@@ -13,6 +14,7 @@ export interface ClassicMenuViewProps {
   tenantSlug?: string;
   orderingAvailable?: boolean;
   preset?: TenantPreset;
+  showReelsLink?: boolean;
 }
 
 export default function ClassicMenuView({
@@ -21,6 +23,7 @@ export default function ClassicMenuView({
   tenantSlug,
   orderingAvailable = true,
   preset = "gastronomy",
+  showReelsLink = false,
 }: ClassicMenuViewProps) {
   const isExpressRetail = preset === "express_retail";
 
@@ -76,7 +79,24 @@ export default function ClassicMenuView({
   return (
     <OrderShell showCart={!isExpressRetail}>
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
-      <main className="space-y-6 p-4 bg-[var(--color-accent-primary)] min-h-[100dvh]">
+      <main className={`space-y-6 p-4 bg-[var(--color-accent-primary)] min-h-[100dvh] ${showReelsLink ? "pt-24 md:pt-[calc(4vh+6rem)]" : ""}`}>
+        <div className={showReelsLink
+          ? "fixed top-4 left-4 right-4 z-40 md:top-[calc(4vh+1rem)] md:left-1/2 md:right-auto md:w-[calc(28rem-2rem)] md:-translate-x-1/2"
+          : "sticky top-4 z-10"}>
+          <MenuViewToolbar mode={showReelsLink ? "grid" : undefined}>
+            <nav aria-label="Categorías de menú" className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {sections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className={`${categoryPillClassName} ${inactiveCategoryPillClassName}`}
+                >
+                  {section.title}
+                </a>
+              ))}
+            </nav>
+          </MenuViewToolbar>
+        </div>
         <header className="space-y-2 text-[var(--color-accent-secondary)]">
           {isExpressRetail ? (
             <div className="flex flex-col gap-2">
@@ -105,26 +125,12 @@ export default function ClassicMenuView({
           )}
         </header>
 
-        <nav className="sticky top-0 z-10 border-y border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)]/95 py-3 backdrop-blur">
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {sections.map((section) => (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                className="shrink-0 rounded-full border border-[var(--color-accent-secondary)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition-colors hover:bg-[var(--color-accent-secondary)] hover:text-[var(--color-accent-primary)]"
-              >
-                {section.title}
-              </a>
-            ))}
-          </div>
-        </nav>
-
         <div className="space-y-10">
           {sections.map((section) => (
             <section
               key={section.id}
               id={section.id}
-              className="scroll-mt-24 space-y-4"
+              className={`${showReelsLink ? "scroll-mt-24 md:scroll-mt-[calc(4vh+6rem)]" : "scroll-mt-24"} space-y-4`}
             >
               <div className="space-y-1 text-[var(--color-accent-secondary)]">
                 <h2 className="text-2xl font-black sm:text-3xl">

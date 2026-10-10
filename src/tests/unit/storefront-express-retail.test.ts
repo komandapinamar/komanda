@@ -41,9 +41,12 @@ vi.mock("next/navigation", () => ({
 const mockAddItem = vi.fn();
 vi.mock("@/features/shop/cart/context/cart.context", () => ({
   useCart: () => ({
+    tenantSlug: "test-store",
     items: [],
     itemCount: 0,
-    subtotal: "0.00",
+    subtotal: 0,
+    total: 0,
+    discountTotal: 0,
     addItem: mockAddItem,
     removeItem: vi.fn(),
     updateQuantity: vi.fn(),
@@ -213,7 +216,7 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
   });
 
   describe("ClassicMenuView (Express Retail Vidriera vs Gastronomy)", () => {
-    it("renders Vidriera header with badge and disables adding products when preset is express_retail", () => {
+    it("renders Vidriera header and disables adding products when preset is express_retail", () => {
       const markup = renderToStaticMarkup(
         React.createElement(ClassicMenuView, {
           categories: [mockCategory],
@@ -223,9 +226,8 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
         }),
       );
 
-      // Header badge and legend
-      expect(markup).toContain('data-testid="storefront-preset-badge"');
-      expect(markup).toContain("🛍️ Tienda Express · Autoservicio");
+      // Header and legend
+      expect(markup).toContain('data-testid="storefront-express-legend"');
       expect(markup).toContain("Vidriera Digital y Precios");
       expect(markup).toContain(
         "Consultá precios y disponibilidad de productos. Las compras se realizan de manera presencial en tienda mediante nuestras terminales de autoservicio o caja.",
@@ -344,7 +346,7 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
       const pageElement = await OrderPage();
       const markup = renderToStaticMarkup(pageElement);
 
-      expect(markup).toContain("🛍️ Tienda Express · Autoservicio");
+      expect(markup).toContain('data-testid="storefront-express-legend"');
       expect(markup).toContain("Vidriera Digital y Precios");
       expect(markup).not.toContain("Ver carrito");
     });
@@ -374,7 +376,7 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
       const markup = renderToStaticMarkup(pageElement);
 
       // Rendered ClassicMenuView with Vidriera header rather than ReelsMenuView
-      expect(markup).toContain("🛍️ Tienda Express · Autoservicio");
+      expect(markup).toContain('data-testid="storefront-express-legend"');
       expect(markup).not.toContain('data-testid="reels-menu-view"');
     });
   });
