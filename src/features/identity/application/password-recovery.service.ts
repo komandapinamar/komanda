@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { identityVerificationChallenges, users, userSessions } from "@/db/schema";
 import { withPlatformServiceTransaction } from "@/db/tenant-transaction";
-import { publicBaseUrl } from "@/lib/config/public-site";
+import { PasswordResetDelivery, passwordResetDeliveryFromEnvironment } from "@/features/identity/infrastructure/password-reset-delivery.port";
 
 const PURPOSE = "password_reset";
 const TTL_MS = 30 * 60 * 1000;
@@ -17,32 +17,11 @@ function digest(token: string) {
 
 export class InvalidPasswordResetTokenError extends Error {}
 
-export type PasswordResetDelivery = (email: string, token: string) => Promise<void>;
-
-export async function deliverPasswordReset(email: string, token: string) {
-  const key = process.env.IDENTITY_VERIFICATION_RESEND_KEY;
-  const baseUrl = publicBaseUrl();
-  if (!key) throw new Error("Password reset email is not configured.");
-  const url = new URL("/reset-password", baseUrl);
-  url.searchParams.set("token", token);
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: process.env.IDENTITY_VERIFICATION_FROM_EMAIL ?? "invitations@komanda.com",
-      to: email,
-      subject: "Restablecer tu contraseña de Komanda",
-      html: `<p>Solicitaste restablecer tu contraseña de Komanda.</p><p><a href="${url.toString()}">Restablecer contraseña</a></p><p>El enlace vence en 30 minutos. Si no lo pediste, ignorá este mensaje.</p>`,
-    }),
-    signal: AbortSignal.timeout(10_000),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("Password reset email delivery failed.");
-}
+export type { PasswordResetDelivery };
 
 export class PasswordRecoveryService {
   constructor(
-    private readonly deliver: PasswordResetDelivery = deliverPasswordReset,
+    private readonly deliver: PasswordResetDelivery = passwordResetDeliveryFromEnvironment(),
     private readonly now: () => Date = () => new Date(),
   ) {}
 
