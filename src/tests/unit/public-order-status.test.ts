@@ -27,7 +27,13 @@ describe("public order tracking", () => {
     }));
     const response = await GET(request, route(tenantId, orderId));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ purchaseNumber: "42", fulfillmentStatus: "ready" });
+    expect(await response.json()).toEqual({
+      purchaseNumber: "42",
+      fulfillmentStatus: "ready",
+      paymentStatus: null,
+      tender: null,
+      paymentExpiresAt: null,
+    });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     const query = new PgDialect().sqlToQuery(where.mock.calls[0][0]);
     expect(query.sql).toContain("tenant_id");
@@ -57,8 +63,20 @@ describe("public order tracking", () => {
     const preparing = await GET(request, route(tenantId, orderId));
     state = "ready";
     const ready = await GET(request, route(tenantId, orderId));
-    expect(await preparing.json()).toEqual({ purchaseNumber: "42", fulfillmentStatus: "preparing" });
-    expect(await ready.json()).toEqual({ purchaseNumber: "42", fulfillmentStatus: "ready" });
+    expect(await preparing.json()).toEqual({
+      purchaseNumber: "42",
+      fulfillmentStatus: "preparing",
+      paymentStatus: null,
+      tender: null,
+      paymentExpiresAt: null,
+    });
+    expect(await ready.json()).toEqual({
+      purchaseNumber: "42",
+      fulfillmentStatus: "ready",
+      paymentStatus: null,
+      tender: null,
+      paymentExpiresAt: null,
+    });
   });
 
   it("rejects invalid identifiers without querying the database", async () => {

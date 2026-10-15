@@ -36,7 +36,7 @@ export default function ReelOverlay({
   return (
     <div
       data-testid="reel-overlay"
-      className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-end"
+      className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-end pb-[env(safe-area-inset-bottom,0px)]"
     >
       {/* Scrim bottom gradient of at least 340px height */}
       <div

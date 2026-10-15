@@ -19,7 +19,7 @@ export function normalizeOptionalPhone(input: string | undefined | null): string
 export function buildCheckoutPayload(input: {
   cartId: string;
   cartVersion?: number;
-  customer: { name: string; phone?: string | null };
+  customer: { name: string; phone?: string | null; whatsappReadyOptIn?: boolean };
   notes: string;
 }): CreatePaymentSessionPayload {
   const notes = input.notes.trim();
@@ -30,6 +30,7 @@ export function buildCheckoutPayload(input: {
     customer: {
       name: input.customer.name.trim(),
       phone: normalizeOptionalPhone(input.customer.phone),
+      ...(input.customer.whatsappReadyOptIn === true ? { whatsappReadyOptIn: true } : {}),
     },
     notes: notes.length > 0 ? notes : undefined,
   };

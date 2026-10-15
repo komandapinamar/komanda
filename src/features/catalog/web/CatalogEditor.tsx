@@ -65,7 +65,7 @@ type Combo = {
   items: { itemId: string; itemName: string; quantity: number }[];
 };
 
-type Props = {
+export type Props = {
   tenantId: string;
   initialCategories: Category[];
   initialItems: Item[];
@@ -273,27 +273,29 @@ export function CatalogEditor({
           </button>
         </div>
       ) : null}
-      <nav
-        className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
-        aria-label="Secciones del catálogo"
-      >
-        {(
-          [
-            ["menu", "Menú"],
-            ["addons", "Adicionales"],
-            ["combos", "Combos"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setTab(value)}
-            className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      {!isExpress ? (
+        <nav
+          className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
+          aria-label="Secciones del catálogo"
+        >
+          {(
+            [
+              ["menu", "Menú"],
+              ["addons", "Adicionales"],
+              ["combos", "Combos"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       {tab === "menu" ? (
         <section className="grid gap-6 lg:grid-cols-[230px_1fr]">
@@ -351,7 +353,7 @@ export function CatalogEditor({
             <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
-                  Menú
+                  {isExpress ? "Catálogo" : "Menú"}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold">
                   {categories.find((category) => category.id === categoryId)
@@ -383,10 +385,24 @@ export function CatalogEditor({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-4xl text-zinc-700">
-                          {isExpress && item.genericIcon
-                            ? item.genericIcon.slice(0, 1)
-                            : "🍽"}
+                        <div className="flex h-full items-center justify-center text-4xl text-zinc-600">
+                          {isExpress ? (
+                            <svg
+                              className="h-12 w-12 text-zinc-600"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+                              />
+                            </svg>
+                          ) : (
+                            "🍽"
+                          )}
                         </div>
                       )}
                       {item.videoUrl ? (
@@ -574,7 +590,7 @@ function ItemModal({
         trackStock: isExpress && trackStock,
         stockQuantity: isExpress && trackStock ? Number(stock) || 0 : 0,
         status: item?.status ?? "draft",
-        addonGroupIds: selectedGroups,
+        addonGroupIds: isExpress ? [] : selectedGroups,
         ...(item ? { version: item.version } : {}),
       };
       const saved = await mutate<Item>(
@@ -732,40 +748,42 @@ function ItemModal({
               value={video}
               onChange={setVideo}
             />
-            <div>
-              <p className="mb-2 text-sm font-semibold">
-                Adicionales disponibles
-              </p>
-              {groups.filter((group) => group.status !== "archived").length ? (
-                <div className="space-y-2">
-                  {groups
-                    .filter((group) => group.status !== "archived")
-                    .map((group) => (
-                      <label
-                        key={group.id}
-                        className="flex items-center gap-2 text-sm text-zinc-300"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedGroups.includes(group.id)}
-                          onChange={(event) =>
-                            setSelectedGroups((current) =>
-                              event.target.checked
-                                ? [...current, group.id]
-                                : current.filter((id) => id !== group.id),
-                            )
-                          }
-                        />
-                        {group.name}
-                      </label>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">
-                  Creá grupos desde la pestaña Adicionales.
+            {!isExpress ? (
+              <div>
+                <p className="mb-2 text-sm font-semibold">
+                  Adicionales disponibles
                 </p>
-              )}
-            </div>
+                {groups.filter((group) => group.status !== "archived").length ? (
+                  <div className="space-y-2">
+                    {groups
+                      .filter((group) => group.status !== "archived")
+                      .map((group) => (
+                        <label
+                          key={group.id}
+                          className="flex items-center gap-2 text-sm text-zinc-300"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedGroups.includes(group.id)}
+                            onChange={(event) =>
+                              setSelectedGroups((current) =>
+                                event.target.checked
+                                  ? [...current, group.id]
+                                  : current.filter((id) => id !== group.id),
+                              )
+                            }
+                          />
+                          {group.name}
+                        </label>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    Creá grupos desde la pestaña Adicionales.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
         <footer className="mt-6 flex justify-end gap-3 border-t border-zinc-800 pt-4">
@@ -875,7 +893,7 @@ function AddonPanel({
                     Elegir entre {group.minSelected} y {group.maxSelected}
                   </p>
                   <ul className="mt-3 space-y-1 text-sm text-zinc-300">
-                    {group.options.map((option) => (
+                    {(group.options ?? []).map((option) => (
                       <li key={option.id} className="flex justify-between">
                         <span>{option.name}</span>
                         <span className="text-zinc-500">

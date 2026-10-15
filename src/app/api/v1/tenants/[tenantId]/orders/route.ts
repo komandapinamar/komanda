@@ -21,6 +21,8 @@ export async function GET(request: Request, route: RouteContext) {
       context,
       status: url.searchParams.get("status"),
       cursor: url.searchParams.get("cursor"),
+      scope: url.searchParams.get("scope"),
+      paymentStatus: url.searchParams.get("paymentStatus"),
     });
     return Response.json(page, {
       headers: { "X-Correlation-Id": correlationId },

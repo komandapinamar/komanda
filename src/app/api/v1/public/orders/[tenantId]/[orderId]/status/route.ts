@@ -22,6 +22,9 @@ export async function GET(request: Request, route: RouteContext) {
         .select({
           purchaseNumber: tenantOrders.purchaseNumber,
           fulfillmentStatus: tenantOrders.fulfillmentStatus,
+          paymentStatus: tenantOrders.paymentStatus,
+          tender: tenantOrders.tender,
+          paymentExpiresAt: tenantOrders.paymentExpiresAt,
         })
         .from(tenantOrders)
         .where(and(eq(tenantOrders.tenantId, tenantId), eq(tenantOrders.id, orderId)))
@@ -35,6 +38,11 @@ export async function GET(request: Request, route: RouteContext) {
     {
       purchaseNumber: order.purchaseNumber.toString(),
       fulfillmentStatus: order.fulfillmentStatus,
+      paymentStatus: order.paymentStatus ?? null,
+      tender: order.tender ?? null,
+      paymentExpiresAt: order.paymentExpiresAt
+        ? new Date(order.paymentExpiresAt).toISOString()
+        : null,
     },
     { headers },
   );

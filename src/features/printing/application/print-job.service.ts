@@ -95,6 +95,12 @@ export class PrintJobService {
     context: TenantContext,
     order: OrderView,
   ) {
+    // Gating de cocina (AD-3): nunca encolar comandas de órdenes en efectivo
+    // impagas. Otros medios (pasarela) conservan su comportamiento previo.
+    if (order.tender === "cash" && order.paymentStatus !== "paid") {
+      return null;
+    }
+
     const repository = new PrintJobRepository(transaction, context);
     if (!(await repository.tenantPrintingEnabled())) {
       return null;

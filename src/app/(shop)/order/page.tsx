@@ -7,13 +7,23 @@ import {
 import ClassicMenuView from "@/features/shop/menu/classic/components/ClassicMenuView";
 import ReelsMenuView from "@/features/shop/menu/reels/components/ReelsMenuView";
 import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
+import type { TenantPreset } from "@/db/schema/platform";
 
 export const dynamic = "force-dynamic";
 
-export default async function Order() {
+interface OrderPageProps {
+  searchParams?: Promise<{ view?: string | string[] }>;
+}
+
+export default async function Order({
+  searchParams,
+}: OrderPageProps = {}) {
   const rawTenantSlug = (await headers()).get("x-komanda-tenant-slug");
   const tenantSlug = rawTenantSlug?.trim();
   if (!tenantSlug) notFound();
+
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const listView = resolvedSearchParams.view === "list";
 
   let catalog;
   try {
@@ -31,8 +41,10 @@ export default async function Order() {
   const menuTheme = rawTheme === "reels" ? "reels" : "classic";
   const orderingAvailable =
     catalog.orderingAvailable ?? catalog.tenant?.orderingAvailable ?? true;
+  const preset: TenantPreset =
+    catalog.preset ?? catalog.tenant?.preset ?? "gastronomy";
 
-  if (menuTheme === "reels") {
+  if (menuTheme === "reels" && !listView && preset !== "express_retail") {
     return (
       <ReelsMenuView
         categories={categories}
@@ -49,6 +61,8 @@ export default async function Order() {
       items={items}
       tenantSlug={tenantSlug}
       orderingAvailable={orderingAvailable}
+      preset={preset}
+      showReelsLink={menuTheme === "reels" && preset !== "express_retail"}
     />
   );
 }

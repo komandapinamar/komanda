@@ -20,6 +20,7 @@ import { catalogCategories, catalogItems } from "./catalog";
 
 export type DiscountType = "percentage" | "fixed_amount";
 export type DiscountScope = "global" | "category" | "item";
+export type ApplicableTender = "all" | "cash";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
@@ -50,6 +51,10 @@ export const discounts = pgTable(
       .notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true, mode: "date" }),
     scope: text("scope").$type<DiscountScope>().default("global").notNull(),
+    applicableTender: text("applicable_tender")
+      .$type<ApplicableTender>()
+      .default("all")
+      .notNull(),
     targetCategoryIds: jsonb("target_category_ids").$type<string[]>().default([]).notNull(),
     targetItemIds: jsonb("target_item_ids").$type<string[]>().default([]).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
@@ -78,6 +83,10 @@ export const discounts = pgTable(
     check(
       "discounts_scope_check",
       sql`${table.scope} in ('global', 'category', 'item')`,
+    ),
+    check(
+      "discounts_applicable_tender_check",
+      sql`${table.applicableTender} in ('all', 'cash')`,
     ),
     check(
       "discounts_value_positive_check",

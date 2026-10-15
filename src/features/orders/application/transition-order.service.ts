@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { cashRegisterMovements } from "@/db/schema";
+import { cashRegisterMovements, cashShifts } from "@/db/schema";
 import {
   assertFulfillmentTransition,
   type FulfillmentStatus,
@@ -10,6 +11,7 @@ import { OrderRepository } from "@/features/orders/infrastructure/order.reposito
 import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
+import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import {
   InvalidPickupPinError,
@@ -21,6 +23,7 @@ export const transitionOrderSchema = z
   .object({
     fulfillmentStatus: z.enum(["preparing", "ready", "delivered", "cancelled"]),
     pickupPin: z.string().trim().optional(),
+    reason: z.string().trim().min(1).optional(),
   })
   .strict();
 
@@ -45,6 +48,27 @@ export class TransitionOrderService {
         nextStatus,
         current.source,
       );
+
+      if (
+        (current.source === "storefront_cash" || current.tender === "cash") &&
+        current.paymentStatus !== "paid" &&
+        nextStatus !== "cancelled"
+      ) {
+        throw new OrderTransitionError(
+          "No se puede avanzar el pedido hasta confirmar su cobro en caja.",
+        );
+      }
+
+      if (
+        nextStatus === "cancelled" &&
+        current.tender === "cash" &&
+        current.paymentStatus === "paid" &&
+        current.source !== "admin_direct"
+      ) {
+        throw new OrderConflictError(
+          "Utilice el endpoint de devolución de efectivo (/refund-cash) para cancelar una orden cobrada.",
+        );
+      }
 
       if (
         nextStatus === "delivered" &&
@@ -82,10 +106,23 @@ export class TransitionOrderService {
       }
 
       if (shouldRefundCash) {
+        const [openShift] = await transaction
+          .select()
+          .from(cashShifts)
+          .where(
+            and(
+              eq(cashShifts.tenantId, input.context.tenantId),
+              eq(cashShifts.status, "open"),
+              eq(cashShifts.locationId, current.locationId),
+            ),
+          )
+          .limit(1);
+
         try {
           await transaction.insert(cashRegisterMovements).values({
             tenantId: input.context.tenantId,
             locationId: current.locationId,
+            shiftId: openShift?.id ?? null,
             orderId: current.id,
             type: "cancellation_withdrawal",
             amount: current.total,
@@ -123,6 +160,7 @@ export class TransitionOrderService {
         orderId: input.orderId,
         fromStatus: current.fulfillmentStatus,
         toStatus: nextStatus,
+        reason: request.reason,
       });
       const order = await repository.findById(input.orderId);
       if (!order) {
@@ -136,6 +174,7 @@ export class TransitionOrderService {
         metadata: {
           fromStatus: current.fulfillmentStatus,
           toStatus: nextStatus,
+          ...(request.reason ? { reason: request.reason } : {}),
         },
       });
       await appendOutboxEvent(transaction, input.context, {
@@ -148,8 +187,23 @@ export class TransitionOrderService {
           toStatus: nextStatus,
           paymentStatus: order.paymentStatus,
           version: order.version,
+          ...(request.reason ? { reason: request.reason } : {}),
         },
       });
+      const customer = (order.customer ?? {}) as Record<string, unknown>;
+      if (
+        nextStatus === "ready" && order.paymentStatus === "paid" &&
+        (order.source === "storefront_cash" || order.source === "mercadopago_webhook") &&
+        customer.whatsappReadyOptIn === true &&
+        normalizeWhatsAppRecipient(typeof customer.phone === "string" ? customer.phone : null)
+      ) {
+        await appendOutboxEvent(transaction, input.context, {
+          aggregateType: "order",
+          aggregateId: order.id,
+          eventType: "order.whatsapp_ready",
+          payload: { orderId: order.id },
+        });
+      }
       return order;
     });
   }

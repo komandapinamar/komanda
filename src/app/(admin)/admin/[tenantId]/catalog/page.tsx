@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { CatalogService } from "@/features/catalog/application/catalog.service";
-import { CatalogEditor } from "@/features/catalog/web/CatalogEditor";
+import { CatalogShell } from "@/features/tenancy/web/shells/catalog-shell";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { canAccess, canWriteCatalog } from "@/lib/authorization/permissions";
@@ -47,14 +47,13 @@ export default async function CatalogPage({
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-      <CatalogEditor
+      <CatalogShell
         tenantId={tenantId}
         initialCategories={categories}
         initialItems={items}
         initialAddonGroups={addonGroups}
         initialCombos={combos}
         isReadOnly={isReadOnly}
-        preset={authority.membership.tenantPreset ?? "gastronomy"}
       />
     </main>
   );
