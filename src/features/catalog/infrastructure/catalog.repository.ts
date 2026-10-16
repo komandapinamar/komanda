@@ -12,6 +12,7 @@ import {
   tenantEntitlementSnapshots,
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
+import { mediaPublicUrl } from "@/features/catalog/domain/media-url";
 
 export class CatalogRepository {
   constructor(
@@ -471,8 +472,8 @@ export class CatalogRepository {
 
     return rows.map(({ item, image, video }) => ({
       ...item,
-      imageUrl: image?.status === "ready" ? image.publicUrl : null,
-      videoUrl: video?.status === "ready" ? (video.publicUrl ?? null) : null,
+      imageUrl: image?.status === "ready" ? mediaPublicUrl(this.tenantId, image.id) : null,
+      videoUrl: video?.status === "ready" ? mediaPublicUrl(this.tenantId, video.id) : null,
       addonGroupIds: links
         .filter((link) => link.itemId === item.id)
         .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -543,7 +544,7 @@ export class CatalogRepository {
       .orderBy(asc(comboItems.sortOrder));
     return combos.map(({ combo, image }) => ({
       ...combo,
-      imageUrl: image?.status === "ready" ? image.publicUrl : null,
+      imageUrl: image?.status === "ready" ? mediaPublicUrl(this.tenantId, image.id) : null,
       items: lines
         .filter(({ line }) => line.comboId === combo.id)
         .map(({ line, itemName }) => ({

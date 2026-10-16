@@ -20,6 +20,7 @@ import {
   withTenantTransaction,
 } from "@/db/tenant-transaction";
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
+import { mediaPublicUrl } from "@/features/catalog/domain/media-url";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
 import { fetchTenantReadiness } from "./tenant-readiness.service";
@@ -284,9 +285,9 @@ export class PublicTenantService {
             .filter(({ item }) => item.categoryId === category.id)
             .map(({ item, media, videoMedia }) => ({
               ...item,
-              imageUrl: media?.status === "ready" ? media.publicUrl : null,
+               imageUrl: media?.status === "ready" ? mediaPublicUrl(tenant.id, media.id) : null,
               videoUrl:
-                videoMedia?.status === "ready" ? (videoMedia.publicUrl ?? null) : null,
+                 videoMedia?.status === "ready" ? mediaPublicUrl(tenant.id, videoMedia.id) : null,
               addonGroups: itemGroups
                 .filter(({ itemId }) => itemId === item.id)
                 .flatMap(({ addonGroupId }) => {
@@ -304,7 +305,7 @@ export class PublicTenantService {
             .filter(({ combo }) => combo.categoryId === category.id)
             .map(({ combo, media }) => ({
               ...combo,
-              imageUrl: media?.status === "ready" ? media.publicUrl : null,
+               imageUrl: media?.status === "ready" ? mediaPublicUrl(tenant.id, media.id) : null,
               items: comboLines.filter(({ comboId }) => comboId === combo.id),
             })),
         })),

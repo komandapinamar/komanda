@@ -5,6 +5,7 @@ import {
   tenants,
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
+import { mediaPublicUrl } from "@/features/catalog/domain/media-url";
 import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
 import { SearchRepository } from "@/features/search/infrastructure/search.repository";
 import { fetchTenantReadiness } from "@/features/tenancy/application/tenant-readiness.service";
@@ -126,7 +127,7 @@ export class SearchProjectionSyncService {
     let imageUrl: string | null = null;
     if (item.imageAssetId) {
       const [media] = await transaction
-        .select({ publicUrl: mediaAssets.publicUrl })
+        .select({ id: mediaAssets.id, status: mediaAssets.status })
         .from(mediaAssets)
         .where(
           and(
@@ -135,7 +136,7 @@ export class SearchProjectionSyncService {
           ),
         )
         .limit(1);
-      imageUrl = media?.publicUrl ?? null;
+      imageUrl = media?.status === "ready" ? mediaPublicUrl(tenantId, media.id) : null;
     }
 
     try {

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { S3Client } from "@aws-sdk/client-s3";
 import { mediaAssets } from "@/db/schema";
+import { mediaPublicUrl } from "@/features/catalog/domain/media-url";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import {
   S3ObjectStorage,
@@ -86,7 +87,7 @@ export class MediaRepository {
         );
       throw new MediaVerificationError("Uploaded object failed verification.");
     }
-    const publicUrl = await resolvePublicUrl(this.storage, asset.storageKey);
+    const publicUrl = mediaPublicUrl(this.tenantId, asset.id);
     const [ready] = await this.transaction
       .update(mediaAssets)
       .set({ status: "ready", publicUrl, updatedAt: new Date() })
@@ -101,22 +102,7 @@ export class MediaRepository {
     if (!ready) throw new MediaVerificationError("Media asset state changed.");
     return ready;
   }
-}
 
-/**
- * URLs públicas estables: si OBJECT_STORAGE_PUBLIC_BASE_URL está configurado
- * (bucket con lectura anónima o CDN), la URL guardada no expira. Si no, se
- * mantiene el comportamiento anterior (URL firmada con vencimiento de 1 hora).
- */
-async function resolvePublicUrl(storage: ObjectStorage, storageKey: string) {
-  const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL?.replace(
-    /\/+$/,
-    "",
-  );
-  if (publicBaseUrl) {
-    return `${publicBaseUrl}/${storageKey}`;
-  }
-  return storage.createReadUrl(storageKey, 3600);
 }
 
 export function objectStorageFromEnvironment(): ObjectStorage {

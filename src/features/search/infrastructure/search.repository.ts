@@ -4,6 +4,7 @@ import {
   publicSearchTenants,
 } from "@/db/schema/search";
 import type { TenantTransaction } from "@/db/tenant-transaction";
+import { resolveLegacyMediaUrl } from "@/features/catalog/domain/media-url";
 import { SEARCH_CONFIG } from "@/features/search/domain/search.rules";
 import type {
   SearchBusinessResult,
@@ -74,7 +75,7 @@ export class SearchRepository {
       price: row.price,
       currency: row.currency,
       category: row.category,
-      imageUrl: row.imageUrl,
+      imageUrl: resolveLegacyMediaUrl(row.imageUrl, row.tenantId),
       tenant: {
         id: row.tenantId,
         slug: row.tenantSlug,
