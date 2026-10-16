@@ -24,6 +24,7 @@ export type CreateDiscountInput = {
   startsAt?: Date;
   endsAt?: Date | null;
   scope?: DiscountScope;
+  applicableTender?: "all" | "cash";
   targetCategoryIds?: string[];
   targetItemIds?: string[];
   isActive?: boolean;
@@ -38,6 +39,7 @@ export type UpdateDiscountInput = {
   startsAt?: Date;
   endsAt?: Date | null;
   scope?: DiscountScope;
+  applicableTender?: "all" | "cash";
   targetCategoryIds?: string[];
   targetItemIds?: string[];
   isActive?: boolean;
@@ -73,6 +75,7 @@ export class DiscountRepository {
         startsAt: input.startsAt ?? new Date(),
         endsAt: input.endsAt ?? null,
         scope: input.scope ?? "global",
+        applicableTender: input.applicableTender ?? "all",
         targetCategoryIds: input.targetCategoryIds ?? [],
         targetItemIds: input.targetItemIds ?? [],
         isActive: input.isActive ?? true,
@@ -227,6 +230,8 @@ export class DiscountRepository {
     if (input.startsAt !== undefined) setValues.startsAt = input.startsAt;
     if (input.endsAt !== undefined) setValues.endsAt = input.endsAt;
     if (input.scope !== undefined) setValues.scope = input.scope;
+    if (input.applicableTender !== undefined)
+      setValues.applicableTender = input.applicableTender;
     if (input.targetCategoryIds !== undefined)
       setValues.targetCategoryIds = input.targetCategoryIds;
     if (input.targetItemIds !== undefined)

@@ -26,6 +26,12 @@ describe("Order Pickup PIN and ETA Specification", () => {
     });
     expect(parsedWithoutCustomer.customer.name).toBe("NN");
     expect(parsedWithoutCustomer.discountCode).toBeUndefined();
+
+    const parsedWithCatalogItemId = createDirectOrderSchemaFromItems.parse({
+      items: [{ catalogItemId: "a0000000-0000-4000-8000-000000000001", quantity: 1 }],
+    });
+    expect(parsedWithCatalogItemId.items[0].kind).toBe("item");
+    expect(parsedWithCatalogItemId.items[0].resourceId).toBe("a0000000-0000-4000-8000-000000000001");
   });
   it("transitionOrderSchema parses valid statuses and pickupPin", () => {
     const valid = transitionOrderSchema.parse({

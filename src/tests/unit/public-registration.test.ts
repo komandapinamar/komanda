@@ -147,7 +147,7 @@ describe("Public Registration Feature", () => {
       expect(markup).toContain("Autoservicio &amp; Retail (Komanda Kiosk)");
       expect(markup).toContain("Nombre del comercio");
       expect(markup).toContain("Identificador público (URL)");
-      expect(markup).toContain("komanda.app/");
+      expect(markup).toContain("ka.ar/");
       expect(markup).toContain("Komanda Kiosk");
       expect(markup).toContain("Iniciá sesión acá");
     });

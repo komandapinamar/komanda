@@ -22,6 +22,7 @@ type CartApiResponse = {
     discountType?: string;
     discountValue?: string | number;
     savingsAmount?: string | number;
+    tenderRestriction?: string;
   } | null;
   discountMetadata?: {
     code?: string;
@@ -29,6 +30,7 @@ type CartApiResponse = {
     discountType?: string;
     discountValue?: string | number;
     savingsAmount?: string | number;
+    tenderRestriction?: string;
   } | null;
   updatedAt?: string;
   expiresAt?: string;
@@ -94,6 +96,9 @@ export function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
             rawDiscount.savingsAmount !== undefined
               ? String(rawDiscount.savingsAmount)
               : undefined,
+          ...(rawDiscount.tenderRestriction
+            ? { tenderRestriction: String(rawDiscount.tenderRestriction) }
+            : {}),
         }
       : null;
 

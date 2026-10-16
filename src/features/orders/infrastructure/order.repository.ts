@@ -24,7 +24,7 @@ type OrderRecord = typeof tenantOrders.$inferSelect;
 type OrderLineRecord = typeof orderLines.$inferSelect;
 type OrderLineOptionRecord = typeof orderLineOptions.$inferSelect;
 
-export type OrderSource = "mercadopago_webhook" | "admin_direct";
+export type OrderSource = "mercadopago_webhook" | "admin_direct" | "storefront_cash";
 
 export type OrderView = {
   id: string;
@@ -73,6 +73,7 @@ export type OrderView = {
   pickupPin?: string | null;
   estimatedWaitMinutes?: number | null;
   estimatedReadyAt?: string | null;
+  paymentExpiresAt?: string | null;
   version: number;
   approvedAt: string | null;
   deliveredAt: string | null;
@@ -146,6 +147,7 @@ function serializeOrder(
     pickupPin: order.pickupPin ?? null,
     estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
     estimatedReadyAt: dateToIso(order.estimatedReadyAt),
+    paymentExpiresAt: dateToIso(order.paymentExpiresAt),
     version: order.version,
     approvedAt: dateToIso(order.approvedAt),
     deliveredAt: dateToIso(order.deliveredAt),
@@ -238,31 +240,59 @@ export class OrderRepository {
 
   async list(input: {
     status?: FulfillmentStatus;
+    scope?: "kitchen" | "all";
+    paymentStatus?: PaymentStatus | string;
     cursor?: string | null;
     limit?: number;
   }) {
     const limit = input.limit ?? 50;
     const conditions = [eq(tenantOrders.tenantId, this.tenantId)];
-    if (input.status) {
-      conditions.push(eq(tenantOrders.fulfillmentStatus, input.status));
+
+    if (input.scope === "kitchen") {
+      conditions.push(eq(tenantOrders.paymentStatus, "paid"));
+      if (input.status) {
+        conditions.push(eq(tenantOrders.fulfillmentStatus, input.status));
+        conditions.push(
+          inArray(tenantOrders.fulfillmentStatus, ["approved", "preparing"]),
+        );
+      } else {
+        conditions.push(
+          inArray(tenantOrders.fulfillmentStatus, ["approved", "preparing"]),
+        );
+      }
     } else {
-      conditions.push(
-        inArray(tenantOrders.fulfillmentStatus, [
-          "approved",
-          "preparing",
-          "ready",
-        ]),
-      );
+      if (input.paymentStatus) {
+        conditions.push(
+          eq(tenantOrders.paymentStatus, input.paymentStatus as PaymentStatus),
+        );
+      }
+      if (input.status) {
+        conditions.push(eq(tenantOrders.fulfillmentStatus, input.status));
+      } else {
+        conditions.push(
+          inArray(tenantOrders.fulfillmentStatus, [
+            "approved",
+            "preparing",
+            "ready",
+          ]),
+        );
+      }
     }
+
     if (input.cursor) {
       conditions.push(sql`${tenantOrders.createdAt} < ${new Date(input.cursor)}`);
     }
+
+    const orderByClause =
+      input.scope === "kitchen"
+        ? [asc(tenantOrders.createdAt), asc(tenantOrders.id)]
+        : [desc(tenantOrders.createdAt), desc(tenantOrders.id)];
 
     const rows = await this.transaction
       .select()
       .from(tenantOrders)
       .where(and(...conditions))
-      .orderBy(desc(tenantOrders.createdAt), desc(tenantOrders.id))
+      .orderBy(...orderByClause)
       .limit(limit + 1);
     const page = rows.slice(0, limit);
     const orders = await Promise.all(page.map((order) => this.hydrate(order)));
@@ -286,6 +316,7 @@ export class OrderRepository {
     pickupPin?: string | null;
     estimatedWaitMinutes?: number | null;
     estimatedReadyAt?: Date | null;
+    paymentExpiresAt?: Date | null;
   }) {
     const existing = await this.findByIdempotencyKey(input.idempotencyKey);
     if (existing) {
@@ -363,6 +394,7 @@ export class OrderRepository {
         pickupPin,
         estimatedWaitMinutes,
         estimatedReadyAt,
+        paymentExpiresAt: input.paymentExpiresAt ?? null,
         currency: input.cart.currency,
         idempotencyKey: input.idempotencyKey,
         approvedAt: input.approvedAt ?? now,
@@ -525,12 +557,14 @@ export class OrderRepository {
     orderId: string;
     fromStatus: FulfillmentStatus | null;
     toStatus: FulfillmentStatus;
+    reason?: string;
   }) {
     return this.appendEvent({
       orderId: input.orderId,
       eventType: "order.transitioned",
       fromStatus: input.fromStatus,
       toStatus: input.toStatus,
+      metadata: input.reason ? { reason: input.reason } : undefined,
     });
   }
 

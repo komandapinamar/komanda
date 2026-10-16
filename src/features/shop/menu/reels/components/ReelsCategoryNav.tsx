@@ -1,6 +1,7 @@
 "use client";
 
 import type { Category } from "@/types/types";
+import { activeCategoryPillClassName, categoryPillClassName, inactiveCategoryPillClassName } from "../../MenuViewToolbar";
 
 export interface ReelsCategoryNavProps {
   categories: Category[];
@@ -41,9 +42,9 @@ export default function ReelsCategoryNav({
     <nav
       data-testid="reels-category-nav"
       aria-label="Categorías de menú"
-      className="absolute top-4 left-0 right-0 z-30 px-4 pointer-events-auto"
+      className="min-w-0"
     >
-      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
+      <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {categories.map((cat) => {
           const isActive = activeCategoryId === cat.documentId;
           return (
@@ -52,11 +53,12 @@ export default function ReelsCategoryNav({
               type="button"
               data-testid={`category-pill-${cat.documentId}`}
               data-active={isActive ? "true" : "false"}
+              aria-pressed={isActive}
               onClick={() => handleCategoryClick(cat.documentId)}
-              className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-200 cursor-pointer ${
+              className={`${categoryPillClassName} cursor-pointer ${
                 isActive
-                  ? "bg-white text-black border border-white shadow-[0_4px_14px_rgba(255,255,255,0.25)] scale-105"
-                  : "bg-[rgba(15,17,23,0.72)] border border-white/15 text-slate-200 backdrop-blur-md hover:text-white"
+                  ? activeCategoryPillClassName
+                  : inactiveCategoryPillClassName
               }`}
             >
               {cat.name}

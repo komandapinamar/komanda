@@ -1,3 +1,5 @@
+import { publicBaseUrl } from "@/lib/config/public-site";
+
 export type ProblemDetails = {
   status: number;
   title: string;
@@ -11,16 +13,8 @@ function codeToSlug(code: string) {
   return code.toLowerCase().replace(/_/g, "-");
 }
 
-function getProblemTypeBaseUrl() {
-  const value =
-    process.env.KOMANDA_PUBLIC_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    "https://komanda.app";
-  return value.trim().replace(/\/+$/, "");
-}
-
 function problemTypeUrl(code: string) {
-  return new URL(`problems/${codeToSlug(code)}`, `${getProblemTypeBaseUrl()}/`).toString();
+  return new URL(`problems/${codeToSlug(code)}`, `${publicBaseUrl()}/`).toString();
 }
 
 export function problemResponse(problem: ProblemDetails): Response {

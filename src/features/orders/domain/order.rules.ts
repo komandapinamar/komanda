@@ -29,7 +29,7 @@ export function isTerminalFulfillmentStatus(status: FulfillmentStatus) {
 export function assertFulfillmentTransition(
   current: FulfillmentStatus,
   next: FulfillmentStatus,
-  source?: "mercadopago_webhook" | "admin_direct" | string | null,
+  source?: "mercadopago_webhook" | "admin_direct" | "storefront_cash" | string | null,
 ) {
   if (current === next) {
     return;
@@ -49,4 +49,14 @@ export function assertFulfillmentTransition(
 
 export function visibleOrderStatuses() {
   return ["approved", "preparing", "ready", "delivered", "cancelled"] as const;
+}
+
+export function validPaymentStatuses(): readonly PaymentStatus[] {
+  return [
+    "pending",
+    "paid",
+    "failed",
+    "refunded",
+    "verification_required",
+  ] as const;
 }

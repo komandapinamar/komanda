@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import { Buffer } from "node:buffer";
+import { publicBaseUrl } from "@/lib/config/public-site";
 
 type DeploymentEnvironment = "staging" | "production";
 
@@ -87,13 +88,27 @@ function verifyDatabase(errors: string[]) {
   }
 }
 
-function verifyMercadoPago(publicBaseUrl: URL | null, errors: string[]) {
+function assertPublicOrigin(errors: string[]): URL | null {
+  if (!value("NEXT_PUBLIC_SITE_URL")) {
+    errors.push("NEXT_PUBLIC_SITE_URL is required.");
+  }
+  const explicit = value("KOMANDA_PUBLIC_BASE_URL");
+  if (explicit) assertUrl("KOMANDA_PUBLIC_BASE_URL", errors);
+  try {
+    return new URL(publicBaseUrl());
+  } catch {
+    errors.push("NEXT_PUBLIC_SITE_URL must be a valid URL.");
+    return null;
+  }
+}
+
+function verifyMercadoPago(publicBaseUrlValue: URL | null, errors: string[]) {
   requireValue("MERCADOPAGO_CLIENT_ID", errors);
   requireValue("MERCADOPAGO_CLIENT_SECRET", errors);
   requireMinLength("MERCADOPAGO_WEBHOOK_SECRET", 16, errors);
   const redirect = assertUrl("MERCADOPAGO_REDIRECT_URI", errors);
-  if (redirect && publicBaseUrl && redirect.origin !== publicBaseUrl.origin) {
-    errors.push("MERCADOPAGO_REDIRECT_URI must use KOMANDA_PUBLIC_BASE_URL origin.");
+  if (redirect && publicBaseUrlValue && redirect.origin !== publicBaseUrlValue.origin) {
+    errors.push("MERCADOPAGO_REDIRECT_URI must use the public site URL origin.");
   }
 }
 
@@ -128,15 +143,14 @@ function verifyObjectStorage(errors: string[]) {
 function main() {
   const errors: string[] = [];
   const environment = deploymentEnvironment(errors);
-  const publicBaseUrl = assertUrl("KOMANDA_PUBLIC_BASE_URL", errors);
-  requireValue("STOREFRONT_ROOT_DOMAIN", errors);
+  const publicOrigin = assertPublicOrigin(errors);
   requireMinLength("KOMANDA_BUSINESS_SERVICE_TOKEN", 32, errors);
   assertBase64Key("APP_ENCRYPTION_KEY_BASE64", errors);
   requireValue("APP_ENCRYPTION_KEY_VERSION", errors);
   verifyDatabase(errors);
   verifyVerificationDelivery(environment, errors);
   verifyObjectStorage(errors);
-  verifyMercadoPago(publicBaseUrl, errors);
+  verifyMercadoPago(publicOrigin, errors);
 
   if (environment === "production") {
     for (const name of [

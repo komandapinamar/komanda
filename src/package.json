@@ -36,6 +36,7 @@
     "db:bootstrap-roles": "tsx scripts/database-role-bootstrap.ts",
     "db:verify-roles:test": "tsx scripts/verify-database-roles.ts",
     "db:maintenance:retention": "tsx scripts/database-maintenance-retention.ts",
+    "cron:expire-unpaid-cash-orders": "tsx scripts/expire-unpaid-cash-orders.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "env:verify": "tsx scripts/verify-runtime-environment.ts",
