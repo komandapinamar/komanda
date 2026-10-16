@@ -220,6 +220,7 @@ export const tenantSettings = pgTable(
     orderPrefix: text("order_prefix").default("K").notNull(),
     menuTheme: text("menu_theme").$type<"classic" | "reels">().default("classic").notNull(),
     slackCashAlertWebhookUrl: text("slack_cash_alert_webhook_url"),
+    ownerCashAlertWhatsAppPhone: text("owner_cash_alert_whatsapp_phone"),
     branding: jsonb("branding").$type<Record<string, unknown>>().default({}).notNull(),
     version: integer("version").default(1).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
@@ -240,6 +241,10 @@ export const tenantSettings = pgTable(
     check(
       "tenant_settings_menu_theme_check",
       sql`${table.menuTheme} in ('classic', 'reels')`,
+    ),
+    check(
+      "tenant_settings_owner_cash_whatsapp_phone_check",
+      sql`${table.ownerCashAlertWhatsAppPhone} is null or ${table.ownerCashAlertWhatsAppPhone} ~ '^549[1-9][0-9]{9}$'`,
     ),
   ],
 );

@@ -176,6 +176,13 @@
       "when": 1791329100000,
       "tag": "0024_add_storefront_cash_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791648000000,
+      "tag": "0025_add_owner_cash_alert_whatsapp_phone",
+      "breakpoints": true
     }
   ]
 }

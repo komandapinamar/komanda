@@ -40,4 +40,41 @@ describe("optional ready-order WhatsApp notifications", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("sends the owner template with four positional es_AR variables", async () => {
+    vi.stubEnv("KOMANDA_WHATSAPP_ACCESS_TOKEN", "test-token");
+    vi.stubEnv("KOMANDA_WHATSAPP_PHONE_NUMBER_ID", "12345");
+    vi.stubEnv("KOMANDA_WHATSAPP_OWNER_CASH_TEMPLATE", "komanda_owner_cash_pending");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      const { sendOwnerCashPendingWhatsApp } = await import("@/features/orders/infrastructure/whatsapp.client");
+      await sendOwnerCashPendingWhatsApp({ phone: "5491123456789", business: "Kiosco", purchaseNumber: "1084", amount: "$1250 ARS", items: "2× Yerba" });
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/12345/messages"), expect.objectContaining({
+        body: JSON.stringify({
+          messaging_product: "whatsapp", to: "5491123456789", type: "template",
+          template: { name: "komanda_owner_cash_pending", language: { code: "es_AR" }, components: [{ type: "body", parameters: ["Kiosco", "1084", "$1250 ARS", "2× Yerba"].map(text => ({ type: "text", text })) }] },
+        }),
+      }));
+    } finally {
+      fetchMock.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("fails safely when the owner template is not configured", async () => {
+    vi.stubEnv("KOMANDA_WHATSAPP_ACCESS_TOKEN", "test-token");
+    vi.stubEnv("KOMANDA_WHATSAPP_PHONE_NUMBER_ID", "12345");
+    vi.stubEnv("KOMANDA_WHATSAPP_OWNER_CASH_TEMPLATE", "");
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    try {
+      const { sendOwnerCashPendingWhatsApp } = await import("@/features/orders/infrastructure/whatsapp.client");
+      await expect(sendOwnerCashPendingWhatsApp({
+        phone: "5491123456789", business: "Kiosco", purchaseNumber: "1084", amount: "1250.00 ARS", items: "Yerba",
+      })).rejects.toThrow("WhatsApp is not configured.");
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      fetchMock.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
 });

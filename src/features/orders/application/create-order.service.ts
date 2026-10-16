@@ -11,9 +11,9 @@ import { OrderConflictError, OrderNotFoundError } from "./order-errors";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import { PrintJobService } from "@/features/printing/application/print-job.service";
 import { BillingRepository } from "@/features/billing/infrastructure/billing.repository";
-import { SlackAlertService } from "@/features/integrations/application/slack-alert.service";
 import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { calculateDiscountAmounts } from "@/features/discounts/domain/discount.rules";
+import { canNotifyOwnerOfCashOrder } from "@/features/orders/domain/owner-cash-whatsapp";
 
 const customerSchema = z
   .object({
@@ -405,26 +405,22 @@ export class CreateOrderService {
           });
         }
 
-        if (request.tender === "cash") {
-          const [settings] = await transaction
-            .select({ webhook: tenantSettings.slackCashAlertWebhookUrl })
-            .from(tenantSettings)
-            .where(eq(tenantSettings.tenantId, context.tenantId))
-            .limit(1);
-
-          if (settings?.webhook) {
-            void new SlackAlertService().dispatchCashOrderAlert({
-              webhookUrl: settings.webhook,
-              ticketNumber: order.purchaseNumber,
-              total: order.total,
-              currency: order.currency,
-              items: lines.map((l) => ({
-                name: l.name,
-                quantity: l.quantity,
-                lineTotal: l.lineTotal,
-              })),
-            });
-          }
+        const [tenant] = await transaction.select({ preset: tenants.preset }).from(tenants)
+          .where(eq(tenants.id, context.tenantId)).limit(1);
+        const [settings] = await transaction.select({ phone: tenantSettings.ownerCashAlertWhatsAppPhone })
+          .from(tenantSettings).where(eq(tenantSettings.tenantId, context.tenantId)).limit(1);
+        if (canNotifyOwnerOfCashOrder({
+          preset: tenant?.preset,
+          tender: order.tender,
+          paymentStatus: order.paymentStatus,
+          phone: settings?.phone,
+        })) {
+          await appendOutboxEvent(transaction, context, {
+            aggregateType: "order",
+            aggregateId: order.id,
+            eventType: "order.whatsapp_owner_cash_pending",
+            payload: { orderId: order.id },
+          });
         }
       }
 
