@@ -17,6 +17,7 @@ export default function ReelMedia({
 }: ReelMediaProps) {
   const [hasVideoError, setHasVideoError] = useState(false);
 
+  const hasImage = Boolean(image);
   const shouldRenderVideo = Boolean(videoUrl && !hasVideoError);
 
   if (shouldRenderVideo) {
@@ -26,7 +27,7 @@ export default function ReelMedia({
           ref={videoRef}
           data-testid="reel-video"
           src={videoUrl!}
-          poster={image}
+          poster={hasImage ? image : undefined}
           muted
           playsInline
           loop
@@ -43,20 +44,24 @@ export default function ReelMedia({
       data-testid="reel-blur-backdrop"
       className="absolute inset-0 w-full h-full overflow-hidden z-[1] bg-black flex items-center justify-center"
     >
-      {/* Blurred background replicating image */}
-      <img
-        src={image}
-        alt=""
-        aria-hidden="true"
-        className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)] object-cover blur-[24px] brightness-[45%] scale-110 pointer-events-none"
-        style={{ filter: "blur(24px) brightness(0.45)" }}
-      />
-      {/* Sharp centered foreground image */}
-      <img
-        src={image}
-        alt={alt}
-        className="relative w-full h-full object-contain z-[2]"
-      />
+      {hasImage ? (
+        <>
+          {/* Blurred background replicating image */}
+          <img
+            src={image}
+            alt=""
+            aria-hidden="true"
+            className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)] object-cover blur-[24px] brightness-[45%] scale-110 pointer-events-none"
+            style={{ filter: "blur(24px) brightness(0.45)" }}
+          />
+          {/* Sharp centered foreground image */}
+          <img
+            src={image}
+            alt={alt}
+            className="relative w-full h-full object-contain z-[2]"
+          />
+        </>
+      ) : null}
     </div>
   );
 }

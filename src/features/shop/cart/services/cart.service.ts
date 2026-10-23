@@ -4,6 +4,7 @@ import type {
   CartSnapshotLine,
   OfficialCart,
   OfficialCartLine,
+  ProductModifierOption,
 } from "@/types/types";
 
 type CartApiResponse = {
@@ -22,6 +23,7 @@ type CartApiResponse = {
     discountType?: string;
     discountValue?: string | number;
     savingsAmount?: string | number;
+    tenderRestriction?: string;
   } | null;
   discountMetadata?: {
     code?: string;
@@ -29,6 +31,7 @@ type CartApiResponse = {
     discountType?: string;
     discountValue?: string | number;
     savingsAmount?: string | number;
+    tenderRestriction?: string;
   } | null;
   updatedAt?: string;
   expiresAt?: string;
@@ -44,12 +47,45 @@ function toOptionalNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function normalizeCartLineOptions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return {
+      optionIds: [] as string[],
+      optionNames: [] as string[],
+      selectedOptions: [] as ProductModifierOption[],
+    };
+  }
+
+  const optionIds: string[] = [];
+  const optionNames: string[] = [];
+  const selectedOptions: ProductModifierOption[] = [];
+  for (const entry of value) {
+    const option = (entry ?? {}) as Record<string, unknown>;
+    const optionId = option.addonOptionId ?? option.optionId ?? option.id;
+    const name = option.nameSnapshot ?? option.name;
+    if (optionId) optionIds.push(String(optionId));
+    if (name) optionNames.push(String(name));
+    if (optionId) {
+      selectedOptions.push({
+        id: String(optionId),
+        name: String(name ?? "Adicional"),
+        description: option.description ? String(option.description) : null,
+        priceDelta: toNumber(option.priceDeltaSnapshot ?? option.priceDelta, 0),
+      });
+    }
+  }
+  return { optionIds, optionNames, selectedOptions };
+}
+
 export function normalizeCartLine(line: unknown): OfficialCartLine {
   const source = (line ?? {}) as Record<string, unknown>;
   const unitPrice = toNumber(source.unitPrice ?? source.unitPriceSnapshot, 0);
   const quantity = toNumber(source.quantity, 0);
+  const { optionIds, optionNames, selectedOptions } =
+    normalizeCartLineOptions(source.options);
 
   return {
+    id: source.id ? String(source.id) : undefined,
     documentId: String(
       source.documentId ??
         source.resourceId ??
@@ -67,6 +103,9 @@ export function normalizeCartLine(line: unknown): OfficialCartLine {
     ),
     available: source.available === undefined ? true : Boolean(source.available),
     note: source.note ? String(source.note) : undefined,
+    optionIds,
+    optionNames,
+    selectedOptions,
   };
 }
 
@@ -94,6 +133,9 @@ export function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
             rawDiscount.savingsAmount !== undefined
               ? String(rawDiscount.savingsAmount)
               : undefined,
+          ...(rawDiscount.tenderRestriction
+            ? { tenderRestriction: String(rawDiscount.tenderRestriction) }
+            : {}),
         }
       : null;
 
@@ -143,7 +185,8 @@ export function buildCartSnapshot(lines: CartSnapshotLine[]) {
     kind: "item" as const,
     resourceId: line.documentId,
     quantity: line.quantity,
-    optionIds: [],
+    optionIds: line.optionIds ?? [],
+    ...(line.note ? { note: line.note } : {}),
     confirmedUnitPrice: line.unitPrice.toFixed(2),
   }));
 }

@@ -1,16 +1,19 @@
 import { ZodError } from "zod";
 import {
+  OrderingNotSupportedError,
   PaymentSessionCartUnavailableError,
   PaymentSessionConflictError,
   PaymentSessionProviderUnavailableError,
   PaymentSessionService,
 } from "@/features/payments/application/payment-session.service";
 import { PublicTenantNotFoundError } from "@/features/tenancy/application/public-tenant.service";
+import { CouponTenderMismatchError } from "@/features/discounts/domain/discount.rules";
 import {
   IdempotencyConflictError,
   IdempotencyInProgressError,
 } from "@/lib/idempotency/idempotency.service";
 import { nonDisclosingNotFound, problemResponse } from "@/lib/http/problem";
+import { publicBaseUrl } from "@/lib/config/public-site";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
 type RouteContext = {
@@ -18,12 +21,7 @@ type RouteContext = {
 };
 
 function baseUrlFromRequest() {
-  const configured = process.env.KOMANDA_PUBLIC_BASE_URL?.trim();
-  if (!configured) {
-    throw new Error("KOMANDA_PUBLIC_BASE_URL is required for payment sessions.");
-  }
-  const url = new URL(configured);
-  return url.origin;
+  return new URL(publicBaseUrl()).origin;
 }
 
 function paymentSessionErrorResponse(error: unknown, correlationId: string) {
@@ -32,6 +30,28 @@ function paymentSessionErrorResponse(error: unknown, correlationId: string) {
     error instanceof PaymentSessionCartUnavailableError
   ) {
     return nonDisclosingNotFound(correlationId);
+  }
+
+  if (error instanceof CouponTenderMismatchError) {
+    return problemResponse({
+      status: 422,
+      title: "Coupon tender mismatch",
+      code: "COUPON_TENDER_MISMATCH",
+      detail: error.message,
+      correlationId,
+    });
+  }
+
+  if (error instanceof OrderingNotSupportedError) {
+    return problemResponse({
+      status: 422,
+      title: "Ordering not supported",
+      code: "ORDERING_NOT_SUPPORTED",
+      detail:
+        error.message ||
+        "El comercio opera en modo autoservicio presencial. Los pedidos web no están habilitados.",
+      correlationId,
+    });
   }
 
   if (error instanceof ZodError) {

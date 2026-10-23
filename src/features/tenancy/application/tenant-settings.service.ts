@@ -23,6 +23,7 @@ import {
   openingHoursSchema,
 } from "@/features/tenancy/domain/opening-hours";
 import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
+import { normalizeOwnerCashAlertPhone } from "@/features/orders/domain/owner-cash-whatsapp";
 
 export class TenantSettingsNotFoundError extends Error {}
 export class TenantSettingsConflictError extends Error {}
@@ -51,7 +52,7 @@ const settingsPatchSchema = z
     salesEnabled: z.boolean().optional(),
     printingEnabled: z.boolean().optional(),
     menuTheme: z.enum(["classic", "reels"]).optional(),
-    slackCashAlertWebhookUrl: z.string().trim().url().nullable().optional(),
+    ownerCashAlertWhatsAppPhone: nullableTrimmedString,
     timezone: z.string().trim().min(1).optional(),
     location: locationSchema.optional(),
     openingHours: openingHoursSchema.optional(),
@@ -73,7 +74,7 @@ function serializeSettings(input: {
     salesEnabled: input.settings.salesEnabled,
     printingEnabled: input.settings.printingEnabled,
     menuTheme: input.settings.menuTheme,
-    slackCashAlertWebhookUrl: input.settings.slackCashAlertWebhookUrl,
+    ownerCashAlertWhatsAppPhone: input.settings.ownerCashAlertWhatsAppPhone,
     preset: input.tenant.preset,
     currency: input.tenant.defaultCurrency,
     timezone: input.tenant.defaultTimezone,
@@ -112,6 +113,16 @@ export class TenantSettingsService {
   update(context: TenantContext, version: number, value: unknown) {
     const patch = settingsPatchSchema.parse(value);
     return withTenantTransaction(context, async (transaction) => {
+      if (patch.ownerCashAlertWhatsAppPhone !== undefined) {
+        const [tenant] = await transaction.select({ preset: tenants.preset }).from(tenants)
+          .where(eq(tenants.id, context.tenantId)).limit(1);
+        const phone = patch.ownerCashAlertWhatsAppPhone;
+        try {
+          patch.ownerCashAlertWhatsAppPhone = normalizeOwnerCashAlertPhone(tenant?.preset ?? "", phone);
+        } catch {
+          throw new z.ZodError([{ code: "custom", path: ["ownerCashAlertWhatsAppPhone"], message: "Ingresá un celular argentino válido para un negocio Express." }]);
+        }
+      }
       if (patch.printingEnabled === true) {
         const canPrint = await this.hasEntitlement(transaction, context.tenantId, "printing");
         if (!canPrint) {
@@ -293,8 +304,8 @@ export class TenantSettingsService {
         ? { printingEnabled: patch.printingEnabled }
         : {}),
       ...(patch.menuTheme !== undefined ? { menuTheme: patch.menuTheme } : {}),
-      ...(patch.slackCashAlertWebhookUrl !== undefined
-        ? { slackCashAlertWebhookUrl: patch.slackCashAlertWebhookUrl }
+      ...(patch.ownerCashAlertWhatsAppPhone !== undefined
+        ? { ownerCashAlertWhatsAppPhone: patch.ownerCashAlertWhatsAppPhone }
         : {}),
     };
   }

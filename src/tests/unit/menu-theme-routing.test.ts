@@ -53,10 +53,12 @@ function createMockCatalog(overrides?: {
   categories?: CatalogResult["categories"];
   tenantName?: string;
   tenantSlug?: string;
+  preset?: "gastronomy" | "express_retail";
 }): CatalogResult {
   const theme = overrides?.menuTheme ?? "reels";
   const slug = overrides?.tenantSlug ?? "mi-resto";
   const name = overrides?.tenantName ?? "Mi Resto";
+  const preset = overrides?.preset ?? "gastronomy";
   return {
     tenant: {
       name,
@@ -64,9 +66,11 @@ function createMockCatalog(overrides?: {
       currency: "ARS",
       menuTheme: theme,
       orderingAvailable: true,
+      preset,
     },
     menuTheme: theme,
     orderingAvailable: true,
+    preset,
     revision: 1,
     categories: overrides?.categories ?? [],
   };
@@ -209,6 +213,100 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
       expect(items).toHaveLength(1);
       expect(items[0].videoUrl).toBeNull();
       expect(items[0].image).toBe("https://cdn.komanda.app/images/coke.jpg");
+    });
+
+    it("maps addon groups into modifier groups and marks the item as configurable", async () => {
+      vi.spyOn(PublicTenantService.prototype, "catalog").mockResolvedValue(
+        createMockCatalog({
+          categories: [
+            {
+              id: "cat-1",
+              name: "Pollo",
+              items: [
+                {
+                  id: "item-pollo",
+                  tenantId: "tenant-1",
+                  categoryId: "cat-1",
+                  name: "Pollo asado",
+                  normalizedName: "pollo-asado",
+                  description: "Pollo entero",
+                  price: "9000.00",
+                  currency: "ARS",
+                  barcode: null,
+                  isGeneric: false,
+                  genericIcon: null,
+                  destinationStation: null,
+                  trackStock: false,
+                  stockQuantity: 0,
+                  imageAssetId: null,
+                  videoAssetId: null,
+                  status: "active",
+                  sortOrder: 0,
+                  version: 1,
+                  archivedAt: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  imageUrl: null,
+                  videoUrl: null,
+                  addonGroups: [
+                    {
+                      id: "group-1",
+                      tenantId: "tenant-1",
+                      name: "Adicionales",
+                      minSelected: 0,
+                      maxSelected: 2,
+                      sortOrder: 0,
+                      status: "active",
+                      version: 1,
+                      archivedAt: null,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                      options: [
+                        {
+                          id: "opt-queso",
+                          tenantId: "tenant-1",
+                          groupId: "group-1",
+                          name: "Queso extra",
+                          description: "Doble porción de queso derretido",
+                          priceDelta: "500.00",
+                          status: "active",
+                          sortOrder: 0,
+                          version: 1,
+                          archivedAt: null,
+                          createdAt: new Date(),
+                          updatedAt: new Date(),
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+              combos: [],
+            },
+          ],
+        }),
+      );
+
+      const items = await getMenuItems("pollo-spot");
+      expect(items).toHaveLength(1);
+      expect(items[0].hasOptions).toBe(true);
+      expect(items[0].modifierGroups).toEqual([
+        {
+          id: "group-1",
+          name: "Adicionales",
+          required: false,
+          minSelect: 0,
+          maxSelect: 2,
+          options: [
+            {
+              id: "opt-queso",
+              name: "Queso extra",
+              description: "Doble porción de queso derretido",
+              priceDelta: 500,
+            },
+          ],
+        },
+      ]);
     });
 
     it("resolves tenant menu theme correctly with getTenantMenuTheme", async () => {

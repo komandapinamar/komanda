@@ -7,7 +7,20 @@ export type IneligibilityReason =
   | "DISCOUNT_EXPIRED"
   | "DISCOUNT_LIMIT_REACHED"
   | "MIN_ORDER_NOT_MET"
-  | "NO_QUALIFYING_ITEMS";
+  | "NO_QUALIFYING_ITEMS"
+  | "COUPON_TENDER_MISMATCH";
+
+export type Tender = "cash" | "posnet" | "mercadopago";
+
+export class CouponTenderMismatchError extends Error {
+  readonly code = "COUPON_TENDER_MISMATCH";
+  constructor(
+    message = "Este cupón de descuento es exclusivo para pagos en efectivo en mostrador",
+  ) {
+    super(message);
+    this.name = "CouponTenderMismatchError";
+  }
+}
 
 export type CartLineForDiscount = {
   id: string;
@@ -32,6 +45,7 @@ export type CouponRuleInput = {
   targetCategoryIds?: string[];
   targetItemIds?: string[];
   isActive: boolean;
+  applicableTender?: "all" | "cash";
 };
 
 export type DiscountEligibilityResult =
@@ -60,7 +74,16 @@ export function evaluateCouponEligibility(
   coupon: CouponRuleInput,
   applicableSubtotalCents: number,
   now: Date = new Date(),
+  tender?: Tender,
 ): DiscountEligibilityResult {
+  if (
+    coupon.applicableTender === "cash" &&
+    tender !== undefined &&
+    tender !== "cash"
+  ) {
+    return { isEligible: false, ineligibilityReason: "COUPON_TENDER_MISMATCH" };
+  }
+
   if (!coupon.isActive) {
     return { isEligible: false, ineligibilityReason: "DISCOUNT_INACTIVE" };
   }
@@ -170,8 +193,9 @@ export function calculateDiscountAmounts(params: {
   lines: CartLineForDiscount[];
   coupon: CouponRuleInput;
   now?: Date;
+  tender?: Tender;
 }): DiscountCalculationResult {
-  const { lines, coupon, now = new Date() } = params;
+  const { lines, coupon, now = new Date(), tender } = params;
 
   const subtotalCents = lines.reduce(
     (sum, line) => sum + line.lineTotalCents,
@@ -203,6 +227,7 @@ export function calculateDiscountAmounts(params: {
     coupon,
     applicableSubtotalCents,
     now,
+    tender,
   );
 
   if (!eligibility.isEligible) {

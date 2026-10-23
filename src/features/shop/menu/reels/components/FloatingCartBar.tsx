@@ -2,6 +2,7 @@
 
 import { useCallback, type MouseEvent } from "react";
 import { formatReelPrice } from "./ReelOverlay";
+import { useBrowserChromeOffset } from "../hooks/useBrowserChromeOffset";
 
 export interface FloatingCartBarProps {
   itemCount: number;
@@ -18,6 +19,7 @@ export default function FloatingCartBar({
 }: FloatingCartBarProps) {
   const isVisible = itemCount > 0;
   const formattedSubtotal = formatReelPrice(subtotal, currency);
+  const chromeOffset = useBrowserChromeOffset();
 
   const handleClick = useCallback(
     (e: MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
@@ -45,6 +47,7 @@ export default function FloatingCartBar({
       style={{
         backgroundColor: "#ff4d2d",
         borderRadius: "9999px",
+        bottom: `calc(${chromeOffset}px + env(safe-area-inset-bottom, 0px) + 1rem)`,
       }}
     >
       {/* Left: Cart badge & item count */}

@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { canAccess } from "@/lib/authorization/permissions";
 import { TenantSettingsService } from "@/features/tenancy/application/tenant-settings.service";
 import { TenantReadinessService } from "@/features/tenancy/application/tenant-readiness.service";
-import { TenantSettingsPanel } from "@/features/tenancy/web/TenantSettingsPanel";
+import { SettingsShell } from "@/features/tenancy/web/shells/settings-shell";
 import { TenantActivationPanel } from "@/features/tenancy/web/TenantActivationPanel";
 import { MercadoPagoIntegrationService } from "@/features/payments/application/integration.service";
 import { MercadoPagoIntegrationPanel } from "@/features/payments/web/MercadoPagoIntegrationPanel";
@@ -103,7 +103,6 @@ export default async function TenantSettingsPage({
   return (
     <main className="mx-auto max-w-4xl space-y-10 px-4 py-8 sm:px-6">
       <header className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Administración</p>
         <h1 className="text-2xl font-semibold tracking-tight">Configuración</h1>
         <p className="text-sm text-zinc-400">Los datos básicos y conexiones de tu negocio.</p>
       </header>
@@ -171,7 +170,7 @@ export default async function TenantSettingsPage({
         <div>
           <h2 className="text-base font-semibold">Datos generales</h2>
         </div>
-        <TenantSettingsPanel initialSettings={settings} />
+        <SettingsShell initialSettings={settings} />
       </section>
 
       <section className="space-y-4 border-t border-zinc-800/80 pt-8">

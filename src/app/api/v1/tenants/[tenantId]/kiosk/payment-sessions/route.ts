@@ -2,6 +2,7 @@ import { KioskPaymentService } from "@/features/payments/application/kiosk-payme
 import { administrativeTenantContext } from "@/features/identity/web/tenant-authority";
 import { kioskPaymentErrorResponse } from "@/features/payments/web/kiosk-payment-http";
 import { problemResponse } from "@/lib/http/problem";
+import { publicBaseUrl } from "@/lib/config/public-site";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
 
 type RouteContext = { params: Promise<{ tenantId: string }> };
@@ -26,8 +27,7 @@ export async function POST(request: Request, route: RouteContext) {
       tenantId,
       correlationId,
     );
-    const baseUrl =
-      process.env.KOMANDA_PUBLIC_BASE_URL || new URL(request.url).origin;
+    const baseUrl = publicBaseUrl() || new URL(request.url).origin;
     const session = await new KioskPaymentService().createSession({
       context,
       body: await request.json(),

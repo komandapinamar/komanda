@@ -53,8 +53,9 @@ describe("Tenant Preset & Backoffice Adaptive Architecture", () => {
     expect(markup).not.toContain('name="preset"');
     expect(markup).not.toContain("Tema del menú digital (QR)");
     expect(markup).not.toContain('name="menuTheme"');
-    expect(markup).toContain("Webhook de Slack para cobros en efectivo");
-    expect(markup).toContain('name="slackCashAlertWebhookUrl"');
+    expect(markup).toContain("WhatsApp para avisos de pedidos en efectivo");
+    expect(markup).toContain('name="ownerCashAlertWhatsAppPhone"');
+    expect(markup).toContain("celular argentino");
 
     const gastronomyMarkup = renderToStaticMarkup(
       React.createElement(TenantSettingsPanel, {
@@ -78,7 +79,7 @@ describe("Tenant Preset & Backoffice Adaptive Architecture", () => {
     expect(gastronomyMarkup).toContain("Tema del menú digital (QR)");
     expect(gastronomyMarkup).toContain('name="menuTheme"');
     expect(gastronomyMarkup).toContain('checked="" value="reels"');
-    expect(gastronomyMarkup).not.toContain("Webhook de Slack para cobros en efectivo");
-    expect(gastronomyMarkup).not.toContain('name="slackCashAlertWebhookUrl"');
+    expect(gastronomyMarkup).not.toContain("WhatsApp para avisos de pedidos en efectivo");
+    expect(gastronomyMarkup).not.toContain('name="ownerCashAlertWhatsAppPhone"');
   });
 });
