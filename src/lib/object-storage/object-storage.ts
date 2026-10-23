@@ -30,6 +30,17 @@ export interface ObjectStorage {
     expected: { byteSize: number; checksumSha256Base64: string },
   ): Promise<boolean>;
   createReadUrl(key: string, expiresInSeconds?: number): Promise<string>;
+  putObject(input: {
+    key: string;
+    body: Uint8Array;
+    mimeType: string;
+    checksumSha256Base64: string;
+  }): Promise<void>;
+  getObject(key: string, range?: string): Promise<{
+    body: ReadableStream<Uint8Array>;
+    contentLength?: number;
+    contentRange?: string;
+  }>;
 }
 
 const extensions: Record<string, string> = {
@@ -126,5 +137,35 @@ export class S3ObjectStorage implements ObjectStorage {
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
       { expiresIn: expiresInSeconds },
     );
+  }
+
+  async putObject(input: {
+    key: string;
+    body: Uint8Array;
+    mimeType: string;
+    checksumSha256Base64: string;
+  }): Promise<void> {
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: input.key,
+      Body: input.body,
+      ContentLength: input.body.byteLength,
+      ContentType: input.mimeType,
+      ChecksumSHA256: input.checksumSha256Base64,
+    }));
+  }
+
+  async getObject(key: string, range?: string) {
+    const result = await this.client.send(new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ...(range ? { Range: range } : {}),
+    }));
+    if (!result.Body) throw new Error("Media object has no body.");
+    return {
+      body: result.Body.transformToWebStream(),
+      contentLength: result.ContentLength,
+      contentRange: result.ContentRange,
+    };
   }
 }
