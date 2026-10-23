@@ -36,7 +36,7 @@ export default function CartPanel() {
   return (
     <div data-testid="cart-ticket" className="relative flex h-full min-h-0 flex-col bg-[#faf7ef] font-mono text-[#29251f] shadow-[0_12px_40px_rgba(0,0,0,0.25)] [--color-accent-primary:#faf7ef] [--color-accent-secondary:#29251f]" style={{ clipPath: ticketClipPath }}>
       <div className="mx-4 border-b-2 border-dashed border-[#29251f]/30 pb-4 pt-7 text-center">
-        <p className="text-2xl font-black">refill</p>
+        <p className="text-2xl font-black tracking-tighter">KOMANDA</p>
         <p className="mt-1 break-words text-xs uppercase">{tenantSlug}</p>
       </div>
 
