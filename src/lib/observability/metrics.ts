@@ -18,7 +18,10 @@ export type MetricEvent =
   | "payment.reconciled"
   | "payment.reconciliation_failed"
   | "payment.verification_lag_alert"
-  | "migration.reported";
+  | "migration.reported"
+  | "pressure.state_changed"
+  | "pressure.snapshot"
+  | "pressure.sample_failed";
 
 export type MetricFields = {
   tenantId?: string;

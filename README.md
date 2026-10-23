@@ -67,6 +67,21 @@ Health checks are available at `/api/health` and report database, object storage
 Mercado Pago, outbox and printing independently. Rollback uses a Core-compatible
 release or a forward fix; the legacy system is not a rollback target.
 
+## Overload Telemetry
+
+`GET /api/health/pressure` exposes per-replica saturation signals without querying
+tenant data: event-loop lag, CPU and heap utilization, PostgreSQL pool waiting and
+utilization, in-flight requests and active SSE connections. Each sample returns a
+`normal`, `elevated` or `critical` state plus a `recommendedAction`
+(`none`, `shed_non_critical`, `activate_fallback`).
+
+Pressure never changes readiness: a saturated replica must stay in the load
+balancer so it can drain, and removing it does not create capacity. The endpoint is
+safe to poll from monitoring; transitions and non-normal samples are also emitted as
+`pressure.state_changed`, `pressure.snapshot` and `pressure.sample_failed` metric
+events. Thresholds are configurable through the `PRESSURE_*` variables documented in
+`src/.env.production.example`.
+
 # MercadoPago API
 
 Each tenant connects its seller account with OAuth. Payment sessions and signed
