@@ -98,6 +98,34 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
       expect(parsed.customer.name).toBe("Martín Autoservicio");
     });
 
+    it("accepts an optional discount code", () => {
+      const parsed = createKioskPaymentSessionSchema.parse({
+        items: [
+          {
+            catalogItemId: "11111111-1111-4111-8111-111111111111",
+            quantity: 1,
+          },
+        ],
+        discountCode: "PROMO10",
+      });
+
+      expect(parsed.discountCode).toBe("PROMO10");
+    });
+
+    it("rejects an oversized discount code", () => {
+      expect(() =>
+        createKioskPaymentSessionSchema.parse({
+          items: [
+            {
+              catalogItemId: "11111111-1111-4111-8111-111111111111",
+              quantity: 1,
+            },
+          ],
+          discountCode: "X".repeat(51),
+        }),
+      ).toThrow();
+    });
+
     it("rejects empty items array", () => {
       expect(() =>
         createKioskPaymentSessionSchema.parse({

@@ -21,6 +21,7 @@ export type CartSelectionCatalog = {
   price: string;
   currency: string;
   imageUrl: string | null;
+  categoryId?: string | null;
   addonGroups: Array<{
     id: string;
     minSelected: number;
@@ -73,10 +74,11 @@ export class CartRepository {
           components.length > 0 && components.every(({ status }) => status === "active")
             ? row.resource.status
             : ("unavailable" as const),
-        price: row.resource.price,
-        currency: row.resource.currency,
-        imageUrl: row.media?.status === "ready" ? row.media.publicUrl : null,
-        addonGroups: [],
+      price: row.resource.price,
+      currency: row.resource.currency,
+      imageUrl: row.media?.status === "ready" ? row.media.publicUrl : null,
+      categoryId: null,
+      addonGroups: [],
       } satisfies CartSelectionCatalog;
     }
 
@@ -137,6 +139,7 @@ export class CartRepository {
       price: row.resource.price,
       currency: row.resource.currency,
       imageUrl: row.media?.status === "ready" ? row.media.publicUrl : null,
+      categoryId: row.resource.categoryId ?? null,
       addonGroups: groups.map((group) => ({
         id: group.id,
         minSelected: group.minSelected,

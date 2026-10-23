@@ -3,12 +3,16 @@ import { tenants, tenantLocations, paymentAttempts, tenantOrders, carts } from "
 import { eq, and } from "drizzle-orm";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { CartRepository } from "@/features/cart/infrastructure/cart.repository";
-import { centsToMoney, revalidateCartSelection } from "@/features/cart/domain/cart.rules";
+import { centsToMoney, moneyToCents, revalidateCartSelection } from "@/features/cart/domain/cart.rules";
 import { IntegrationRepository } from "@/features/payments/infrastructure/integration.repository";
+import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
+import { calculateDiscountAmounts } from "@/features/discounts/domain/discount.rules";
 import { MercadoPagoCheckoutClient } from "@/features/payments/application/payment-session.service";
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import {
   createKioskPaymentSessionSchema,
+  kioskDiscountPreviewSchema,
+  type KioskDiscountPreviewResponse,
   type KioskPaymentSessionResponse,
 } from "@/features/payments/domain/kiosk-payment.schemas";
 import {
@@ -87,6 +91,7 @@ export class KioskPaymentService {
 
       const cartRepo = new CartRepository(transaction, context.tenantId);
       let subtotalCents = 0;
+      const categoryMap = new Map<string, string | null>();
       const lines: Array<{
         kind: "item" | "combo";
         resourceId: string;
@@ -114,6 +119,11 @@ export class KioskPaymentService {
           );
         }
 
+        categoryMap.set(
+          itemReq.catalogItemId,
+          (catalog as { categoryId?: string | null }).categoryId ?? null,
+        );
+
         const validated = revalidateCartSelection(
           {
             kind: "item",
@@ -139,12 +149,75 @@ export class KioskPaymentService {
         });
       }
 
+      let discountTotal = "0.00";
+      let totalCents = subtotalCents;
+      let appliedDiscountCodeId: string | null = null;
+      let discountMetadata: {
+        code: string;
+        name: string;
+        discountType: string;
+        discountValue: string;
+        savingsAmount: string;
+        tenderRestriction?: string;
+      } | null = null;
+
+      if (request.discountCode) {
+        const discountRepo = new DiscountRepository(
+          transaction,
+          context.tenantId,
+        );
+        const discount = await discountRepo.findByCode(request.discountCode);
+        if (!discount) {
+          throw new KioskPaymentCartUnavailableError(
+            "Código de descuento inválido o no encontrado.",
+          );
+        }
+
+        const linesForDiscount = lines.map((line, index) => ({
+          id: `line-${index}`,
+          resourceId: line.resourceId,
+          categoryId: categoryMap.get(line.resourceId) ?? undefined,
+          quantity: line.quantity,
+          unitPriceCents: moneyToCents(line.unitPrice),
+          lineTotalCents: moneyToCents(line.lineTotal),
+        }));
+
+        const calcResult = calculateDiscountAmounts({
+          lines: linesForDiscount,
+          coupon: discount,
+          now: new Date(),
+          tender: "mercadopago",
+        });
+
+        if (!calcResult.isEligible) {
+          throw new KioskPaymentCartUnavailableError(
+            calcResult.ineligibilityReason === "COUPON_TENDER_MISMATCH"
+              ? "Este cupón es exclusivo para pagos en efectivo."
+              : "El código de descuento no es aplicable a este pedido.",
+          );
+        }
+
+        discountTotal = calcResult.discountTotal;
+        totalCents = calcResult.totalCents;
+        appliedDiscountCodeId = discount.id;
+        discountMetadata = {
+          code: discount.code,
+          name: discount.name,
+          discountType: discount.discountType,
+          discountValue: discount.discountValue,
+          savingsAmount: calcResult.discountTotal,
+        };
+      }
+
       const expiresAt = new Date(Date.now() + 120 * 1000);
       const cart = await cartRepo.create({
         locationId: location.id,
         currency: tenantRow.currency,
         subtotal: centsToMoney(subtotalCents),
-        total: centsToMoney(subtotalCents),
+        discountTotal,
+        total: centsToMoney(totalCents),
+        appliedDiscountCodeId,
+        discountMetadata,
         expiresAt,
         lines,
       });
@@ -197,6 +270,121 @@ export class KioskPaymentService {
         await idempotency.fail(claim.recordId);
         throw error;
       }
+    });
+  }
+
+  async previewDiscount(input: {
+    context: TenantContext;
+    body: unknown;
+  }): Promise<KioskDiscountPreviewResponse> {
+    const request = kioskDiscountPreviewSchema.parse(input.body);
+
+    return withTenantTransaction(input.context, async (transaction) => {
+      const [tenantRow] = await transaction
+        .select({ currency: tenants.defaultCurrency })
+        .from(tenants)
+        .where(eq(tenants.id, input.context.tenantId))
+        .limit(1);
+
+      if (!tenantRow) {
+        throw new KioskPaymentCartUnavailableError("Tenant not found.");
+      }
+
+      const cartRepo = new CartRepository(transaction, input.context.tenantId);
+      let subtotalCents = 0;
+      const linesForDiscount: Array<{
+        id: string;
+        resourceId: string;
+        categoryId: string | null;
+        quantity: number;
+        unitPriceCents: number;
+        lineTotalCents: number;
+      }> = [];
+
+      for (const [index, itemReq] of request.items.entries()) {
+        const catalog = await cartRepo.loadSelection(
+          "item",
+          itemReq.catalogItemId,
+        );
+        if (!catalog || catalog.currency !== tenantRow.currency) {
+          throw new KioskPaymentItemUnavailableError(
+            `Product ${itemReq.catalogItemId} is unavailable.`,
+          );
+        }
+
+        const validated = revalidateCartSelection(
+          {
+            kind: "item",
+            resourceId: itemReq.catalogItemId,
+            quantity: itemReq.quantity,
+            optionIds: [],
+          },
+          catalog,
+        );
+
+        const lineTotalCents = validated.unitPriceCents * itemReq.quantity;
+        subtotalCents += lineTotalCents;
+        linesForDiscount.push({
+          id: `line-${index}`,
+          resourceId: itemReq.catalogItemId,
+          categoryId:
+            (catalog as { categoryId?: string | null }).categoryId ?? null,
+          quantity: itemReq.quantity,
+          unitPriceCents: validated.unitPriceCents,
+          lineTotalCents,
+        });
+      }
+
+      const subtotal = centsToMoney(subtotalCents);
+      const discountRepo = new DiscountRepository(
+        transaction,
+        input.context.tenantId,
+      );
+      const discount = await discountRepo.findByCode(request.discountCode);
+
+      if (!discount) {
+        return {
+          eligible: false,
+          reason: "DISCOUNT_NOT_FOUND",
+          code: request.discountCode,
+          name: null,
+          subtotal,
+          discountTotal: "0.00",
+          total: subtotal,
+          applicableTender: null,
+        };
+      }
+
+      const calcResult = calculateDiscountAmounts({
+        lines: linesForDiscount,
+        coupon: discount,
+        now: new Date(),
+        tender: request.tender,
+      });
+
+      if (!calcResult.isEligible) {
+        return {
+          eligible: false,
+          reason: calcResult.ineligibilityReason ?? "DISCOUNT_NOT_APPLICABLE",
+          code: discount.code,
+          name: discount.name,
+          subtotal,
+          discountTotal: "0.00",
+          total: subtotal,
+          applicableTender: discount.applicableTender,
+        };
+      }
+
+      return {
+        eligible: true,
+        reason: null,
+        code: discount.code,
+        name: discount.name,
+        subtotal,
+        discountTotal: calcResult.discountTotal,
+        total: calcResult.total,
+        applicableTender: discount.applicableTender,
+      };
     });
   }
 
