@@ -29,6 +29,7 @@ type PersistedCartState = {
   items: CartLine[];
   appliedDiscount?: AppliedDiscountInfo | null;
   discountTotal?: number;
+  savedAt?: number;
 };
 
 type CartContextValue = {
@@ -54,22 +55,45 @@ type CartContextValue = {
   applyOfficialCart: (cart: OfficialCart) => void;
   applyDiscount: (code: string) => Promise<{ success: boolean; error?: string }>;
   removeDiscount: () => Promise<void>;
+  backupCart: () => void;
+  restoreCartBackup: () => boolean;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+function optionSignature(optionIds?: string[]) {
+  return [...(optionIds ?? [])].sort().join(",");
+}
+
+function cartLineId(item: MenuItem) {
+  const signature = optionSignature(item.selectedOptionIds);
+  return signature ? `${item.documentId}::${signature}` : item.documentId;
+}
 
 function cartLineToSnapshot(cartLine: CartLine): CartSnapshotLine {
   return {
     documentId: cartLine.item.documentId,
     quantity: cartLine.quantity,
     name: cartLine.item.name,
-    unitPrice: cartLine.item.price,
+    unitPrice: cartLine.item.basePrice ?? cartLine.item.price,
     image: cartLine.item.image,
+    optionIds: cartLine.item.selectedOptionIds ?? [],
+    note: cartLine.item.selectedOptionSummary ?? undefined,
   };
 }
 
 function officialCartToLines(cart: OfficialCart): CartLine[] {
   return cart.items.map((line) => ({
+    lineId: line.id ?? cartLineId({
+      documentId: line.documentId,
+      name: line.name,
+      price: line.unitPrice,
+      description: null,
+      image: line.image,
+      category: null,
+      combos: null,
+      selectedOptionIds: line.optionIds,
+    }),
     quantity: line.quantity,
     item: {
       documentId: line.documentId,
@@ -79,6 +103,9 @@ function officialCartToLines(cart: OfficialCart): CartLine[] {
       image: line.image,
       category: null,
       combos: null,
+      selectedOptionIds: line.optionIds,
+      selectedOptionSummary: line.optionNames?.join(", ") || line.note || null,
+      selectedOptions: line.selectedOptions,
     },
   }));
 }
@@ -179,29 +206,38 @@ export function CartProvider({
       );
     }
     setItems((currentItems) => {
+      const targetLineId = cartLineId(item);
       const existingItem = currentItems.find(
-        (cartLine) => cartLine.item.documentId === item.documentId,
+        (cartLine) =>
+          (cartLine.lineId ?? cartLineId(cartLine.item)) === targetLineId,
       );
 
       if (!existingItem) {
-        return [...currentItems, { item, quantity: 1 }];
+        return [
+          ...currentItems,
+          { item, quantity: 1, lineId: targetLineId },
+        ];
       }
 
       return currentItems.map((cartLine) =>
-        cartLine.item.documentId === item.documentId
+        (cartLine.lineId ?? cartLineId(cartLine.item)) === targetLineId
           ? { ...cartLine, quantity: cartLine.quantity + 1 }
           : cartLine,
       );
     });
   }, []);
 
-  const decrementItem = useCallback((documentId: string) => {
+  const decrementItem = useCallback((lineIdOrDocumentId: string) => {
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
     setItems((currentItems) =>
       currentItems.flatMap((cartLine) => {
-        if (cartLine.item.documentId !== documentId) {
+        const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
+        if (
+          lineId !== lineIdOrDocumentId &&
+          cartLine.item.documentId !== lineIdOrDocumentId
+        ) {
           return [cartLine];
         }
 
@@ -214,12 +250,18 @@ export function CartProvider({
     );
   }, []);
 
-  const removeItem = useCallback((documentId: string) => {
+  const removeItem = useCallback((lineIdOrDocumentId: string) => {
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
     setItems((currentItems) =>
-      currentItems.filter((cartLine) => cartLine.item.documentId !== documentId),
+      currentItems.filter((cartLine) => {
+        const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
+        return (
+          lineId !== lineIdOrDocumentId &&
+          cartLine.item.documentId !== lineIdOrDocumentId
+        );
+      }),
     );
   }, []);
 
@@ -238,7 +280,13 @@ export function CartProvider({
   );
 
   const applyOfficialCart = useCallback((cart: OfficialCart) => {
-    setItems(officialCartToLines(cart));
+    setItems((currentItems) => officialCartToLines(cart).map((line) => ({
+      ...line,
+      item: {
+        ...line.item,
+        videoUrl: currentItems.find(({ item }) => item.documentId === line.item.documentId)?.item.videoUrl,
+      },
+    })));
     setCartId(cart.id);
     setDiscountTotal(cart.discountTotal ?? 0);
     setAppliedDiscount(cart.appliedDiscount ?? null);
@@ -344,6 +392,78 @@ export function CartProvider({
     }
   }, [applyOfficialCart, cartId, tenantSlug]);
 
+  const backupStorageKey = `komanda.cart.backup.${tenantSlug}`;
+
+  const backupCart = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const persistedState: PersistedCartState = {
+        cartId,
+        items,
+        appliedDiscount,
+        discountTotal,
+        savedAt: Date.now(),
+      };
+
+      window.localStorage.setItem(backupStorageKey, JSON.stringify(persistedState));
+    } catch {
+      // Ignore localStorage quota / access errors
+    }
+  }, [appliedDiscount, backupStorageKey, cartId, discountTotal, items]);
+
+  const restoreCartBackupCallback = useCallback(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    try {
+      const storedBackup = window.localStorage.getItem(backupStorageKey);
+      if (!storedBackup) {
+        return false;
+      }
+
+      const parsedCart = JSON.parse(storedBackup) as PersistedCartState;
+
+      if (Array.isArray(parsedCart.items)) {
+        const restoredItems = parsedCart.items.filter(isPersistedCartLine).map((line) => ({
+          ...line,
+          item: {
+            ...line.item,
+            category: line.item.category ?? null,
+            combos: line.item.combos ?? null,
+          },
+        }));
+
+        setItems(restoredItems);
+        setCartId(null);
+        setAppliedDiscount(parsedCart.appliedDiscount ?? null);
+        setDiscountTotal(parsedCart.discountTotal ?? 0);
+        setSyncStatus("idle");
+        setSyncError(null);
+
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            cartId: null,
+            items: restoredItems,
+            appliedDiscount: parsedCart.appliedDiscount ?? null,
+            discountTotal: parsedCart.discountTotal ?? 0,
+          }),
+        );
+
+        window.localStorage.removeItem(backupStorageKey);
+        return true;
+      }
+    } catch {
+      return false;
+    }
+
+    return false;
+  }, [backupStorageKey, storageKey]);
+
   const beginCheckout = useCallback(async () => syncCart(), [syncCart]);
 
   const value = useMemo(
@@ -369,12 +489,15 @@ export function CartProvider({
       applyOfficialCart,
       applyDiscount,
       removeDiscount,
+      backupCart,
+      restoreCartBackup: restoreCartBackupCallback,
     }),
     [
       addItem,
       applyDiscount,
       applyOfficialCart,
       appliedDiscount,
+      backupCart,
       beginCheckout,
       cartId,
       clearCart,
@@ -385,6 +508,7 @@ export function CartProvider({
       items,
       removeDiscount,
       removeItem,
+      restoreCartBackupCallback,
       snapshot,
       subtotal,
       syncCart,
@@ -410,4 +534,55 @@ export function useCart() {
   }
 
   return context;
+}
+
+export function restoreCartBackup(tenantSlug?: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    let targetKey: string | null = null;
+    let targetSlug = tenantSlug;
+
+    if (targetSlug) {
+      targetKey = `komanda.cart.backup.${targetSlug}`;
+    } else {
+      // No slug: pick the most recently saved backup to avoid injecting a
+      // different tenant's cart into the current storefront.
+      let newestSavedAt = -Infinity;
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key && key.startsWith("komanda.cart.backup.")) {
+          const raw = window.localStorage.getItem(key);
+          if (!raw) continue;
+          let savedAt = 0;
+          try {
+            const candidate = JSON.parse(raw) as PersistedCartState;
+            savedAt =
+              typeof candidate.savedAt === "number" ? candidate.savedAt : 0;
+          } catch {
+            savedAt = 0;
+          }
+          if (savedAt >= newestSavedAt) {
+            newestSavedAt = savedAt;
+            targetKey = key;
+            targetSlug = key.replace("komanda.cart.backup.", "");
+          }
+        }
+      }
+    }
+
+    if (!targetKey || !targetSlug) return false;
+    const backupData = window.localStorage.getItem(targetKey);
+    if (!backupData) return false;
+
+    const parsedState = JSON.parse(backupData) as PersistedCartState;
+    if (!Array.isArray(parsedState.items)) return false;
+    parsedState.cartId = null; // Ensure new active cart session is created on checkout
+
+    const primaryKey = `komanda.cart.${targetSlug}`;
+    window.localStorage.setItem(primaryKey, JSON.stringify(parsedState));
+    window.localStorage.removeItem(targetKey);
+    return true;
+  } catch {
+    return false;
+  }
 }

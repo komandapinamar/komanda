@@ -47,7 +47,12 @@ const mockConfigurableItem: MenuItem = {
       name: "Elegí tu aderezo",
       required: true,
       options: [
-        { id: "mayo-trufa", name: "Mayonesa Trufada", priceDelta: 0 },
+        {
+          id: "mayo-trufa",
+          name: "Mayonesa Trufada",
+          description: "Receta de la casa con trufa negra",
+          priceDelta: 0,
+        },
         { id: "bbq-bacon", name: "BBQ Ahumada", priceDelta: 500 },
       ],
     },
@@ -139,7 +144,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
   });
 
   describe("ReelActionRail (Story 3.1)", () => {
-    it("renders like button with +1 label, info button and heartPop micro-animation style", () => {
+    it("renders cart button with +1 label, info button and cartPop micro-animation style", () => {
       const html = renderToStaticMarkup(
         React.createElement(ReelActionRail, {
           item: mockSimpleItem,
@@ -147,51 +152,69 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       );
 
       expect(html).toContain('data-testid="reel-action-rail"');
-      expect(html).toContain('data-testid="action-btn-like"');
-      expect(html).toContain('data-testid="action-like-label"');
+      expect(html).toContain('data-testid="action-btn-add"');
+      expect(html).toContain('data-testid="action-add-label"');
       expect(html).toContain("+1");
       expect(html).toContain('data-testid="action-btn-info"');
-      expect(html).toContain("heartPop");
-      expect(html).toContain("animate-heart-pop");
+      expect(html).toContain("cartPop");
+      expect(html).toContain("animate-cart-pop");
+      expect(html).toContain('data-in-cart="false"');
+      expect(html).not.toContain('data-testid="action-cart-badge"');
     });
 
-    it("renders floating heart animation element when showHeart is active", () => {
+    it("keeps persistent in-cart state with quantity badge when item is already in cart", () => {
       const html = renderToStaticMarkup(
         React.createElement(ReelActionRail, {
           item: mockSimpleItem,
-          showHeart: true,
+          isInCart: true,
+          quantity: 3,
         })
       );
 
-      expect(html).toContain('data-testid="reel-heart-pop"');
-      expect(html).toContain("pointer-events-none");
-      expect(html).toContain("animate-heart-pop");
-      expect(html).toContain("#ff2a55");
+      expect(html).toContain('data-testid="action-btn-add"');
+      expect(html).toContain('data-in-cart="true"');
+      expect(html).toContain('data-testid="action-cart-badge"');
+      expect(html).toContain("bg-[#ff4d2d]");
+      expect(html).toContain(">3<");
     });
 
-    it("stops propagation and triggers onLike when like button is clicked", () => {
-      const onLike = vi.fn();
-      let capturedLikeButton: TestElement | null = null;
+    it("renders floating cart animation element when showBurst is active", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(ReelActionRail, {
+          item: mockSimpleItem,
+          showBurst: true,
+        })
+      );
+
+      expect(html).toContain('data-testid="reel-cart-pop"');
+      expect(html).toContain("pointer-events-none");
+      expect(html).toContain("animate-cart-pop");
+      expect(html).toContain("#ff4d2d");
+    });
+
+    it("stops propagation and triggers onAddToCart when cart button is clicked", () => {
+      const onAddToCart = vi.fn();
+      let capturedAddButton: TestElement | null = null;
 
       function TestHarness() {
         const el = ReelActionRail({
           item: mockSimpleItem,
-          onLike,
+          onAddToCart,
         }) as TestElement;
         const fragmentChildren = el.props.children as TestElement[];
         const railContainer = fragmentChildren[2];
         const buttons = railContainer.props.children as TestElement[];
-        capturedLikeButton = buttons[0];
+        capturedAddButton = buttons[0];
         return el;
       }
 
       renderToStaticMarkup(React.createElement(TestHarness));
 
       const stopPropagation = vi.fn();
-      capturedLikeButton!.props.onClick!({ stopPropagation });
+      capturedAddButton!.props.onClick!({ stopPropagation });
 
       expect(stopPropagation).toHaveBeenCalled();
-      expect(onLike).toHaveBeenCalledTimes(1);
+      expect(onAddToCart).toHaveBeenCalledTimes(1);
     });
 
     it("opens dish info modal when info button is clicked", () => {
@@ -221,7 +244,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
   });
 
   describe("ProductModifierSheet (Story 3.2)", () => {
-    it("renders bottom sheet with 28px top rounded corners and surface background #161822", () => {
+    it("renders as a centered modal with the surface background #161822", () => {
       const onConfirm = vi.fn();
       const onClose = vi.fn();
 
@@ -234,14 +257,16 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
         })
       );
 
+      expect(html).toContain('data-testid="product-modifier-overlay"');
+      expect(html).toContain("items-center");
       expect(html).toContain('data-testid="product-modifier-sheet"');
       expect(html).toContain('data-testid="modifier-sheet-title"');
       expect(html).toContain("Doble Smash Bacon");
-      expect(html).toContain("rounded-t-[28px]");
+      expect(html).toContain("rounded-[28px]");
       expect(html).toContain("#161822");
     });
 
-    it("renders modifier groups and options with price deltas", () => {
+    it("renders modifier groups, descriptions and options with price deltas", () => {
       const onConfirm = vi.fn();
       const onClose = vi.fn();
 
@@ -258,6 +283,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       expect(html).toContain('data-testid="modifier-option-mayo-trufa"');
       expect(html).toContain('data-testid="modifier-option-bbq-bacon"');
       expect(html).toContain("Mayonesa Trufada");
+      expect(html).toContain("Receta de la casa con trufa negra");
       expect(html).toContain("BBQ Ahumada");
       expect(html).toContain("+$500");
     });
@@ -267,17 +293,29 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       const onClose = vi.fn();
       let capturedConfirmButton: TestElement | null = null;
 
+      function findConfirmButton(node: unknown): TestElement | null {
+        if (!React.isValidElement(node)) return null;
+        const props = node.props as Record<string, unknown>;
+        if (props["data-testid"] === "modifier-confirm-btn") {
+          return node as TestElement;
+        }
+        const children = props.children;
+        const list = Array.isArray(children) ? children : [children];
+        for (const child of list) {
+          const found = findConfirmButton(child);
+          if (found) return found;
+        }
+        return null;
+      }
+
       function TestHarness() {
         const el = ProductModifierSheet({
           item: mockConfigurableItem,
           isOpen: true,
           onConfirm,
           onClose,
-        }) as TestElement;
-        const sheetContainer = el.props.children as TestElement;
-        const sheetChildren = sheetContainer.props.children as TestElement[];
-        const ctaContainer = sheetChildren[3];
-        capturedConfirmButton = ctaContainer.props.children as TestElement;
+        });
+        capturedConfirmButton = findConfirmButton(el);
         return el;
       }
 
@@ -289,6 +327,10 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       const configuredItem = onConfirm.mock.calls[0][0];
       expect(configuredItem.documentId).toBe(mockConfigurableItem.documentId);
       expect(configuredItem.description).toContain("Mayonesa Trufada");
+      expect(configuredItem.selectedOptionSummary).toBe("Mayonesa Trufada");
+      expect(configuredItem.selectedOptions[0].description).toBe(
+        "Receta de la casa con trufa negra"
+      );
     });
   });
 
@@ -350,7 +392,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
   });
 
   describe("ReelItem & ReelOverlay Cart Padding Integration", () => {
-    it("applies touch-action: pan-y to not block vertical scroll", () => {
+    it("prevents double-tap zoom while allowing scrolling and pinch zoom", () => {
       const html = renderToStaticMarkup(
         React.createElement(ReelItem, {
           item: mockSimpleItem,
@@ -358,7 +400,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       );
 
       expect(html).toContain('data-testid="reel-item"');
-      expect(html).toContain("touch-action:pan-y");
+      expect(html).toContain("touch-action:manipulation");
     });
 
     it("applies pb-28 to ReelOverlay when cart is active (withCart / hasCartItems)", () => {

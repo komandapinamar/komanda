@@ -2,7 +2,15 @@ import { MenuItem } from "@/types/types";
 import { useState } from "react";
 import Image from "next/image";
 
-export default function ProductCard({ item }: { item: MenuItem }) {
+export interface ProductCardProps {
+    item: MenuItem;
+    showAddButton?: boolean;
+}
+
+export default function ProductCard({
+    item,
+    showAddButton = true,
+}: ProductCardProps) {
     const [active, setActive] = useState<boolean>(false);
     const TIMEOUT_MS = 200;
     const hasImage = Boolean(item.image);
@@ -50,7 +58,7 @@ export default function ProductCard({ item }: { item: MenuItem }) {
                 <p className="text-lg font-semibold">${item.price}</p>
             </div>
 
-            <aside className="relative z-10 flex flex-none items-center p-4 pr-12">
+            <aside className={`relative z-10 flex flex-none items-center p-4 ${showAddButton ? "pr-12" : "pr-4"}`}>
                 {hasImage ? (
                     <Image
                         className="h-28 w-28 shrink-0 rounded-sm object-cover sm:h-28 sm:w-28"
@@ -64,11 +72,17 @@ export default function ProductCard({ item }: { item: MenuItem }) {
                 ) : null}
             </aside>
 
-            <div className="absolute bottom-3 right-3 z-20">
-                <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-accent-secondary)] text-2xl font-bold leading-none text-[var(--color-accent-primary)] shadow-md transition-transform hover:scale-105">
-                    +
-                </button>
-            </div>
+            {showAddButton ? (
+                <div className="absolute bottom-3 right-3 z-20">
+                    <button
+                        type="button"
+                        aria-label={`Agregar ${item.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-accent-secondary)] text-2xl font-bold leading-none text-[var(--color-accent-primary)] shadow-md transition-transform hover:scale-105"
+                    >
+                        +
+                    </button>
+                </div>
+            ) : null}
         </div>
     )
 }

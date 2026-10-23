@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import AdminOrdersLive from "@/features/orders/web/AdminOrdersLive";
+import { OrdersShell } from "@/features/tenancy/web/shells/orders-shell";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
 import { canAccess } from "@/lib/authorization/permissions";
@@ -36,6 +36,9 @@ function toDashboardOrder(order: OrderView): AdminDashboardOrder {
     discountTotal: order.discountTotal,
     total: order.total,
     currency: order.currency,
+    tender: order.tender ?? null,
+    pickupPin: order.pickupPin ?? null,
+    paymentExpiresAt: order.paymentExpiresAt ?? null,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
     createdAt: order.createdAt,
@@ -112,7 +115,7 @@ export default async function TenantOrdersPage({
         </div>
       ) : null}
 
-      <AdminOrdersLive
+      <OrdersShell
         tenantId={tenantId}
         initialOrders={page.data.map(toDashboardOrder)}
       />

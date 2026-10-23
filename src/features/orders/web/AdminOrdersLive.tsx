@@ -6,6 +6,7 @@ import type {
   CustomerInfo,
   OrderStatus,
 } from "@/types/types";
+import { nextOrderStatus, orderStage, type OrderStage } from "./order-workflow";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
@@ -31,6 +32,8 @@ function sourceLabel(source: string | null) {
     return "Pago Mercado Pago";
   }
 
+  if (source === "storefront_cash") return "Menú online · Efectivo";
+
   return "Origen no disponible";
 }
 
@@ -46,26 +49,6 @@ function statusLabel(status: OrderStatus) {
     case "cancelled":
       return "Cancelado";
   }
-}
-
-function nextStatus(status: OrderStatus): OrderStatus | null {
-  switch (status) {
-    case "approved":
-    case "preparing":
-      return "ready";
-    case "ready":
-      return "delivered";
-    case "delivered":
-    case "cancelled":
-      return null;
-  }
-}
-
-function nextStatusLabel(status: OrderStatus) {
-  const next = nextStatus(status);
-  if (next === "ready") return "Listo para entregar";
-  if (next === "delivered") return "Entregado";
-  return null;
 }
 
 function connectionLabel(state: ConnectionState) {
@@ -101,7 +84,8 @@ function TenantTransitionButton({
   disabled: boolean;
   onTransition: (order: AdminDashboardOrder) => void;
 }) {
-  const label = nextStatusLabel(order.status);
+  const next = nextOrderStatus(order);
+  const label = next === "ready" ? "Marcar listo en cocina" : next === "delivered" ? "Marcar como entregado" : null;
   if (!label) return null;
   return (
     <button
@@ -118,6 +102,7 @@ function TenantTransitionButton({
 type AdminOrdersLiveProps = {
   initialOrders: AdminDashboardOrder[];
   tenantId: string;
+  onOrdersChange?: (orders: AdminDashboardOrder[]) => void;
 };
 
 type TenantOrderLineResponse = {
@@ -138,7 +123,7 @@ type TenantOrderResponse = {
   id: string;
   purchaseNumber: string | number;
   fulfillmentStatus: OrderStatus;
-  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded" | "verification_required";
   customer?: Record<string, unknown>;
   notes: string | null;
   source: AdminDashboardOrder["source"];
@@ -147,7 +132,9 @@ type TenantOrderResponse = {
   discountTotal: string;
   total: string;
   currency: string;
+  tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
@@ -159,6 +146,15 @@ type TenantOrderEvent = {
   orderId: string;
   sequence: string;
 };
+
+function isCashPending(order: AdminDashboardOrder): boolean {
+  return (
+    order.tender === "cash" &&
+    order.paymentStatus === "pending" &&
+    order.status !== "cancelled" &&
+    order.status !== "delivered"
+  );
+}
 
 function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
   return {
@@ -186,7 +182,9 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
     discountTotal: order.discountTotal,
     total: order.total,
     currency: order.currency,
+    tender: order.tender ?? null,
     pickupPin: order.pickupPin ?? null,
+    paymentExpiresAt: order.paymentExpiresAt ?? null,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
     createdAt: order.createdAt,
@@ -195,20 +193,211 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
   };
 }
 
+type CollectCashResult = {
+  orderId: string;
+  paymentStatus: string;
+  paidAt?: string;
+  version?: number;
+};
+
+function CollectCashDialog({
+  order,
+  tenantId,
+  onClose,
+  onCollected,
+}: {
+  order: AdminDashboardOrder;
+  tenantId: string;
+  onClose: () => void;
+  onCollected: (orderId: string, version?: number) => void;
+}) {
+  const [authMethod, setAuthMethod] = useState<"pickup_pin" | "account_auth">(
+    "pickup_pin",
+  );
+  const [pin, setPin] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canConfirm =
+    !isSubmitting && (authMethod === "account_auth" || /^\d{4}$/.test(pin));
+
+  const confirm = async () => {
+    if (!canConfirm) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/v1/tenants/${tenantId}/orders/${order.id}/collect-cash`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            authMethod,
+            ...(authMethod === "pickup_pin" ? { authCode: pin } : {}),
+          }),
+        },
+      );
+      if (!response.ok) {
+        const problem = (await response.json().catch(() => null)) as {
+          code?: string;
+          detail?: string;
+        } | null;
+        const message =
+          problem?.code === "INVALID_PICKUP_PIN"
+            ? "El PIN ingresado es incorrecto."
+            : problem?.code === "NO_OPEN_CASH_SHIFT"
+              ? "No hay un turno de caja abierto."
+              : problem?.detail || "No se pudo registrar el cobro.";
+        setError(message);
+        setIsSubmitting(false);
+        return;
+      }
+      const result = (await response.json()) as CollectCashResult;
+      onCollected(order.id, result.version);
+      onClose();
+    } catch {
+      setError("Error de conexión. Intente nuevamente.");
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
+        <h3 className="text-lg font-bold">
+          Cobrar en efectivo — Compra #{order.purchaseNumber}
+        </h3>
+        <p className="mt-3 rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-center">
+          <span className="block text-xs uppercase tracking-widest text-amber-500">
+            Total a cobrar en efectivo
+          </span>
+          <span className="mt-1 block font-mono text-2xl font-black text-amber-400">
+            ${order.total} {order.currency}
+          </span>
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMethod("pickup_pin");
+              setError(null);
+            }}
+            className={`rounded-sm border px-3 py-2 text-sm font-semibold ${
+              authMethod === "pickup_pin"
+                ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                : "border-[var(--color-accent-secondary)]/40 opacity-75"
+            }`}
+          >
+            PIN del pedido
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMethod("account_auth");
+              setError(null);
+            }}
+            className={`rounded-sm border px-3 py-2 text-sm font-semibold ${
+              authMethod === "account_auth"
+                ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                : "border-[var(--color-accent-secondary)]/40 opacity-75"
+            }`}
+          >
+            Confirmar con mi cuenta
+          </button>
+        </div>
+
+        {authMethod === "pickup_pin" ? (
+          <input
+            value={pin}
+            onChange={(event) => {
+              const next = event.target.value.replace(/\D/g, "").slice(0, 4);
+              setPin(next);
+              setError(null);
+            }}
+            inputMode="numeric"
+            placeholder="PIN de 4 dígitos"
+            className="mt-4 w-full rounded-sm border border-[var(--color-accent-secondary)]/50 bg-transparent px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] outline-none"
+          />
+        ) : (
+          <p className="mt-4 rounded-sm border border-[var(--color-accent-secondary)]/20 p-3 text-sm opacity-80">
+            Se autorizará el cobro con tu cuenta de usuario de Komanda
+            actualmente autenticada.
+          </p>
+        )}
+
+        {error ? (
+          <p className="mt-3 rounded-sm border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={confirm}
+            disabled={!canConfirm}
+            className="flex-1 rounded-sm bg-amber-500 px-4 py-3 font-bold text-zinc-950 disabled:opacity-50"
+          >
+            {isSubmitting ? "Procesando..." : "Marcar como pagado"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-sm border border-[var(--color-accent-secondary)]/40 px-4 py-3 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminOrdersLive({
   initialOrders,
   tenantId,
+  onOrdersChange,
 }: AdminOrdersLiveProps) {
   const [orders, setOrders] = useState(initialOrders);
+  const [stageFilter, setStageFilter] = useState<"all" | Exclude<OrderStage, "finished">>("all");
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+  const activeOrders = orders.filter((order) => orderStage(order) !== "finished");
+  const visibleOrders = activeOrders.filter((order) => stageFilter === "all" || orderStage(order) === stageFilter);
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [transitioningOrderId, setTransitioningOrderId] = useState<string | null>(
     null,
   );
+  const [collectingOrder, setCollectingOrder] =
+    useState<AdminDashboardOrder | null>(null);
+
+  const handleCollected = (orderId: string, version?: number) => {
+    setOrders((current) =>
+      current.map((candidate) =>
+        candidate.id === orderId
+          ? {
+              ...candidate,
+              paymentStatus: "paid" as const,
+              version: version ?? candidate.version,
+            }
+          : candidate,
+      ),
+    );
+    setLastUpdatedAt(new Date().toISOString());
+  };
 
   useEffect(() => {
     setOrders(initialOrders);
   }, [initialOrders]);
+
+  useEffect(() => {
+    onOrdersChange?.(orders);
+  }, [orders, onOrdersChange]);
 
   useEffect(() => {
     let isActive = true;
@@ -277,9 +466,10 @@ export default function AdminOrdersLive({
 
   const transitionTenantOrder = async (order: AdminDashboardOrder) => {
     if (!order.version) return;
-    const targetStatus = nextStatus(order.status);
+    const targetStatus = nextOrderStatus(order);
     if (!targetStatus) return;
     setTransitioningOrderId(order.id);
+    setTransitionError(null);
     try {
       const response = await fetch(`/api/v1/tenants/${tenantId}/orders/${order.id}`, {
         method: "PATCH",
@@ -289,10 +479,20 @@ export default function AdminOrdersLive({
         },
         body: JSON.stringify({
           fulfillmentStatus: targetStatus,
-          pickupPin: order.pickupPin || undefined,
+          pickupPin: targetStatus === "delivered" ? order.pickupPin || undefined : undefined,
         }),
       });
-      if (!response.ok) throw new Error("Failed to transition order.");
+      if (!response.ok) {
+        const problem = await response.json().catch(() => null) as { detail?: string } | null;
+        if (response.status === 409) {
+          const refresh = await fetch(`/api/v1/tenants/${tenantId}/orders/${order.id}`, { cache: "no-store" });
+          if (refresh.ok) {
+            const latest = toDashboardOrder(await refresh.json() as TenantOrderResponse);
+            setOrders((current) => current.map((candidate) => candidate.id === latest.id ? latest : candidate));
+          }
+        }
+        throw new Error(problem?.detail || "No se pudo actualizar el pedido. Revisá su estado e intentá nuevamente.");
+      }
       const updated = toDashboardOrder((await response.json()) as TenantOrderResponse);
       setOrders((current) =>
         current.map((candidate) =>
@@ -300,6 +500,8 @@ export default function AdminOrdersLive({
         ),
       );
       setLastUpdatedAt(new Date().toISOString());
+    } catch (error) {
+      setTransitionError(error instanceof Error ? error.message : "Error de conexión al actualizar el pedido.");
     } finally {
       setTransitioningOrderId(null);
     }
@@ -311,7 +513,7 @@ export default function AdminOrdersLive({
         <div>
           <h2 className="text-2xl font-bold">Activos</h2>
           <p className="text-sm opacity-75">
-            {orders.length} pedido{orders.length === 1 ? "" : "s"} esperando entrega.
+            {activeOrders.length} pedido{activeOrders.length === 1 ? "" : "s"} esperando entrega.
           </p>
         </div>
 
@@ -330,19 +532,39 @@ export default function AdminOrdersLive({
         </div>
       </div>
 
-      {orders.length === 0 ? (
+      <nav aria-label="Etapas del pedido" className="mt-4 flex flex-wrap gap-2">
+        {([
+          ["all", "Todos"],
+          ["payment", "1. Pago"],
+          ["kitchen", "2. Cocina"],
+          ["delivery", "3. Entrega"],
+        ] as const).map(([stage, label]) => (
+          <button key={stage} type="button" aria-pressed={stageFilter === stage} onClick={() => setStageFilter(stage)} className={`rounded-full border px-4 py-2 text-sm font-semibold ${stageFilter === stage ? "border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)]" : "border-[var(--color-accent-secondary)]/30"}`}>
+            {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})
+          </button>
+        ))}
+      </nav>
+      {transitionError ? <p role="alert" className="mt-4 rounded-sm border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">{transitionError}</p> : null}
+
+      {visibleOrders.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-lg font-semibold">No hay pedidos en proceso.</p>
+          <p className="text-lg font-semibold">No hay pedidos {stageFilter === "all" ? "en proceso" : "en esta etapa"}.</p>
           <p className="mt-2 text-sm opacity-75">
-            Cuando entre un nuevo pedido aprobado va a aparecer aca.
+            Los pedidos se actualizan en vivo: pago → cocina → entrega.
           </p>
         </div>
       ) : (
         <div className="mt-6 grid gap-4">
-          {orders.map((order) => (
+          {visibleOrders.map((order) => {
+            const cashPending = isCashPending(order);
+            return (
             <article
               key={order.id}
-              className="rounded-sm border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)] p-5"
+              className={`rounded-sm border p-5 ${
+                cashPending
+                  ? "border-amber-500 bg-amber-500/5"
+                  : "border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]"
+              }`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-3">
@@ -358,6 +580,11 @@ export default function AdminOrdersLive({
                     <span className="rounded-full border border-[var(--color-accent-secondary)]/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]">
                       {sourceLabel(order.source)}
                     </span>
+                    {cashPending ? (
+                      <span className="rounded-full border border-amber-500 bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-amber-400">
+                        Pendiente de pago - Efectivo
+                      </span>
+                    ) : null}
                   </div>
 
                   <div>
@@ -368,10 +595,11 @@ export default function AdminOrdersLive({
 
                   <div className="text-sm opacity-85">
                     <p className="text-base font-extrabold uppercase">
-                      Estado: {statusLabel(order.status)}
+                      Estado:{" "}
+                        {orderStage(order) === "payment" ? "Esperando pago" : statusLabel(order.status)}
                     </p>
                     {order.paymentStatus ? (
-                      <p>Pago: {order.paymentStatus}</p>
+                      <p>Pago: {order.paymentStatus === "paid" ? "Pagado" : order.paymentStatus === "pending" ? "Pendiente" : order.paymentStatus === "verification_required" ? "Requiere verificación" : order.paymentStatus === "refunded" ? "Reembolsado" : "Fallido"}</p>
                     ) : null}
                     <p>Pedido interno: {order.id}</p>
                   </div>
@@ -439,18 +667,45 @@ export default function AdminOrdersLive({
                   ) : null}
                 </div>
 
-                <div className="shrink-0">
-                  <TenantTransitionButton
-                    order={order}
-                    disabled={transitioningOrderId === order.id}
-                    onTransition={transitionTenantOrder}
-                  />
+                <div className="shrink-0 lg:w-56">
+                  {cashPending ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setCollectingOrder(order)}
+                        className="w-full rounded-sm bg-amber-500 px-4 py-3 text-sm font-bold text-zinc-950"
+                      >
+                        Marcar como pagado · Efectivo
+                      </button>
+                      <p className="text-center text-xs opacity-70">
+                        El pedido no se prepara hasta confirmar el cobro.
+                      </p>
+                    </div>
+                  ) : orderStage(order) === "payment" ? (
+                    <p className="text-sm opacity-70">Esperando la confirmación del pago para enviar a cocina.</p>
+                  ) : (
+                    <TenantTransitionButton
+                      order={order}
+                      disabled={transitioningOrderId === order.id}
+                      onTransition={transitionTenantOrder}
+                    />
+                  )}
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {collectingOrder ? (
+        <CollectCashDialog
+          order={collectingOrder}
+          tenantId={tenantId}
+          onClose={() => setCollectingOrder(null)}
+          onCollected={handleCollected}
+        />
+      ) : null}
     </section>
   );
 }

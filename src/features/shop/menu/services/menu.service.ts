@@ -1,21 +1,49 @@
 import { PublicTenantService } from "@/features/tenancy/application/public-tenant.service";
-import type { Category, Combo, MenuItem } from "@/types/types";
+import type {
+  Category,
+  Combo,
+  MenuItem,
+  ProductModifierGroup,
+} from "@/types/types";
 
 type PublicCatalog = Awaited<ReturnType<PublicTenantService["catalog"]>>;
+
+function mapModifierGroups(
+  groups: PublicCatalog["categories"][number]["items"][number]["addonGroups"],
+): ProductModifierGroup[] {
+  return groups.map((group) => ({
+    id: group.id,
+    name: group.name,
+    required: group.minSelected > 0,
+    minSelect: group.minSelected,
+    maxSelect: group.maxSelected,
+    options: group.options.map((option) => ({
+      id: option.id,
+      name: option.name,
+      description: option.description ?? null,
+      priceDelta: Number(option.priceDelta),
+    })),
+  }));
+}
 
 function mapItem(
   item: PublicCatalog["categories"][number]["items"][number],
   category: Category,
 ): MenuItem {
+  const modifierGroups = mapModifierGroups(item.addonGroups);
+
   return {
     documentId: item.id,
     name: item.name,
     price: Number(item.price),
+    basePrice: Number(item.price),
     description: item.description,
     image: item.imageUrl ?? "",
     category,
     combos: null,
     videoUrl: item.videoUrl ?? null,
+    hasOptions: modifierGroups.length > 0,
+    modifierGroups,
   };
 }
 

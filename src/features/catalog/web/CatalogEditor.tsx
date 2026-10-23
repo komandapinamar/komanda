@@ -39,8 +39,10 @@ type Item = {
 type AddonOption = {
   id: string;
   name: string;
+  description?: string | null;
   priceDelta: string;
   status: string;
+  sortOrder?: number;
 };
 type AddonGroup = {
   id: string;
@@ -65,7 +67,7 @@ type Combo = {
   items: { itemId: string; itemName: string; quantity: number }[];
 };
 
-type Props = {
+export type Props = {
   tenantId: string;
   initialCategories: Category[];
   initialItems: Item[];
@@ -273,27 +275,29 @@ export function CatalogEditor({
           </button>
         </div>
       ) : null}
-      <nav
-        className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
-        aria-label="Secciones del catálogo"
-      >
-        {(
-          [
-            ["menu", "Menú"],
-            ["addons", "Adicionales"],
-            ["combos", "Combos"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setTab(value)}
-            className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      {!isExpress ? (
+        <nav
+          className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
+          aria-label="Secciones del catálogo"
+        >
+          {(
+            [
+              ["menu", "Menú"],
+              ["addons", "Adicionales"],
+              ["combos", "Combos"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       {tab === "menu" ? (
         <section className="grid gap-6 lg:grid-cols-[230px_1fr]">
@@ -351,7 +355,7 @@ export function CatalogEditor({
             <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
-                  Menú
+                  {isExpress ? "Catálogo" : "Menú"}
                 </p>
                 <h2 className="mt-1 text-2xl font-bold">
                   {categories.find((category) => category.id === categoryId)
@@ -383,10 +387,24 @@ export function CatalogEditor({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-4xl text-zinc-700">
-                          {isExpress && item.genericIcon
-                            ? item.genericIcon.slice(0, 1)
-                            : "🍽"}
+                        <div className="flex h-full items-center justify-center text-4xl text-zinc-600">
+                          {isExpress ? (
+                            <svg
+                              className="h-12 w-12 text-zinc-600"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+                              />
+                            </svg>
+                          ) : (
+                            "🍽"
+                          )}
                         </div>
                       )}
                       {item.videoUrl ? (
@@ -574,7 +592,7 @@ function ItemModal({
         trackStock: isExpress && trackStock,
         stockQuantity: isExpress && trackStock ? Number(stock) || 0 : 0,
         status: item?.status ?? "draft",
-        addonGroupIds: selectedGroups,
+        addonGroupIds: isExpress ? [] : selectedGroups,
         ...(item ? { version: item.version } : {}),
       };
       const saved = await mutate<Item>(
@@ -732,40 +750,42 @@ function ItemModal({
               value={video}
               onChange={setVideo}
             />
-            <div>
-              <p className="mb-2 text-sm font-semibold">
-                Adicionales disponibles
-              </p>
-              {groups.filter((group) => group.status !== "archived").length ? (
-                <div className="space-y-2">
-                  {groups
-                    .filter((group) => group.status !== "archived")
-                    .map((group) => (
-                      <label
-                        key={group.id}
-                        className="flex items-center gap-2 text-sm text-zinc-300"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedGroups.includes(group.id)}
-                          onChange={(event) =>
-                            setSelectedGroups((current) =>
-                              event.target.checked
-                                ? [...current, group.id]
-                                : current.filter((id) => id !== group.id),
-                            )
-                          }
-                        />
-                        {group.name}
-                      </label>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">
-                  Creá grupos desde la pestaña Adicionales.
+            {!isExpress ? (
+              <div>
+                <p className="mb-2 text-sm font-semibold">
+                  Adicionales disponibles
                 </p>
-              )}
-            </div>
+                {groups.filter((group) => group.status !== "archived").length ? (
+                  <div className="space-y-2">
+                    {groups
+                      .filter((group) => group.status !== "archived")
+                      .map((group) => (
+                        <label
+                          key={group.id}
+                          className="flex items-center gap-2 text-sm text-zinc-300"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedGroups.includes(group.id)}
+                            onChange={(event) =>
+                              setSelectedGroups((current) =>
+                                event.target.checked
+                                  ? [...current, group.id]
+                                  : current.filter((id) => id !== group.id),
+                              )
+                            }
+                          />
+                          {group.name}
+                        </label>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    Creá grupos desde la pestaña Adicionales.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
         <footer className="mt-6 flex justify-end gap-3 border-t border-zinc-800 pt-4">
@@ -803,8 +823,16 @@ function AddonPanel({
 }) {
   const [name, setName] = useState("");
   const [optionName, setOptionName] = useState("");
+  const [optionDescription, setOptionDescription] = useState("");
   const [optionPrice, setOptionPrice] = useState("0");
   const [saving, setSaving] = useState(false);
+  const [editingOption, setEditingOption] = useState<{
+    groupId: string;
+    optionId: string;
+    name: string;
+    description: string;
+    priceDelta: string;
+  } | null>(null);
   async function create(event: FormEvent) {
     event.preventDefault();
     const price = normalizeMoneyInput(optionPrice);
@@ -828,6 +856,7 @@ function AddonPanel({
             options: [
               {
                 name: optionName,
+                description: optionDescription.trim() || null,
                 priceDelta: price,
                 status: "active",
                 sortOrder: 0,
@@ -839,11 +868,81 @@ function AddonPanel({
       setGroups([...groups, group]);
       setName("");
       setOptionName("");
+      setOptionDescription("");
       setOptionPrice("0");
       onMessage("Grupo de adicionales creado.");
     } catch (error) {
       onMessage(
         error instanceof Error ? error.message : "No se pudo crear el grupo.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function publishGroup(group: AddonGroup) {
+    setSaving(true);
+    try {
+      const updated = await mutate<AddonGroup>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(group.version),
+          body: JSON.stringify({ status: "active" }),
+        },
+      );
+      setGroups(
+        groups.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+      onMessage("Grupo de adicionales publicado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo publicar el grupo.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function saveOption(group: AddonGroup) {
+    if (!editingOption) return;
+    const price = normalizeMoneyInput(editingOption.priceDelta);
+    if (!price) {
+      onMessage("El precio adicional no es válido.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const options = group.options.map((option, index) => {
+        const isTarget = option.id === editingOption.optionId;
+        return {
+          name: isTarget ? editingOption.name : option.name,
+          description: isTarget
+            ? editingOption.description.trim() || null
+            : option.description ?? null,
+          priceDelta: isTarget ? price : option.priceDelta,
+          status: option.status === "unavailable" ? "unavailable" : "active",
+          sortOrder: option.sortOrder ?? index,
+        };
+      });
+      const updated = await mutate<AddonGroup>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(group.version),
+          body: JSON.stringify({ options, version: group.version }),
+        },
+      );
+      setGroups(
+        groups.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+      setEditingOption(null);
+      onMessage("Adicional actualizado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el adicional.",
       );
     } finally {
       setSaving(false);
@@ -871,18 +970,123 @@ function AddonPanel({
                   key={group.id}
                   className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
                 >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold">{group.name}</h3>
+                    {group.status === "draft" && !readOnly ? (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => void publishGroup(group)}
+                        className="rounded-md bg-[var(--color-accent-tertiary)] px-2 py-1 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
+                      >
+                        Publicar
+                      </button>
+                    ) : (
+                      <span className="text-[11px] uppercase tracking-wide text-zinc-500">
+                        {group.status === "active" ? "Publicado" : group.status}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-2 text-xs text-zinc-500">
                     Elegir entre {group.minSelected} y {group.maxSelected}
                   </p>
-                  <ul className="mt-3 space-y-1 text-sm text-zinc-300">
-                    {group.options.map((option) => (
-                      <li key={option.id} className="flex justify-between">
-                        <span>{option.name}</span>
-                        <span className="text-zinc-500">
-                          +${option.priceDelta}
-                        </span>
-                      </li>
-                    ))}
+                  <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+                    {(group.options ?? []).map((option) => {
+                      const isEditing =
+                        editingOption?.groupId === group.id &&
+                        editingOption.optionId === option.id;
+                      if (isEditing && editingOption) {
+                        return (
+                          <li
+                            key={option.id}
+                            className="space-y-2 rounded-lg border border-zinc-700 bg-zinc-900 p-3"
+                          >
+                            <input
+                              value={editingOption.name}
+                              onChange={(event) =>
+                                setEditingOption({
+                                  ...editingOption,
+                                  name: event.target.value,
+                                })
+                              }
+                              placeholder="Nombre"
+                              className={inputClass}
+                            />
+                            <input
+                              value={editingOption.description}
+                              onChange={(event) =>
+                                setEditingOption({
+                                  ...editingOption,
+                                  description: event.target.value,
+                                })
+                              }
+                              placeholder="Descripción para el cliente"
+                              className={inputClass}
+                            />
+                            <input
+                              value={editingOption.priceDelta}
+                              onChange={(event) =>
+                                setEditingOption({
+                                  ...editingOption,
+                                  priceDelta: event.target.value,
+                                })
+                              }
+                              placeholder="Precio extra"
+                              className={inputClass}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => void saveOption(group)}
+                                className="rounded-md bg-[var(--color-accent-tertiary)] px-3 py-1.5 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingOption(null)}
+                                className="px-3 py-1.5 text-xs font-bold text-zinc-400"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      }
+                      return (
+                        <li key={option.id} className="space-y-1">
+                          <div className="flex justify-between gap-2">
+                            <span>{option.name}</span>
+                            <span className="shrink-0 text-zinc-500">
+                              +${option.priceDelta}
+                            </span>
+                          </div>
+                          {option.description ? (
+                            <p className="text-xs text-zinc-500">
+                              {option.description}
+                            </p>
+                          ) : null}
+                          {!readOnly ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingOption({
+                                  groupId: group.id,
+                                  optionId: option.id,
+                                  name: option.name,
+                                  description: option.description ?? "",
+                                  priceDelta: option.priceDelta,
+                                })
+                              }
+                              className="text-xs text-[var(--color-accent-tertiary)] underline underline-offset-2"
+                            >
+                              Editar
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </article>
               ))}
@@ -911,6 +1115,12 @@ function AddonPanel({
             value={optionName}
             onChange={(event) => setOptionName(event.target.value)}
             placeholder="Primera opción"
+            className={inputClass}
+          />
+          <input
+            value={optionDescription}
+            onChange={(event) => setOptionDescription(event.target.value)}
+            placeholder="Descripción para el cliente (opcional)"
             className={inputClass}
           />
           <input

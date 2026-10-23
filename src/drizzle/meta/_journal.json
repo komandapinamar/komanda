@@ -162,6 +162,34 @@
       "when": 1790011000000,
       "tag": "0022_enumerate_runtime_grants_and_default_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791328224321,
+      "tag": "0023_add_discount_applicable_tender",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791329100000,
+      "tag": "0024_add_storefront_cash_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791648000000,
+      "tag": "0025_add_owner_cash_alert_whatsapp_phone",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792713456612,
+      "tag": "0026_add_addon_option_description",
+      "breakpoints": true
     }
   ]
 }

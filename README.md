@@ -70,7 +70,8 @@ release or a forward fix; the legacy system is not a rollback target.
 # MercadoPago API
 
 Each tenant connects its seller account with OAuth. Payment sessions and signed
-webhooks use the tenant integration and `KOMANDA_PUBLIC_BASE_URL`.
+webhooks use the tenant integration and the public site origin
+(`NEXT_PUBLIC_SITE_URL`, overridable via `KOMANDA_PUBLIC_BASE_URL`).
 
 ## Local Printing
 
@@ -93,6 +94,34 @@ Core uses the environment examples in `src/.env.staging.example` and
 `npm --prefix src run db:verify-roles:test` with the runtime URL, then deploy the
 application using `DATABASE_URL` as `komanda_runtime`. The runtime role must never
 be the migration owner and must not have `BYPASSRLS`.
+
+Password recovery sends single-use reset links through Resend. Configure
+`IDENTITY_VERIFICATION_RESEND_KEY`, `IDENTITY_VERIFICATION_FROM_EMAIL` and
+`NEXT_PUBLIC_SITE_URL` on the application runtime.
+
+Optional ready-order WhatsApp notifications require a Meta WhatsApp Business
+Cloud API token (`KOMANDA_WHATSAPP_ACCESS_TOKEN`), phone number ID
+(`KOMANDA_WHATSAPP_PHONE_NUMBER_ID`) and an approved `es_AR` template
+(`KOMANDA_WHATSAPP_READY_TEMPLATE`) whose body has one text placeholder for the
+purchase number. Configure `CRON_SECRET` on the application and the same value
+in the repository's GitHub Actions secrets, plus a `KOMANDA_PUBLIC_BASE_URL`
+Actions secret. The `dispatch-ready-whatsapp` workflow invokes the protected
+endpoint every five minutes; without this schedule, opted-in messages stay in
+the outbox queue. Failed deliveries retry up to five times.
+
+Express owners can optionally enable pending cash-order alerts by saving their
+Argentine mobile in Backoffice settings. A new `admin_direct` cash order is queued
+transactionally only for an Express tenant with a configured number; dispatch
+rechecks the current phone, preset, payment and fulfillment status. The central
+Meta integration also requires an approved `es_AR` template configured as
+`KOMANDA_WHATSAPP_OWNER_CASH_TEMPLATE` with four body variables in this order:
+business name, purchase number, amount/currency, and item summary. The same
+platform access token, phone number ID, cron secret and five-minute scheduler are
+reused. Delivery is best effort on the five-minute schedule, not immediate; removing
+the phone suppresses queued alerts. Existing inactive Slack settings are retained
+for rollback and are no longer used for order alerts.
+The approved template should clearly say that a customer placed this order and
+will approach the register to pay; payment is still pending.
 
 # Infrasture and use cases
 

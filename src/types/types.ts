@@ -18,6 +18,7 @@ export type Combo = {
 export type ProductModifierOption = {
   id: string;
   name: string;
+  description?: string | null;
   priceDelta?: number;
 };
 
@@ -34,6 +35,7 @@ export type MenuItem = {
   documentId: string;
   name: string;
   price: number;
+  basePrice?: number;
   description: string | null;
   image: string;
   category: Category | null;
@@ -41,11 +43,15 @@ export type MenuItem = {
   videoUrl?: string | null;
   hasOptions?: boolean;
   modifierGroups?: ProductModifierGroup[] | null;
+  selectedOptionIds?: string[];
+  selectedOptionSummary?: string | null;
+  selectedOptions?: ProductModifierOption[];
 };
 
 export type CartLine = {
   item: MenuItem;
   quantity: number;
+  lineId?: string;
 };
 
 export type CartSnapshotLine = {
@@ -54,11 +60,14 @@ export type CartSnapshotLine = {
   name: string;
   unitPrice: number;
   image: string;
+  optionIds?: string[];
+  note?: string;
 };
 
 export type CartSyncStatus = "idle" | "syncing" | "ready" | "error";
 
 export type OfficialCartLine = {
+  id?: string;
   documentId: string;
   quantity: number;
   name: string;
@@ -67,6 +76,9 @@ export type OfficialCartLine = {
   image: string;
   available: boolean;
   note?: string;
+  optionIds?: string[];
+  optionNames?: string[];
+  selectedOptions?: ProductModifierOption[];
 };
 
 export type AppliedDiscountInfo = {
@@ -75,6 +87,7 @@ export type AppliedDiscountInfo = {
   discountType: "percentage" | "fixed_amount";
   discountValue: string;
   savingsAmount?: string | number;
+  tenderRestriction?: string;
 };
 
 export type OfficialCart = {
@@ -94,9 +107,10 @@ export type CustomerInfo = {
   name: string;
   email?: string;
   phone?: string;
+  whatsappReadyOptIn?: boolean;
 };
 
-export type OrderSource = "mercadopago_webhook" | "admin_direct";
+export type OrderSource = "mercadopago_webhook" | "admin_direct" | "storefront_cash";
 
 export type CheckoutFormValues = {
   customer: CustomerInfo;
@@ -132,7 +146,9 @@ export type AdminDashboardOrder = {
   discountTotal: string;
   total: string;
   currency: string;
+  tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt?: string | null;
   createdAt: string;

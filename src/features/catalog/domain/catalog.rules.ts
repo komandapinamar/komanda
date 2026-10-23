@@ -50,6 +50,7 @@ export const catalogItemPatchSchema = catalogItemInputSchema
 export const addonOptionInputSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
+    description: z.string().trim().max(500).nullable().optional(),
     priceDelta: moneySchema,
     status: z.enum(["active", "unavailable"]).default("active"),
     sortOrder: z.number().int().nonnegative().default(0),

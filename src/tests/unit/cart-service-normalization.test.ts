@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCartSnapshot,
   normalizeCartLine,
   normalizeCartResponse,
 } from "@/features/shop/cart/services/cart.service";
@@ -57,5 +58,51 @@ describe("cart.service normalization", () => {
     expect(cart.items[0].documentId).toBe("item-1");
     expect(cart.items[0].name).toBe("Papas Fritas");
     expect(cart.items[0].unitPrice).toBe(2200);
+  });
+
+  it("keeps add-on selections when normalizing and building cart snapshots", () => {
+    const line = normalizeCartLine({
+      id: "line-uuid-2",
+      itemId: "item-pollo",
+      quantity: 1,
+      nameSnapshot: "Pollo asado",
+      unitPriceSnapshot: "9500.00",
+      lineTotal: "9500.00",
+      note: "Queso extra",
+      options: [
+        {
+          addonOptionId: "opt-queso",
+          nameSnapshot: "Queso extra",
+          priceDeltaSnapshot: "500.00",
+        },
+      ],
+    });
+
+    expect(line.id).toBe("line-uuid-2");
+    expect(line.optionIds).toEqual(["opt-queso"]);
+    expect(line.optionNames).toEqual(["Queso extra"]);
+
+    expect(
+      buildCartSnapshot([
+        {
+          documentId: "item-pollo",
+          quantity: 1,
+          name: "Pollo asado",
+          unitPrice: 9500,
+          image: "",
+          optionIds: ["opt-queso"],
+          note: "Queso extra",
+        },
+      ]),
+    ).toEqual([
+      {
+        kind: "item",
+        resourceId: "item-pollo",
+        quantity: 1,
+        optionIds: ["opt-queso"],
+        note: "Queso extra",
+        confirmedUnitPrice: "9500.00",
+      },
+    ]);
   });
 });

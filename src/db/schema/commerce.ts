@@ -55,6 +55,7 @@ export const carts = pgTable(
       discountType: string;
       discountValue: string;
       savingsAmount: string;
+      tenderRestriction?: string;
     }>(),
     catalogRevision: integer("catalog_revision").default(1).notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true, mode: "date" }),
@@ -243,7 +244,7 @@ export const tenantOrders = pgTable(
     paymentAttemptId: uuid("payment_attempt_id"),
     purchaseNumber: bigint("purchase_number", { mode: "bigint" }).notNull(),
     source: text("source")
-      .$type<"mercadopago_webhook" | "admin_direct">()
+      .$type<"mercadopago_webhook" | "admin_direct" | "storefront_cash">()
       .notNull(),
     fulfillmentStatus: text("fulfillment_status")
       .$type<"approved" | "preparing" | "ready" | "delivered" | "cancelled">()
@@ -274,6 +275,7 @@ export const tenantOrders = pgTable(
     pickupPin: text("pickup_pin"),
     estimatedWaitMinutes: integer("estimated_wait_minutes"),
     estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true, mode: "date" }),
+    paymentExpiresAt: timestamp("payment_expires_at", { withTimezone: true, mode: "date" }),
     currency: text("currency").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     approvedAt: timestamp("approved_at", { withTimezone: true, mode: "date" }),
@@ -319,7 +321,7 @@ export const tenantOrders = pgTable(
     index("orders_tenant_created_idx").on(table.tenantId, table.createdAt),
     check(
       "orders_source_check",
-      sql`${table.source} in ('mercadopago_webhook', 'admin_direct')`,
+      sql`${table.source} in ('mercadopago_webhook', 'admin_direct', 'storefront_cash')`,
     ),
     check(
       "orders_fulfillment_status_check",
