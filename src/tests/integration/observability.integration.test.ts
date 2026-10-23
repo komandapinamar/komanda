@@ -21,6 +21,17 @@ describe("observability", () => {
     expect(route).toContain("collectHealth");
   });
 
+  it("exposes an overload pressure snapshot route", async () => {
+    const [route, pressure] = await Promise.all([
+      readFile("app/api/health/pressure/route.ts", "utf8"),
+      readFile("lib/observability/pressure.ts", "utf8"),
+    ]);
+
+    expect(route).toContain("readPressureSnapshot");
+    expect(pressure).toContain("recommendedAction");
+    expect(pressure).toContain("activate_fallback");
+  });
+
   it("emits safe metric envelopes for multi-tenant events", () => {
     const metric = emitMetric("order.event", {
       tenantId: "tenant-a",

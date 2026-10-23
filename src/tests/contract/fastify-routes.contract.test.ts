@@ -75,6 +75,28 @@ describe("Fastify Extracted Routes Contract Test", () => {
     expect(Array.isArray(body.checks)).toBe(true);
   });
 
+  it("GET /api/health/pressure exposes overload signals without failing readiness", async () => {
+    const app = await buildFastifyServer();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/health/pressure",
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.state).toBe("normal");
+    expect(body.recommendedAction).toBe("none");
+    expect(Array.isArray(body.signals)).toBe(true);
+    expect(body.signals.map((entry: { name: string }) => entry.name)).toEqual(
+      expect.arrayContaining([
+        "event_loop_lag",
+        "pg_pool_waiting",
+        "in_flight_requests",
+        "sse_connections",
+      ]),
+    );
+  });
+
   it("POST /api/v1/print/jobs/claim requires authorization header", async () => {
     const app = await buildFastifyServer();
     const res = await app.inject({

@@ -18,6 +18,14 @@ class GracefulShutdownManager {
     return this.isShuttingDown;
   }
 
+  getActiveRequestCount() {
+    return this.activeRequests;
+  }
+
+  getSseClientCount() {
+    return this.sseClients.size;
+  }
+
   registerSseClient(closeStream: () => void): () => void {
     if (this.isShuttingDown) {
       closeStream();
