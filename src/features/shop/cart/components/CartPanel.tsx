@@ -12,7 +12,6 @@ export default function CartPanel() {
   const {
     beginCheckout,
     items,
-    itemCount,
     subtotal,
     discountTotal,
     total,
@@ -58,23 +57,6 @@ export default function CartPanel() {
       </div>
 
       <div className="mx-4 space-y-3 border-t-2 border-dashed border-[#29251f]/30 pb-7 pt-4">
-        <div className="flex justify-between text-xs uppercase opacity-70">
-          <span>Líneas: {items.length}</span>
-          <span>Unidades: {itemCount}</span>
-        </div>
-        {items.some(
-          (cartLine) => (cartLine.item.selectedOptions ?? []).length > 0,
-        ) ? (
-          <div className="flex justify-between text-xs uppercase opacity-70">
-            <span>Adicionales</span>
-            <span>
-              x{" "}
-              {items.filter(
-                (cartLine) => (cartLine.item.selectedOptions ?? []).length > 0,
-              ).length}
-            </span>
-          </div>
-        ) : null}
         {items.length > 0 ? (
           <div className="border-b border-[var(--color-accent-secondary)]/30 pb-3">
             <DiscountCouponInput
