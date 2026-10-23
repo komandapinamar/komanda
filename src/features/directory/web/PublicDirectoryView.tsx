@@ -12,6 +12,7 @@ import type {
   SearchResultData,
 } from "@/features/search/domain/search.schemas";
 import { ProductSearchResultCard } from "@/features/directory/web/ProductSearchResultCard";
+import { OpeningHoursSummary } from "@/features/directory/web/OpeningHoursSummary";
 import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
 
 export type DirectoryTenantItem = PublicDirectoryTenant & {
@@ -181,6 +182,11 @@ export function PublicDirectoryView({ tenants }: Props) {
   const hasSearchQuery = searchTerm.trim().length > 0;
   const isServerSearchActive = hasSearchQuery && searchResults !== null && !searchError;
 
+  const directoryById = useMemo(
+    () => new Map(tenants.map((tenant) => [tenant.id, tenant])),
+    [tenants],
+  );
+
   const products = isServerSearchActive ? searchResults.products : [];
   const businesses = isServerSearchActive ? searchResults.businesses : [];
 
@@ -338,6 +344,9 @@ export function PublicDirectoryView({ tenants }: Props) {
                     "storefrontUrl" in tenant
                       ? (tenant as DirectoryTenantItem).storefrontUrl
                       : `${buildStorefrontUrl(tenant.slug, typeof window !== "undefined" ? { host: window.location.host, protocol: window.location.protocol } : undefined)}/order`;
+                  const directoryTenant = directoryById.get(tenant.id);
+                  const openingHours = directoryTenant?.openingHours ?? null;
+                  const contactPhone = directoryTenant?.contactPhone ?? null;
 
                   return (
                     <article
@@ -374,6 +383,30 @@ export function PublicDirectoryView({ tenants }: Props) {
                         </div>
 
                         <div className="mt-5 space-y-3">
+                          <div className="rounded-xl border-3 border-black bg-zinc-950/60 p-3 shadow-[3px_3px_0_0_black]">
+                            <div className="flex items-center justify-between border-b-2 border-white/10 pb-1.5">
+                              <span className="text-[11px] font-black uppercase tracking-wider text-zinc-300">
+                                Horarios de apertura
+                              </span>
+                            </div>
+                            <div className="mt-2">
+                              <OpeningHoursSummary openingHours={openingHours} />
+                            </div>
+                            {contactPhone ? (
+                              <div className="mt-2 flex items-center justify-between gap-3 border-t border-white/10 pt-2">
+                                <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                                  Celular
+                                </span>
+                                <a
+                                  href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}
+                                  className="text-sm font-semibold text-white underline decoration-zinc-500 underline-offset-2 transition hover:text-[var(--color-accent-secondary)]"
+                                >
+                                  {contactPhone}
+                                </a>
+                              </div>
+                            ) : null}
+                          </div>
+
                           {/* Mapa abierto del local confirmado */}
                           <div className="pt-1">
                             <div className="overflow-hidden rounded-xl border-3 border-black bg-zinc-100 shadow-[3px_3px_0_0_black]">

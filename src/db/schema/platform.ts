@@ -70,6 +70,10 @@ export const tenantLocations = pgTable(
     latitude: numeric("latitude", { precision: 9, scale: 6 }),
     longitude: numeric("longitude", { precision: 9, scale: 6 }),
     address: jsonb("address").$type<Record<string, unknown> | null>(),
+    openingHours: jsonb("opening_hours")
+      .$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
     ...timestamps,
   },
   (table) => [
