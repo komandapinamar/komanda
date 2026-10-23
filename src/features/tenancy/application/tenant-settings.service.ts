@@ -18,6 +18,10 @@ import {
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
 import { locationSchema } from "@/features/location/application/location.schemas";
+import {
+  normalizeOpeningHours,
+  openingHoursSchema,
+} from "@/features/tenancy/domain/opening-hours";
 import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
 
 export class TenantSettingsNotFoundError extends Error {}
@@ -50,6 +54,7 @@ const settingsPatchSchema = z
     slackCashAlertWebhookUrl: z.string().trim().url().nullable().optional(),
     timezone: z.string().trim().min(1).optional(),
     location: locationSchema.optional(),
+    openingHours: openingHoursSchema.optional(),
   })
   .strict();
 
@@ -75,6 +80,7 @@ function serializeSettings(input: {
     location: locationSchema.safeParse(input.location?.address).success
       ? locationSchema.parse(input.location?.address)
       : null,
+    openingHours: normalizeOpeningHours(input.location?.openingHours),
     version: input.settings.version,
   };
 }
@@ -155,16 +161,25 @@ export class TenantSettingsService {
         throw new TenantSettingsConflictError("Tenant settings version conflict.");
       }
 
-      if (patch.location) {
+      if (patch.location || patch.openingHours !== undefined) {
         const [location] = await transaction
           .update(tenantLocations)
           .set({
-            latitude: patch.location.lat != null ? String(patch.location.lat) : null,
-            longitude: patch.location.lng != null ? String(patch.location.lng) : null,
-            address: {
-              ...patch.location,
-              geocoderProvider: patch.location.geocoderProvider ?? "photon",
-            },
+            ...(patch.location
+              ? {
+                  latitude:
+                    patch.location.lat != null ? String(patch.location.lat) : null,
+                  longitude:
+                    patch.location.lng != null ? String(patch.location.lng) : null,
+                  address: {
+                    ...patch.location,
+                    geocoderProvider: patch.location.geocoderProvider ?? "photon",
+                  },
+                }
+              : {}),
+            ...(patch.openingHours !== undefined
+              ? { openingHours: normalizeOpeningHours(patch.openingHours) }
+              : {}),
             updatedAt: new Date(),
           })
           .where(and(

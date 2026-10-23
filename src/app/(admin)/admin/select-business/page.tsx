@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
+import { PublicTenantService } from "@/features/tenancy/application/public-tenant.service";
 import { canAccess } from "@/lib/authorization/permissions";
 
 export default async function SelectBusinessPage() {
@@ -14,6 +15,10 @@ export default async function SelectBusinessPage() {
   } catch {
     redirect("/login");
   }
+
+  const directoryListing = await new PublicTenantService()
+    .listDirectoryListing(memberships.map((membership) => membership.tenantId))
+    .catch(() => ({}) as Record<string, boolean>);
 
   return (
     <main className="min-h-dvh bg-[var(--color-accent-primary)] px-6 py-12 text-[var(--color-accent-tertiary)]">
@@ -30,6 +35,20 @@ export default async function SelectBusinessPage() {
               canAccess(membership.role, "configuracion") && membership.tenantStatus === "onboarding"
                 ? `/admin/${membership.tenantId}/settings`
                 : `/admin/${membership.tenantId}/${defaultPath}`;
+            const isListed = directoryListing[membership.tenantId] === true;
+            const statusLabel =
+              membership.tenantStatus === "suspended"
+                ? "Suspendido"
+                : isListed
+                  ? "Activo"
+                  : membership.tenantStatus === "onboarding"
+                    ? "Onboarding"
+                    : "No publicado";
+            const statusClass = isListed
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              : membership.tenantStatus === "onboarding"
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                : "border-zinc-700 bg-zinc-800 text-zinc-400";
 
             return (
               <Link
@@ -39,7 +58,17 @@ export default async function SelectBusinessPage() {
               >
                 <div>
                   <span className="block text-lg font-medium">{membership.tenantName}</span>
-                  <span className="text-sm text-zinc-400">{membership.tenantSlug} · {membership.tenantStatus}</span>
+                  <span className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+                    <span>{membership.tenantSlug}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                  </span>
+                  {!isListed && membership.tenantStatus === "active" ? (
+                    <span className="mt-1 block text-xs text-zinc-500">
+                      No aparece en la página principal.
+                    </span>
+                  ) : null}
                 </div>
                 <span className="rounded-full bg-[var(--color-accent-tertiary)]/10 border border-[var(--color-accent-tertiary)]/20 px-3 py-1 text-xs font-semibold text-[var(--color-accent-tertiary)]">
                   {membership.tenantPreset === "express_retail" ? "Express Retail" : "Gastronomía"}

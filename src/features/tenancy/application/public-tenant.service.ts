@@ -21,6 +21,7 @@ import {
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
+import type { OpeningHours } from "@/features/tenancy/domain/opening-hours";
 import { fetchTenantReadiness } from "./tenant-readiness.service";
 
 export class PublicTenantNotFoundError extends Error {}
@@ -44,6 +45,8 @@ export type PublicDirectoryTenant = {
   lng: number;
   mapQuery: string;
   categoriesCount: number;
+  contactPhone: string | null;
+  openingHours: OpeningHours;
 };
 
 export class PublicTenantService {
@@ -98,10 +101,48 @@ export class PublicTenantService {
             lat: confirmedLocation.lat,
             lng: confirmedLocation.lng,
             categoriesCount: categories.length,
+            contactPhone: eligibility.contactPhone,
+            openingHours: eligibility.primaryLocation?.openingHours ?? {},
           });
         }
 
         return results;
+      },
+    );
+  }
+
+  /**
+   * Returns the real directory visibility for the given tenants. A tenant that
+   * is `active` in the database can still be absent from the public page when
+   * it has no confirmed location or is missing an ordering requirement.
+   */
+  async listDirectoryListing(
+    tenantIds: string[],
+  ): Promise<Record<string, boolean>> {
+    if (tenantIds.length === 0) return {};
+
+    return withPlatformServiceTransaction(
+      { serviceId: "public-directory-listing", correlationId: randomUUID() },
+      async (transaction) => {
+        const listing: Record<string, boolean> = {};
+
+        for (const tenantId of tenantIds) {
+          await transaction.execute(
+            sql`select set_config('app.tenant_id', ${tenantId}, true)`,
+          );
+          try {
+            const eligibility = await fetchTenantReadiness(transaction, tenantId);
+            const confirmedLocation = parseConfirmedLocation(
+              eligibility.primaryLocation?.address,
+            );
+            listing[tenantId] =
+              eligibility.orderingAvailable && confirmedLocation !== null;
+          } catch {
+            listing[tenantId] = false;
+          }
+        }
+
+        return listing;
       },
     );
   }
