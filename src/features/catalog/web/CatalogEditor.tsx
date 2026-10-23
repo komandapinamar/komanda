@@ -39,8 +39,10 @@ type Item = {
 type AddonOption = {
   id: string;
   name: string;
+  description?: string | null;
   priceDelta: string;
   status: string;
+  sortOrder?: number;
 };
 type AddonGroup = {
   id: string;
@@ -821,8 +823,16 @@ function AddonPanel({
 }) {
   const [name, setName] = useState("");
   const [optionName, setOptionName] = useState("");
+  const [optionDescription, setOptionDescription] = useState("");
   const [optionPrice, setOptionPrice] = useState("0");
   const [saving, setSaving] = useState(false);
+  const [editingOption, setEditingOption] = useState<{
+    groupId: string;
+    optionId: string;
+    name: string;
+    description: string;
+    priceDelta: string;
+  } | null>(null);
   async function create(event: FormEvent) {
     event.preventDefault();
     const price = normalizeMoneyInput(optionPrice);
@@ -846,6 +856,7 @@ function AddonPanel({
             options: [
               {
                 name: optionName,
+                description: optionDescription.trim() || null,
                 priceDelta: price,
                 status: "active",
                 sortOrder: 0,
@@ -857,11 +868,81 @@ function AddonPanel({
       setGroups([...groups, group]);
       setName("");
       setOptionName("");
+      setOptionDescription("");
       setOptionPrice("0");
       onMessage("Grupo de adicionales creado.");
     } catch (error) {
       onMessage(
         error instanceof Error ? error.message : "No se pudo crear el grupo.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function publishGroup(group: AddonGroup) {
+    setSaving(true);
+    try {
+      const updated = await mutate<AddonGroup>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(group.version),
+          body: JSON.stringify({ status: "active" }),
+        },
+      );
+      setGroups(
+        groups.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+      onMessage("Grupo de adicionales publicado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo publicar el grupo.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function saveOption(group: AddonGroup) {
+    if (!editingOption) return;
+    const price = normalizeMoneyInput(editingOption.priceDelta);
+    if (!price) {
+      onMessage("El precio adicional no es válido.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const options = group.options.map((option, index) => {
+        const isTarget = option.id === editingOption.optionId;
+        return {
+          name: isTarget ? editingOption.name : option.name,
+          description: isTarget
+            ? editingOption.description.trim() || null
+            : option.description ?? null,
+          priceDelta: isTarget ? price : option.priceDelta,
+          status: option.status === "unavailable" ? "unavailable" : "active",
+          sortOrder: option.sortOrder ?? index,
+        };
+      });
+      const updated = await mutate<AddonGroup>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(group.version),
+          body: JSON.stringify({ options, version: group.version }),
+        },
+      );
+      setGroups(
+        groups.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+      setEditingOption(null);
+      onMessage("Adicional actualizado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el adicional.",
       );
     } finally {
       setSaving(false);
@@ -889,18 +970,123 @@ function AddonPanel({
                   key={group.id}
                   className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
                 >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold">{group.name}</h3>
+                    {group.status === "draft" && !readOnly ? (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => void publishGroup(group)}
+                        className="rounded-md bg-[var(--color-accent-tertiary)] px-2 py-1 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
+                      >
+                        Publicar
+                      </button>
+                    ) : (
+                      <span className="text-[11px] uppercase tracking-wide text-zinc-500">
+                        {group.status === "active" ? "Publicado" : group.status}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-2 text-xs text-zinc-500">
                     Elegir entre {group.minSelected} y {group.maxSelected}
                   </p>
-                  <ul className="mt-3 space-y-1 text-sm text-zinc-300">
-                    {(group.options ?? []).map((option) => (
-                      <li key={option.id} className="flex justify-between">
-                        <span>{option.name}</span>
-                        <span className="text-zinc-500">
-                          +${option.priceDelta}
-                        </span>
-                      </li>
-                    ))}
+                  <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+                    {(group.options ?? []).map((option) => {
+                      const isEditing =
+                        editingOption?.groupId === group.id &&
+                        editingOption.optionId === option.id;
+                      if (isEditing && editingOption) {
+                        return (
+                          <li
+                            key={option.id}
+                            className="space-y-2 rounded-lg border border-zinc-700 bg-zinc-900 p-3"
+                          >
+                            <input
+                              value={editingOption.name}
+                              onChange={(event) =>
+                                setEditingOption({
+                                  ...editingOption,
+                                  name: event.target.value,
+                                })
+                              }
+                              placeholder="Nombre"
+                              className={inputClass}
+                            />
+                            <input
+                              value={editingOption.description}
+                              onChange={(event) =>
+                                setEditingOption({
+                                  ...editingOption,
+                                  description: event.target.value,
+                                })
+                              }
+                              placeholder="Descripción para el cliente"
+                              className={inputClass}
+                            />
+                            <input
+                              value={editingOption.priceDelta}
+                              onChange={(event) =>
+                                setEditingOption({
+                                  ...editingOption,
+                                  priceDelta: event.target.value,
+                                })
+                              }
+                              placeholder="Precio extra"
+                              className={inputClass}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => void saveOption(group)}
+                                className="rounded-md bg-[var(--color-accent-tertiary)] px-3 py-1.5 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingOption(null)}
+                                className="px-3 py-1.5 text-xs font-bold text-zinc-400"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      }
+                      return (
+                        <li key={option.id} className="space-y-1">
+                          <div className="flex justify-between gap-2">
+                            <span>{option.name}</span>
+                            <span className="shrink-0 text-zinc-500">
+                              +${option.priceDelta}
+                            </span>
+                          </div>
+                          {option.description ? (
+                            <p className="text-xs text-zinc-500">
+                              {option.description}
+                            </p>
+                          ) : null}
+                          {!readOnly ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingOption({
+                                  groupId: group.id,
+                                  optionId: option.id,
+                                  name: option.name,
+                                  description: option.description ?? "",
+                                  priceDelta: option.priceDelta,
+                                })
+                              }
+                              className="text-xs text-[var(--color-accent-tertiary)] underline underline-offset-2"
+                            >
+                              Editar
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </article>
               ))}
@@ -929,6 +1115,12 @@ function AddonPanel({
             value={optionName}
             onChange={(event) => setOptionName(event.target.value)}
             placeholder="Primera opción"
+            className={inputClass}
+          />
+          <input
+            value={optionDescription}
+            onChange={(event) => setOptionDescription(event.target.value)}
+            placeholder="Descripción para el cliente (opcional)"
             className={inputClass}
           />
           <input

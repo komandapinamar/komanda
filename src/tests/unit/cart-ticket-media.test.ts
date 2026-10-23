@@ -58,4 +58,31 @@ describe("Cart ticket product media", () => {
     expect(markup).not.toContain('<img');
     expect(markup).not.toContain('src=""');
   });
+
+  it("lists the selected add-ons and their price deltas in the ticket", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CartItem, {
+        cartLine: {
+          ...line,
+          item: {
+            ...line.item,
+            selectedOptionIds: ["salsa-cheddar"],
+            selectedOptionSummary: "Salsa cheddar",
+            selectedOptions: [
+              {
+                id: "salsa-cheddar",
+                name: "Salsa cheddar",
+                description: "Salsa extra cremosa",
+                priceDelta: 1000,
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    expect(markup).toContain("Adicionales");
+    expect(markup).toContain("Salsa cheddar");
+    expect(markup).toContain("+$1.000");
+  });
 });

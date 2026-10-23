@@ -8,7 +8,7 @@ import {
 import { POST } from "@/app/api/v1/storefronts/[tenantSlug]/carts/[cartId]/payment-sessions/route";
 import OrderShell from "@/features/shop/order/components/OrderShell";
 import ProductCard from "@/features/shop/menu/classic/components/ProductCard";
-import OrderProductCard from "@/features/shop/order/components/OrderProductCard";
+import OrderProductCard, { dispatchProductCardSelection } from "@/features/shop/order/components/OrderProductCard";
 import ClassicMenuView from "@/features/shop/menu/classic/components/ClassicMenuView";
 import OrderPage from "@/app/(shop)/order/page";
 import type { Category, MenuItem } from "@/types/types";
@@ -146,59 +146,44 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
       expect(markup).toContain("+");
     });
 
-    it("OrderProductCard click capture does not trigger addItem when interactive=false", () => {
+    it("does not trigger addItem when interactive=false", () => {
       mockAddItem.mockClear();
-      const component = OrderProductCard({
+      dispatchProductCardSelection({
         item: mockItem,
         interactive: false,
+        cart: { addItem: mockAddItem },
+        openModifiers: vi.fn(),
       });
-
-      const mockEvent = {
-        target: { closest: vi.fn().mockReturnValue({ tagName: "BUTTON" }) },
-      } as unknown as React.MouseEvent<HTMLDivElement>;
-
-      if (React.isValidElement<{ onClickCapture?: (e: React.MouseEvent<HTMLDivElement>) => void }>(component)) {
-        component.props.onClickCapture?.(mockEvent);
-      }
 
       expect(mockAddItem).not.toHaveBeenCalled();
     });
 
-    it("OrderProductCard click capture invokes addItem when interactive=true and button clicked", () => {
+    it("invokes addItem when interactive=true and item has no options", () => {
       mockAddItem.mockClear();
-      const component = OrderProductCard({
+      dispatchProductCardSelection({
         item: mockItem,
         interactive: true,
+        cart: { addItem: mockAddItem },
+        openModifiers: vi.fn(),
       });
-
-      const mockButton = { tagName: "BUTTON" };
-      const mockEvent = {
-        target: { closest: vi.fn().mockReturnValue(mockButton) },
-      } as unknown as React.MouseEvent<HTMLDivElement>;
-
-      if (React.isValidElement<{ onClickCapture?: (e: React.MouseEvent<HTMLDivElement>) => void }>(component)) {
-        component.props.onClickCapture?.(mockEvent);
-      }
 
       expect(mockAddItem).toHaveBeenCalledWith(mockItem);
     });
 
-    it("OrderProductCard click capture ignores clicks outside button", () => {
+    it("opens the modifier sheet instead of adding when item has add-ons", () => {
       mockAddItem.mockClear();
-      const component = OrderProductCard({
-        item: mockItem,
+      const openModifiers = vi.fn();
+      dispatchProductCardSelection({
+        item: { ...mockItem, hasOptions: true },
         interactive: true,
+        cart: { addItem: mockAddItem },
+        openModifiers,
       });
 
-      const mockEvent = {
-        target: { closest: vi.fn().mockReturnValue(null) },
-      } as unknown as React.MouseEvent<HTMLDivElement>;
-
-      if (React.isValidElement<{ onClickCapture?: (e: React.MouseEvent<HTMLDivElement>) => void }>(component)) {
-        component.props.onClickCapture?.(mockEvent);
-      }
-
       expect(mockAddItem).not.toHaveBeenCalled();
+      expect(openModifiers).toHaveBeenCalledWith(
+        expect.objectContaining({ documentId: mockItem.documentId }),
+      );
     });
 
     it("OrderProductCard displays add button when interactive is true (default)", () => {

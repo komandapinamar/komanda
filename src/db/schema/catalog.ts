@@ -213,6 +213,7 @@ export const addonOptions = pgTable(
     tenantId: uuid("tenant_id").notNull(),
     groupId: uuid("group_id").notNull(),
     name: text("name").notNull(),
+    description: text("description"),
     priceDelta: numeric("price_delta", { precision: 12, scale: 2 })
       .default("0")
       .notNull(),

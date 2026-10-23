@@ -183,6 +183,13 @@
       "when": 1791648000000,
       "tag": "0025_add_owner_cash_alert_whatsapp_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792713456612,
+      "tag": "0026_add_addon_option_description",
+      "breakpoints": true
     }
   ]
 }

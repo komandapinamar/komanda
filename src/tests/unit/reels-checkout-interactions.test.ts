@@ -47,7 +47,12 @@ const mockConfigurableItem: MenuItem = {
       name: "Elegí tu aderezo",
       required: true,
       options: [
-        { id: "mayo-trufa", name: "Mayonesa Trufada", priceDelta: 0 },
+        {
+          id: "mayo-trufa",
+          name: "Mayonesa Trufada",
+          description: "Receta de la casa con trufa negra",
+          priceDelta: 0,
+        },
         { id: "bbq-bacon", name: "BBQ Ahumada", priceDelta: 500 },
       ],
     },
@@ -239,7 +244,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
   });
 
   describe("ProductModifierSheet (Story 3.2)", () => {
-    it("renders bottom sheet with 28px top rounded corners and surface background #161822", () => {
+    it("renders as a centered modal with the surface background #161822", () => {
       const onConfirm = vi.fn();
       const onClose = vi.fn();
 
@@ -252,14 +257,16 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
         })
       );
 
+      expect(html).toContain('data-testid="product-modifier-overlay"');
+      expect(html).toContain("items-center");
       expect(html).toContain('data-testid="product-modifier-sheet"');
       expect(html).toContain('data-testid="modifier-sheet-title"');
       expect(html).toContain("Doble Smash Bacon");
-      expect(html).toContain("rounded-t-[28px]");
+      expect(html).toContain("rounded-[28px]");
       expect(html).toContain("#161822");
     });
 
-    it("renders modifier groups and options with price deltas", () => {
+    it("renders modifier groups, descriptions and options with price deltas", () => {
       const onConfirm = vi.fn();
       const onClose = vi.fn();
 
@@ -276,6 +283,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       expect(html).toContain('data-testid="modifier-option-mayo-trufa"');
       expect(html).toContain('data-testid="modifier-option-bbq-bacon"');
       expect(html).toContain("Mayonesa Trufada");
+      expect(html).toContain("Receta de la casa con trufa negra");
       expect(html).toContain("BBQ Ahumada");
       expect(html).toContain("+$500");
     });
@@ -285,17 +293,29 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       const onClose = vi.fn();
       let capturedConfirmButton: TestElement | null = null;
 
+      function findConfirmButton(node: unknown): TestElement | null {
+        if (!React.isValidElement(node)) return null;
+        const props = node.props as Record<string, unknown>;
+        if (props["data-testid"] === "modifier-confirm-btn") {
+          return node as TestElement;
+        }
+        const children = props.children;
+        const list = Array.isArray(children) ? children : [children];
+        for (const child of list) {
+          const found = findConfirmButton(child);
+          if (found) return found;
+        }
+        return null;
+      }
+
       function TestHarness() {
         const el = ProductModifierSheet({
           item: mockConfigurableItem,
           isOpen: true,
           onConfirm,
           onClose,
-        }) as TestElement;
-        const sheetContainer = el.props.children as TestElement;
-        const sheetChildren = sheetContainer.props.children as TestElement[];
-        const ctaContainer = sheetChildren[3];
-        capturedConfirmButton = ctaContainer.props.children as TestElement;
+        });
+        capturedConfirmButton = findConfirmButton(el);
         return el;
       }
 
@@ -307,6 +327,10 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       const configuredItem = onConfirm.mock.calls[0][0];
       expect(configuredItem.documentId).toBe(mockConfigurableItem.documentId);
       expect(configuredItem.description).toContain("Mayonesa Trufada");
+      expect(configuredItem.selectedOptionSummary).toBe("Mayonesa Trufada");
+      expect(configuredItem.selectedOptions[0].description).toBe(
+        "Receta de la casa con trufa negra"
+      );
     });
   });
 

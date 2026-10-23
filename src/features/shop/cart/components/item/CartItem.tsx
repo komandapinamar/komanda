@@ -10,6 +10,9 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
   const [failedVideo, setFailedVideo] = useState<string | null>(null);
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const { item, quantity } = cartLine;
+  const lineId = cartLine.lineId ?? item.documentId;
+  const optionsSummary = item.selectedOptionSummary;
+  const selectedOptions = item.selectedOptions ?? [];
 
   return (
     <>
@@ -41,10 +44,34 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <h3 className="break-words text-sm font-bold uppercase">{quantity} × {item.name}</h3>
+          {selectedOptions.length > 0 ? (
+            <div className="space-y-0.5">
+              <p className="text-[11px] font-bold uppercase tracking-wide opacity-60">
+                Adicionales
+              </p>
+              <ul className="space-y-0.5">
+                {selectedOptions.map((option) => (
+                  <li
+                    key={option.id}
+                    className="flex items-start justify-between gap-2 text-xs"
+                  >
+                    <span className="break-words">• {option.name}</span>
+                    {option.priceDelta && option.priceDelta > 0 ? (
+                      <span className="shrink-0 font-semibold">
+                        +${option.priceDelta.toLocaleString("es-AR")}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : optionsSummary ? (
+            <p className="break-words text-xs opacity-70">{optionsSummary}</p>
+          ) : null}
           <p className="text-xs opacity-60">${item.price.toLocaleString("es-AR")} c/u</p>
           <button
             type="button"
-            onClick={() => removeItem(cartLine.item.documentId)}
+            onClick={() => removeItem(lineId)}
             aria-label={`Quitar ${item.name}`}
             className="text-xs opacity-60 underline underline-offset-2 hover:opacity-100"
           >
@@ -57,7 +84,7 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => decrementItem(cartLine.item.documentId)}
+            onClick={() => decrementItem(lineId)}
             aria-label={`Reducir cantidad de ${item.name}`}
             className="flex h-9 w-9 items-center justify-center rounded-sm border border-current/25 text-lg font-bold hover:bg-black/5"
           >

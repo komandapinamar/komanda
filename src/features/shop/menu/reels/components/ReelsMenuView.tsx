@@ -202,6 +202,7 @@ export default function ReelsMenuView({
       {/* Bottom Sheet modal for product modifiers / sauces */}
       {selectedItemForModifiers ? (
         <ProductModifierSheet
+          key={selectedItemForModifiers.documentId}
           item={selectedItemForModifiers}
           isOpen={true}
           onConfirm={handleConfirmModifiers}

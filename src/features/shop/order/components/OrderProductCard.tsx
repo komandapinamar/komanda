@@ -1,7 +1,8 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import ProductCard from "@/features/shop/menu/classic/components/ProductCard";
+import ProductModifierSheet from "@/features/shop/menu/reels/components/ProductModifierSheet";
 import { useOptionalCart } from "@/features/shop/cart/context/cart.context";
 import { MenuItem } from "@/types/types";
 
@@ -10,11 +11,33 @@ export interface OrderProductCardProps {
   interactive?: boolean;
 }
 
+type AddToCart = { addItem: (item: MenuItem) => void } | null | undefined;
+
+export function dispatchProductCardSelection(input: {
+  item: MenuItem;
+  interactive: boolean;
+  cart: AddToCart;
+  openModifiers: (item: MenuItem) => void;
+}) {
+  if (!input.interactive) {
+    return;
+  }
+
+  if (input.item.hasOptions) {
+    input.openModifiers(input.item);
+    return;
+  }
+
+  input.cart?.addItem(input.item);
+}
+
 export default function OrderProductCard({
   item,
   interactive = true,
 }: OrderProductCardProps) {
   const cart = useOptionalCart();
+  const [selectedItemForModifiers, setSelectedItemForModifiers] =
+    useState<MenuItem | null>(null);
 
   function handleClickCapture(event: MouseEvent<HTMLDivElement>) {
     if (!interactive) {
@@ -27,12 +50,33 @@ export default function OrderProductCard({
       return;
     }
 
-    cart?.addItem(item);
+    dispatchProductCardSelection({
+      item,
+      interactive,
+      cart,
+      openModifiers: setSelectedItemForModifiers,
+    });
+  }
+
+  function handleConfirmModifiers(configuredItem: MenuItem) {
+    cart?.addItem(configuredItem);
+    setSelectedItemForModifiers(null);
   }
 
   return (
-    <div onClickCapture={handleClickCapture}>
-      <ProductCard item={item} showAddButton={interactive} />
-    </div>
+    <>
+      <div onClickCapture={handleClickCapture}>
+        <ProductCard item={item} showAddButton={interactive} />
+      </div>
+      {selectedItemForModifiers ? (
+        <ProductModifierSheet
+          key={selectedItemForModifiers.documentId}
+          item={selectedItemForModifiers}
+          isOpen={true}
+          onConfirm={handleConfirmModifiers}
+          onClose={() => setSelectedItemForModifiers(null)}
+        />
+      ) : null}
+    </>
   );
 }

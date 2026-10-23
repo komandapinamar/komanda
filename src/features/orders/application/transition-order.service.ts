@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { cashRegisterMovements, cashShifts } from "@/db/schema";
+import { cashRegisterMovements, cashShifts, outboxEvents } from "@/db/schema";
 import {
   assertFulfillmentTransition,
   type FulfillmentStatus,
@@ -197,6 +197,17 @@ export class TransitionOrderService {
         customer.whatsappReadyOptIn === true &&
         normalizeWhatsAppRecipient(typeof customer.phone === "string" ? customer.phone : null)
       ) {
+        const [existing] = await transaction
+          .select({ id: outboxEvents.id })
+          .from(outboxEvents)
+          .where(
+            and(
+              eq(outboxEvents.aggregateId, order.id),
+              eq(outboxEvents.eventType, "order.whatsapp_ready"),
+            ),
+          )
+          .limit(1);
+        if (existing) return order;
         await appendOutboxEvent(transaction, input.context, {
           aggregateType: "order",
           aggregateId: order.id,

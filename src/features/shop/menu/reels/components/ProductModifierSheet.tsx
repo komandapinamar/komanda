@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback, type MouseEvent } from "react";
 import type { MenuItem, ProductModifierGroup, ProductModifierOption } from "@/types/types";
 import { formatReelPrice } from "./ReelOverlay";
-import { useBrowserChromeOffset } from "../hooks/useBrowserChromeOffset";
 
 export interface ProductModifierSheetProps {
   item: MenuItem;
@@ -12,16 +11,13 @@ export interface ProductModifierSheetProps {
   onClose: () => void;
 }
 
-const DEFAULT_SAUCE_GROUP: ProductModifierGroup = {
-  id: "default-sauces",
-  name: "Elegí tus aderezos",
-  required: true,
-  options: [
-    { id: "mayo-trufa", name: "Mayonesa Trufada de la casa", priceDelta: 0 },
-    { id: "bbq-smoke", name: "Salsa Barbacoa Ahumada", priceDelta: 0 },
-    { id: "alioli-garlic", name: "Alioli con Ajo Asado", priceDelta: 0 },
-  ],
-};
+function groupMinSelect(group: ProductModifierGroup) {
+  return group.minSelect ?? (group.required ? 1 : 0);
+}
+
+function groupMaxSelect(group: ProductModifierGroup) {
+  return group.maxSelect ?? (group.required ? 1 : group.options.length);
+}
 
 export default function ProductModifierSheet({
   item,
@@ -29,20 +25,16 @@ export default function ProductModifierSheet({
   onConfirm,
   onClose,
 }: ProductModifierSheetProps) {
-  const chromeOffset = useBrowserChromeOffset();
-  // Use item's modifier groups or fall back to default sauces if empty
-  const groups: ProductModifierGroup[] = useMemo(() => {
-    if (item.modifierGroups && item.modifierGroups.length > 0) {
-      return item.modifierGroups;
-    }
-    return [DEFAULT_SAUCE_GROUP];
-  }, [item.modifierGroups]);
+  const groups: ProductModifierGroup[] = useMemo(
+    () => item.modifierGroups ?? [],
+    [item.modifierGroups],
+  );
 
   // Initial selection: for required single-choice groups, select first option by default
   const initialSelections = useMemo(() => {
     const map: Record<string, string[]> = {};
     for (const group of groups) {
-      if (group.required && group.options.length > 0) {
+      if (groupMinSelect(group) > 0 && groupMaxSelect(group) === 1 && group.options.length > 0) {
         map[group.id] = [group.options[0].id];
       } else {
         map[group.id] = [];
@@ -55,7 +47,9 @@ export default function ProductModifierSheet({
     useState<Record<string, string[]>>(initialSelections);
 
   const handleToggleOption = useCallback(
-    (groupId: string, optionId: string, isSingleSelect: boolean = true) => {
+    (group: ProductModifierGroup, optionId: string, isSingleSelect: boolean = true) => {
+      const groupId = group.id;
+      const maxSelect = groupMaxSelect(group);
       setSelectedOptions((prev) => {
         const current = prev[groupId] ?? [];
         if (isSingleSelect) {
@@ -67,6 +61,9 @@ export default function ProductModifierSheet({
             [groupId]: current.filter((id) => id !== optionId),
           };
         }
+        if (current.length >= maxSelect) {
+          return prev;
+        }
         return {
           ...prev,
           [groupId]: [...current, optionId],
@@ -76,12 +73,14 @@ export default function ProductModifierSheet({
     []
   );
 
-  // Validation: all required groups must have at least one selection
+  // Validation: every group must respect its min/max selection bounds
   const isValid = useMemo(() => {
     return groups.every((group) => {
-      if (!group.required) return true;
       const selections = selectedOptions[group.id] ?? [];
-      return selections.length > 0;
+      return (
+        selections.length >= groupMinSelect(group) &&
+        selections.length <= groupMaxSelect(group)
+      );
     });
   }, [groups, selectedOptions]);
 
@@ -104,13 +103,17 @@ export default function ProductModifierSheet({
     if (!isValid) return;
 
     // Build human-readable option summary
+    const selectedOptionIds: string[] = [];
     const selectedOptionNames: string[] = [];
+    const selectedOptionDetails: ProductModifierOption[] = [];
     for (const group of groups) {
       const selections = selectedOptions[group.id] ?? [];
       for (const optId of selections) {
         const opt = group.options.find((o) => o.id === optId);
         if (opt) {
+          selectedOptionIds.push(opt.id);
           selectedOptionNames.push(opt.name);
+          selectedOptionDetails.push(opt);
         }
       }
     }
@@ -119,23 +122,24 @@ export default function ProductModifierSheet({
     const configuredItem: MenuItem = {
       ...item,
       price: calculatedPrice,
+      basePrice: item.basePrice ?? item.price,
       description: optionsNote
         ? `${item.description ? `${item.description} • ` : ""}[${optionsNote}]`
         : item.description,
+      selectedOptionIds,
+      selectedOptionSummary: optionsNote || null,
+      selectedOptions: selectedOptionDetails,
     };
 
     onConfirm(configuredItem);
   }, [calculatedPrice, groups, isValid, item, onConfirm, selectedOptions]);
 
-  if (!isOpen) return null;
+  if (!isOpen || groups.length === 0) return null;
 
   return (
     <div
       data-testid="product-modifier-overlay"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm pointer-events-auto select-none transition-[bottom] duration-200"
-      style={{
-        bottom: `calc(${chromeOffset}px + env(safe-area-inset-bottom, 0px))`,
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 backdrop-blur-sm pointer-events-auto select-none p-4"
       onClick={onClose}
     >
       <div
@@ -143,20 +147,12 @@ export default function ProductModifierSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modifier-sheet-title"
-        className="relative w-full max-w-md bg-[#161822] text-white rounded-t-[28px] border-t border-white/16 p-6 pb-8 shadow-2xl space-y-5 animate-in slide-in-from-bottom duration-300"
+        className="relative flex max-h-[88dvh] w-full max-w-md flex-col bg-[#161822] text-white rounded-[28px] border border-white/16 p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         style={{
-          borderTopLeftRadius: "28px",
-          borderTopRightRadius: "28px",
           backgroundColor: "#161822",
         }}
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <div
-          data-testid="modifier-sheet-handle"
-          className="w-10 h-1 bg-white/25 rounded-full mx-auto -mt-2 mb-3"
-        />
-
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
           <div className="space-y-1">
@@ -171,7 +167,7 @@ export default function ProductModifierSheet({
               data-testid="modifier-sheet-subtitle"
               className="text-xs text-neutral-400"
             >
-              Elegí tus aderezos y opciones para continuar
+              ¿Querés agregar adicionales? Elegí tus opciones para continuar
             </p>
           </div>
           <button
@@ -186,9 +182,12 @@ export default function ProductModifierSheet({
         </div>
 
         {/* Options Groups */}
-        <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+        <div className="mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           {groups.map((group) => {
             const currentSelected = selectedOptions[group.id] ?? [];
+            const minSelect = groupMinSelect(group);
+            const maxSelect = groupMaxSelect(group);
+            const isSingleSelect = maxSelect === 1;
             return (
               <div
                 key={group.id}
@@ -199,7 +198,7 @@ export default function ProductModifierSheet({
                   <span className="text-sm font-bold text-neutral-200">
                     {group.name}
                   </span>
-                  {group.required ? (
+                  {minSelect > 0 ? (
                     <span className="text-[11px] font-bold uppercase tracking-wider text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full">
                       Obligatorio
                     </span>
@@ -207,42 +206,71 @@ export default function ProductModifierSheet({
                     <span className="text-[11px] text-neutral-400">Opcional</span>
                   )}
                 </div>
+                <p className="text-[11px] text-neutral-500">
+                  {isSingleSelect
+                    ? minSelect > 0
+                      ? "Elegí 1 opción"
+                      : "Elegí 1 opción o continuá sin adicionales"
+                    : `Elegí${minSelect > 0 ? ` al menos ${minSelect}` : ""} hasta ${maxSelect} opciones`}
+                </p>
 
                 <div className="space-y-1.5" data-testid="modifier-options-group">
                   {group.options.map((option: ProductModifierOption) => {
                     const isSelected = currentSelected.includes(option.id);
+                    const reachedLimit =
+                      !isSingleSelect && !isSelected && currentSelected.length >= maxSelect;
                     return (
                       <div
                         key={option.id}
                         data-testid={`modifier-option-${option.id}`}
                         data-selected={String(isSelected)}
-                        onClick={() => handleToggleOption(group.id, option.id, true)}
-                        className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all duration-150 ${
+                        onClick={() =>
+                          handleToggleOption(group, option.id, isSingleSelect)
+                        }
+                        aria-disabled={reachedLimit}
+                        className={`flex items-start justify-between gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-150 ${
                           isSelected
                             ? "bg-[#ff4d2d]/15 border-[#ff4d2d] text-white shadow-sm"
-                            : "bg-white/5 border-transparent text-neutral-300 hover:bg-white/10"
+                            : reachedLimit
+                              ? "bg-white/[0.02] border-transparent text-neutral-500 cursor-not-allowed"
+                              : "bg-white/5 border-transparent text-neutral-300 hover:bg-white/10"
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          {/* Radio visual indicator */}
+                        <div className="flex min-w-0 items-start gap-3">
+                          {/* Radio / checkbox visual indicator */}
                           <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            className={`mt-0.5 w-4 h-4 shrink-0 border-2 flex items-center justify-center transition-colors ${
+                              isSingleSelect ? "rounded-full" : "rounded-[4px]"
+                            } ${
                               isSelected
                                 ? "border-[#ff4d2d]"
                                 : "border-neutral-500"
                             }`}
                           >
                             {isSelected ? (
-                              <div className="w-2 h-2 rounded-full bg-[#ff4d2d]" />
+                              <div
+                                className={
+                                  isSingleSelect
+                                    ? "w-2 h-2 rounded-full bg-[#ff4d2d]"
+                                    : "w-2 h-2 rounded-[2px] bg-[#ff4d2d]"
+                                }
+                              />
                             ) : null}
                           </div>
-                          <span className="text-sm font-semibold">
-                            {option.name}
-                          </span>
+                          <div className="min-w-0 space-y-0.5">
+                            <span className="block text-sm font-semibold">
+                              {option.name}
+                            </span>
+                            {option.description ? (
+                              <p className="text-xs leading-4 text-neutral-400">
+                                {option.description}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
 
                         <span
-                          className={`text-xs font-bold ${
+                          className={`shrink-0 text-xs font-bold ${
                             isSelected ? "text-[#ff4d2d]" : "text-[#22c55e]"
                           }`}
                         >
@@ -268,7 +296,7 @@ export default function ProductModifierSheet({
             onClick={handleConfirm}
             className="w-full py-4 rounded-full bg-[#ff4d2d] hover:bg-[#e03e1f] text-white font-extrabold text-base tracking-wide shadow-[0_8px_24px_rgba(255,77,45,0.35)] disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            <span>Confirmar y agregar</span>
+            <span>Confirmar</span>
             <span className="text-white/80 font-normal">·</span>
             <span>${formatReelPrice(calculatedPrice)}</span>
           </button>

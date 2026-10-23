@@ -48,7 +48,7 @@ export default function CartPanel() {
         ) : (
           items.map((cartLine) => (
             <article
-              key={cartLine.item.documentId}
+              key={cartLine.lineId ?? cartLine.item.documentId}
               className="space-y-3 border-b border-dashed border-[#29251f]/25 py-4 first:pt-0 last:border-0"
             >
               <CartItem cartLine={cartLine} />
@@ -62,6 +62,19 @@ export default function CartPanel() {
           <span>Líneas: {items.length}</span>
           <span>Unidades: {itemCount}</span>
         </div>
+        {items.some(
+          (cartLine) => (cartLine.item.selectedOptions ?? []).length > 0,
+        ) ? (
+          <div className="flex justify-between text-xs uppercase opacity-70">
+            <span>Adicionales</span>
+            <span>
+              x{" "}
+              {items.filter(
+                (cartLine) => (cartLine.item.selectedOptions ?? []).length > 0,
+              ).length}
+            </span>
+          </div>
+        ) : null}
         {items.length > 0 ? (
           <div className="border-b border-[var(--color-accent-secondary)]/30 pb-3">
             <DiscountCouponInput

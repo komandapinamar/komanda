@@ -58,6 +58,10 @@ export function computeDisplayTotals(
   };
 }
 
+function normalizedOptionIds(optionIds?: string[]) {
+  return [...(optionIds ?? [])].sort().join(",");
+}
+
 function doesGlobalCartMatchOfficialCart(
   items: CartLine[],
   cartId: string | null,
@@ -76,7 +80,8 @@ function doesGlobalCartMatchOfficialCart(
       item.item.name === officialLine.name &&
       item.item.price === officialLine.unitPrice &&
       item.item.image === officialLine.image &&
-      (item.item.description ?? null) === (officialLine.note ?? null)
+      normalizedOptionIds(item.item.selectedOptionIds) ===
+        normalizedOptionIds(officialLine.optionIds)
     );
   });
 }
@@ -129,7 +134,23 @@ function OfficialCartSummary({
                 Este producto no esta disponible.
               </p>
             ) : null}
-            {line.note ? (
+            {line.selectedOptions && line.selectedOptions.length > 0 ? (
+              <div className="mt-2 space-y-1 text-sm opacity-80">
+                <p className="font-semibold">Adicionales</p>
+                <ul>
+                  {line.selectedOptions.map((option) => (
+                    <li key={option.id} className="flex justify-between gap-2">
+                      <span>• {option.name}</span>
+                      {option.priceDelta && option.priceDelta > 0 ? (
+                        <span>
+                          +{formatCurrency(option.priceDelta, officialCart.currency)}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : line.note ? (
               <p className="mt-2 text-sm opacity-80">{line.note}</p>
             ) : null}
           </div>

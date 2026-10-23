@@ -61,18 +61,39 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+function optionSignature(optionIds?: string[]) {
+  return [...(optionIds ?? [])].sort().join(",");
+}
+
+function cartLineId(item: MenuItem) {
+  const signature = optionSignature(item.selectedOptionIds);
+  return signature ? `${item.documentId}::${signature}` : item.documentId;
+}
+
 function cartLineToSnapshot(cartLine: CartLine): CartSnapshotLine {
   return {
     documentId: cartLine.item.documentId,
     quantity: cartLine.quantity,
     name: cartLine.item.name,
-    unitPrice: cartLine.item.price,
+    unitPrice: cartLine.item.basePrice ?? cartLine.item.price,
     image: cartLine.item.image,
+    optionIds: cartLine.item.selectedOptionIds ?? [],
+    note: cartLine.item.selectedOptionSummary ?? undefined,
   };
 }
 
 function officialCartToLines(cart: OfficialCart): CartLine[] {
   return cart.items.map((line) => ({
+    lineId: line.id ?? cartLineId({
+      documentId: line.documentId,
+      name: line.name,
+      price: line.unitPrice,
+      description: null,
+      image: line.image,
+      category: null,
+      combos: null,
+      selectedOptionIds: line.optionIds,
+    }),
     quantity: line.quantity,
     item: {
       documentId: line.documentId,
@@ -82,6 +103,9 @@ function officialCartToLines(cart: OfficialCart): CartLine[] {
       image: line.image,
       category: null,
       combos: null,
+      selectedOptionIds: line.optionIds,
+      selectedOptionSummary: line.optionNames?.join(", ") || line.note || null,
+      selectedOptions: line.selectedOptions,
     },
   }));
 }
@@ -182,29 +206,38 @@ export function CartProvider({
       );
     }
     setItems((currentItems) => {
+      const targetLineId = cartLineId(item);
       const existingItem = currentItems.find(
-        (cartLine) => cartLine.item.documentId === item.documentId,
+        (cartLine) =>
+          (cartLine.lineId ?? cartLineId(cartLine.item)) === targetLineId,
       );
 
       if (!existingItem) {
-        return [...currentItems, { item, quantity: 1 }];
+        return [
+          ...currentItems,
+          { item, quantity: 1, lineId: targetLineId },
+        ];
       }
 
       return currentItems.map((cartLine) =>
-        cartLine.item.documentId === item.documentId
+        (cartLine.lineId ?? cartLineId(cartLine.item)) === targetLineId
           ? { ...cartLine, quantity: cartLine.quantity + 1 }
           : cartLine,
       );
     });
   }, []);
 
-  const decrementItem = useCallback((documentId: string) => {
+  const decrementItem = useCallback((lineIdOrDocumentId: string) => {
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
     setItems((currentItems) =>
       currentItems.flatMap((cartLine) => {
-        if (cartLine.item.documentId !== documentId) {
+        const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
+        if (
+          lineId !== lineIdOrDocumentId &&
+          cartLine.item.documentId !== lineIdOrDocumentId
+        ) {
           return [cartLine];
         }
 
@@ -217,12 +250,18 @@ export function CartProvider({
     );
   }, []);
 
-  const removeItem = useCallback((documentId: string) => {
+  const removeItem = useCallback((lineIdOrDocumentId: string) => {
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
     setItems((currentItems) =>
-      currentItems.filter((cartLine) => cartLine.item.documentId !== documentId),
+      currentItems.filter((cartLine) => {
+        const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
+        return (
+          lineId !== lineIdOrDocumentId &&
+          cartLine.item.documentId !== lineIdOrDocumentId
+        );
+      }),
     );
   }, []);
 
