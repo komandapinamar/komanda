@@ -13,6 +13,7 @@ import type {
 } from "@/features/search/domain/search.schemas";
 import { ProductSearchResultCard } from "@/features/directory/web/ProductSearchResultCard";
 import { OpeningHoursSummary } from "@/features/directory/web/OpeningHoursSummary";
+import { AsciiVideoOverlay } from "@/features/directory/web/AsciiVideoOverlay";
 import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
 
 export type DirectoryTenantItem = PublicDirectoryTenant & {
@@ -215,6 +216,7 @@ export function PublicDirectoryView({ tenants }: Props) {
           <source src="/videos/directory-bg.mp4" type="video/mp4" />
           <source src="/videos/directory-bg.webm" type="video/webm" />
         </video>
+        <AsciiVideoOverlay videoRef={videoRef} />
         {/* Dark Overlay for Readability and Contrast */}
         <div className="absolute inset-0 bg-black/45" />
       </div>
