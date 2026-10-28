@@ -5,8 +5,7 @@ import { useEffect, useRef, type RefObject } from "react";
 const GLYPHS = " .:-=+*#%@";
 
 /**
- * Renders the background logo video as a live animated ASCII canvas (HackTandil style).
- * Time drives the continuous video frame sampling; scroll position drives the crossfade blend.
+ * Renders the background logo video as a continuously animated ASCII canvas.
  */
 export function AsciiVideoOverlay({
   videoRef,
@@ -33,17 +32,10 @@ export function AsciiVideoOverlay({
     let height = 0;
     let columns = 0;
     let rows = 0;
-    let cellSize = 12;
+    let cellSize = 11;
     let frame = 0;
     let lastPaint = -Infinity;
     let failed = false;
-
-    const getScrollY = () =>
-      Math.max(
-        window.scrollY,
-        document.documentElement.scrollTop,
-        document.body.scrollTop,
-      );
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
@@ -54,9 +46,9 @@ export function AsciiVideoOverlay({
       canvas.height = Math.round(height * ratio);
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-      cellSize = width < 768 ? 10 : 12;
-      columns = Math.max(1, Math.min(170, Math.floor(width / cellSize)));
-      rows = Math.max(1, Math.min(105, Math.floor(height / cellSize)));
+      cellSize = width < 768 ? 9 : 11;
+      columns = Math.max(1, Math.min(180, Math.floor(width / cellSize)));
+      rows = Math.max(1, Math.min(110, Math.floor(height / cellSize)));
       sample.width = columns;
       sample.height = rows;
 
@@ -74,15 +66,7 @@ export function AsciiVideoOverlay({
       if (time - lastPaint < 1000 / 24) return;
       lastPaint = time;
 
-      const scrollY = getScrollY();
-      const triggerDistance = Math.min(240, Math.max(120, height * 0.28));
-      const rawProgress = Math.min(1, Math.max(0, scrollY / triggerDistance));
-      const blend = rawProgress * rawProgress * (3 - 2 * rawProgress);
-
-      if (blend <= 0.01 || !width || !height) {
-        canvas.style.opacity = "0";
-        return;
-      }
+      if (!width || !height) return;
 
       const hasVideoFrame =
         video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0;
@@ -91,10 +75,7 @@ export function AsciiVideoOverlay({
         posterImage.naturalWidth > 0 &&
         posterImage.naturalHeight > 0;
 
-      if (!hasVideoFrame && !hasPosterFrame) {
-        canvas.style.opacity = "0";
-        return;
-      }
+      if (!hasVideoFrame && !hasPosterFrame) return;
 
       const sourceWidth = hasVideoFrame
         ? video.videoWidth
@@ -122,7 +103,7 @@ export function AsciiVideoOverlay({
         );
         const data = pixels.getImageData(0, 0, columns, rows).data;
 
-        context.fillStyle = "rgba(5, 5, 8, 0.94)";
+        context.fillStyle = "#050508";
         context.fillRect(0, 0, width, height);
 
         const cellWidth = width / columns;
@@ -137,9 +118,9 @@ export function AsciiVideoOverlay({
             const b = data[offset + 2] ?? 0;
 
             const luminance = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
-            if (luminance < 0.015) continue;
+            if (luminance < 0.012) continue;
 
-            const boosted = Math.min(1, Math.pow(luminance, 0.52) * 1.25);
+            const boosted = Math.min(1, Math.pow(luminance, 0.5) * 1.28);
             const glyphIndex = Math.min(
               GLYPHS.length - 1,
               Math.max(1, Math.floor(boosted * GLYPHS.length)),
@@ -147,19 +128,16 @@ export function AsciiVideoOverlay({
             const glyph = GLYPHS[glyphIndex];
             if (!glyph || glyph === " ") continue;
 
-            const cr = Math.min(255, Math.round(r * 1.35 + 75));
-            const cg = Math.min(255, Math.round(g * 1.35 + 80));
-            const cb = Math.min(255, Math.round(b * 1.35 + 90));
+            const cr = Math.min(255, Math.round(r * 1.4 + 80));
+            const cg = Math.min(255, Math.round(g * 1.4 + 85));
+            const cb = Math.min(255, Math.round(b * 1.4 + 95));
 
             context.fillStyle = `rgb(${cr} ${cg} ${cb})`;
             context.fillText(glyph, (x + 0.5) * cellWidth, cy);
           }
         }
-
-        canvas.style.opacity = String(blend);
       } catch {
         failed = true;
-        canvas.style.opacity = "0";
         window.cancelAnimationFrame(frame);
       }
     };
@@ -167,9 +145,7 @@ export function AsciiVideoOverlay({
     const sync = () => {
       window.cancelAnimationFrame(frame);
       frame = 0;
-      if (document.hidden) {
-        canvas.style.opacity = "0";
-      } else if (!failed) {
+      if (!document.hidden && !failed) {
         frame = window.requestAnimationFrame(paint);
       }
     };
@@ -191,7 +167,7 @@ export function AsciiVideoOverlay({
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-10 h-full w-full opacity-0 transition-opacity duration-75"
+      className="pointer-events-none absolute inset-0 z-10 h-full w-full opacity-100"
     />
   );
 }
