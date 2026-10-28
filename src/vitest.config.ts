@@ -50,6 +50,7 @@ export default defineConfig({
             "tests/unit/**/*.test.ts",
             "tests/regression/**/*.{test,spec}.ts",
             "features/**/tests/**/*.test.ts",
+            "features/**/__tests__/**/*.test.ts",
           ],
         },
       }),

@@ -3,6 +3,7 @@ import { z } from "zod";
 export const kioskPaymentItemSchema = z.object({
   catalogItemId: z.string().uuid(),
   quantity: z.number().int().positive(),
+  calculatedSubtotal: z.string().regex(/^\d{1,10}\.\d{2}$/).optional(),
 });
 
 export const createKioskPaymentSessionSchema = z.object({

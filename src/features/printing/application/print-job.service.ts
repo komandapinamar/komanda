@@ -134,6 +134,7 @@ function buildTicketPayload(order: OrderView, tenantName?: string) {
     items: order.lines.map((line) => ({
       id: line.sourceItemId ?? line.sourceComboId ?? line.id,
       name: line.name,
+      itemType: line.itemType ?? "unit",
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       lineTotal: line.lineTotal,

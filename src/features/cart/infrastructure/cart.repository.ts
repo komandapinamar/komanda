@@ -17,6 +17,7 @@ export type CartSelectionCatalog = {
   kind: "item" | "combo";
   id: string;
   name: string;
+  itemType: "unit" | "weighted";
   status: "draft" | "active" | "unavailable" | "archived";
   price: string;
   currency: string;
@@ -70,6 +71,7 @@ export class CartRepository {
         kind,
         id: row.resource.id,
         name: row.resource.name,
+        itemType: "unit",
         status:
           components.length > 0 && components.every(({ status }) => status === "active")
             ? row.resource.status
@@ -135,6 +137,7 @@ export class CartRepository {
       kind,
       id: row.resource.id,
       name: row.resource.name,
+      itemType: row.resource.itemType ?? "unit",
       status: row.resource.status,
       price: row.resource.price,
       currency: row.resource.currency,
@@ -174,6 +177,7 @@ export class CartRepository {
     lines: Array<{
       kind: "item" | "combo";
       resourceId: string;
+      itemType?: "unit" | "weighted";
       quantity: number;
       name: string;
       unitPrice: string;
@@ -212,6 +216,7 @@ export class CartRepository {
           cartId: cart!.id,
           itemId: line.kind === "item" ? line.resourceId : null,
           comboId: line.kind === "combo" ? line.resourceId : null,
+          itemType: line.itemType ?? "unit",
           quantity: line.quantity,
           nameSnapshot: line.name,
           unitPriceSnapshot: line.unitPrice,

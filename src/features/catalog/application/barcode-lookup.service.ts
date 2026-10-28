@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import { withTenantTransaction } from "@/db/tenant-transaction";
-import { globalProductCatalog } from "@/db/schema/catalog";
+import { globalProductCatalog, type CatalogItemType } from "@/db/schema/catalog";
 import { CatalogRepository } from "@/features/catalog/infrastructure/catalog.repository";
+import {
+  isScaleEan13Prefix,
+  parseScaleEan13,
+} from "@/features/catalog/domain/catalog.rules";
 import type { TenantContext } from "@/lib/tenant-context/types";
 
 export type BarcodeLookupResult =
@@ -12,6 +16,7 @@ export type BarcodeLookupResult =
         name: string;
         price: string;
         currency: string;
+        itemType: CatalogItemType;
         barcode: string | null;
         isGeneric: boolean;
         genericIcon: string | null;
@@ -44,9 +49,39 @@ export class BarcodeLookupService {
     return withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
 
-      // Level 1: Tenant local check
+      // Scale EAN-13 (20..29 prefix): lookup weighted PLU in tenant and never call global/external APIs
+      if (isScaleEan13Prefix(cleanBarcode)) {
+        const parsedScale = parseScaleEan13(cleanBarcode);
+        if (!parsedScale) {
+          return { source: "none", suggestion: null };
+        }
+        const weightedItem = await repository.findWeightedItemByPlu(
+          parsedScale.pluCode,
+        );
+        if (weightedItem && weightedItem.itemType === "weighted") {
+          return {
+            source: "tenant",
+            item: {
+              id: weightedItem.id,
+              name: weightedItem.name,
+              price: weightedItem.price,
+              currency: weightedItem.currency,
+              itemType: weightedItem.itemType,
+              barcode: weightedItem.barcode,
+              isGeneric: weightedItem.isGeneric,
+              genericIcon: weightedItem.genericIcon,
+              trackStock: weightedItem.trackStock,
+              stockQuantity: weightedItem.stockQuantity,
+              status: weightedItem.status,
+            },
+          };
+        }
+        return { source: "none", suggestion: null };
+      }
+
+      // Level 1: Tenant local check (standard unit items only)
       const localItem = await repository.findItemByBarcode(cleanBarcode);
-      if (localItem) {
+      if (localItem && localItem.itemType !== "weighted") {
         return {
           source: "tenant",
           item: {
@@ -54,6 +89,7 @@ export class BarcodeLookupService {
             name: localItem.name,
             price: localItem.price,
             currency: localItem.currency,
+            itemType: localItem.itemType,
             barcode: localItem.barcode,
             isGeneric: localItem.isGeneric,
             genericIcon: localItem.genericIcon,

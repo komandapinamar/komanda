@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import { OrderTransitionError } from "@/features/orders/domain/order.rules";
+import { CartRevalidationError } from "@/features/cart/domain/cart.rules";
 import {
   BusinessClosedError,
   CashOrderCartUnavailableError,
@@ -105,6 +106,16 @@ export function orderErrorResponse(error: unknown, correlationId: string) {
       detail:
         error.message ||
         "No existe un turno de caja abierto para registrar el cobro.",
+      correlationId,
+    });
+  }
+
+  if (error instanceof CartRevalidationError) {
+    return problemResponse({
+      status: 400,
+      title: "Bad Request",
+      code: "CART_REVALIDATION_FAILED",
+      detail: error.message,
       correlationId,
     });
   }

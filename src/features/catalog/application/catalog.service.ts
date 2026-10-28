@@ -13,6 +13,7 @@ import {
   assertArchivableCategory,
   assertPublishableCombo,
   assertPublishableItem,
+  CatalogRuleViolationError,
   catalogItemInputSchema,
   catalogItemPatchSchema,
   categoryInputSchema,
@@ -20,6 +21,7 @@ import {
   comboInputSchema,
   comboPatchSchema,
   normalizeCatalogName,
+  normalizePluCode,
 } from "@/features/catalog/domain/catalog.rules";
 import { CatalogRepository } from "@/features/catalog/infrastructure/catalog.repository";
 import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
@@ -217,8 +219,25 @@ export class CatalogService {
         }
       }
       const { addonGroupIds, ...values } = input;
+      const isWeighted = values.itemType === "weighted";
+      const normalizedBarcode = isWeighted
+        ? normalizePluCode(values.barcode ?? "")
+        : values.barcode;
+      if (isWeighted && !/^(?!00000)\d{5}$/.test(normalizedBarcode ?? "")) {
+        throw new CatalogRuleViolationError(
+          "Weighted items require a valid 5-digit non-zero PLU code.",
+        );
+      }
       const createdItem = await repository.createItem(
-        { ...values, normalizedName: normalizeCatalogName(input.name) },
+        {
+          ...values,
+          barcode: normalizedBarcode,
+          trackStock: isWeighted ? false : values.trackStock,
+          stockQuantity: isWeighted ? 0 : values.stockQuantity,
+          isGeneric: isWeighted ? false : values.isGeneric,
+          genericIcon: isWeighted ? null : values.genericIcon,
+          normalizedName: normalizeCatalogName(input.name),
+        },
         [...new Set(addonGroupIds)],
       );
       await recordMutation(transaction, context, {
@@ -291,11 +310,34 @@ export class CatalogService {
           });
         }
       }
+      const effectiveItemType = input.itemType ?? current.itemType;
+      const isWeighted = effectiveItemType === "weighted";
+      const rawBarcode =
+        input.barcode === undefined ? current.barcode : input.barcode;
+      const normalizedBarcode = isWeighted
+        ? normalizePluCode(rawBarcode ?? "")
+        : rawBarcode;
+      if (isWeighted && !/^(?!00000)\d{5}$/.test(normalizedBarcode ?? "")) {
+        throw new CatalogRuleViolationError(
+          "Weighted items require a valid 5-digit non-zero PLU code.",
+        );
+      }
       const updatedItem = await repository.updateItem(
         itemId,
         version,
         {
           ...input,
+          ...(input.barcode !== undefined || input.itemType !== undefined
+            ? { barcode: normalizedBarcode }
+            : {}),
+          ...(isWeighted
+            ? {
+                trackStock: false,
+                stockQuantity: 0,
+                isGeneric: false,
+                genericIcon: null,
+              }
+            : {}),
           ...(input.name
             ? { normalizedName: normalizeCatalogName(input.name) }
             : {}),

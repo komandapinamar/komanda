@@ -43,6 +43,7 @@ export type OrderView = {
     id: string;
     sourceItemId: string | null;
     sourceComboId: string | null;
+    itemType: "unit" | "weighted";
     name: string;
     quantity: number;
     unitPrice: string;
@@ -122,6 +123,7 @@ function serializeOrder(
       id: line.id,
       sourceItemId: line.sourceItemId,
       sourceComboId: line.sourceComboId,
+      itemType: (line.itemType as "unit" | "weighted") ?? "unit",
       name: line.name,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
@@ -406,7 +408,8 @@ export class OrderRepository {
     if (!order) throw new Error("Failed to create order.");
 
     for (const cartLine of input.cart.lines) {
-      if (cartLine.itemId) {
+      const lineItemType = (cartLine as { itemType?: "unit" | "weighted" }).itemType ?? "unit";
+      if (cartLine.itemId && lineItemType !== "weighted") {
         const deducted = await this.transaction
           .update(catalogItems)
           .set({
@@ -446,6 +449,7 @@ export class OrderRepository {
           orderId: order.id,
           sourceItemId: cartLine.itemId,
           sourceComboId: cartLine.comboId,
+          itemType: lineItemType,
           name: cartLine.nameSnapshot,
           quantity: cartLine.quantity,
           unitPrice: cartLine.unitPriceSnapshot,

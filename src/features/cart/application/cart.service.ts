@@ -99,6 +99,7 @@ export class CartService {
         lines.push({
           kind: selection.kind,
           resourceId: selection.resourceId,
+          itemType: validated.itemType,
           quantity: selection.quantity,
           name: catalog.name,
           unitPrice: centsToMoney(validated.unitPriceCents),

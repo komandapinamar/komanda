@@ -95,6 +95,7 @@ export class KioskPaymentService {
       const lines: Array<{
         kind: "item" | "combo";
         resourceId: string;
+        itemType?: "unit" | "weighted";
         quantity: number;
         name: string;
         unitPrice: string;
@@ -130,17 +131,21 @@ export class KioskPaymentService {
             resourceId: itemReq.catalogItemId,
             quantity: itemReq.quantity,
             optionIds: [],
+            calculatedSubtotal: itemReq.calculatedSubtotal,
           },
           catalog,
         );
 
-        const lineTotalCents = validated.unitPriceCents * itemReq.quantity;
+        const effectiveQuantity =
+          validated.itemType === "weighted" ? 1 : itemReq.quantity;
+        const lineTotalCents = validated.unitPriceCents * effectiveQuantity;
         subtotalCents += lineTotalCents;
 
         lines.push({
           kind: "item",
           resourceId: itemReq.catalogItemId,
-          quantity: itemReq.quantity,
+          itemType: validated.itemType,
+          quantity: effectiveQuantity,
           name: catalog.name,
           unitPrice: centsToMoney(validated.unitPriceCents),
           lineTotal: centsToMoney(lineTotalCents),
@@ -318,18 +323,21 @@ export class KioskPaymentService {
             resourceId: itemReq.catalogItemId,
             quantity: itemReq.quantity,
             optionIds: [],
+            calculatedSubtotal: itemReq.calculatedSubtotal,
           },
           catalog,
         );
 
-        const lineTotalCents = validated.unitPriceCents * itemReq.quantity;
+        const effectiveQuantity =
+          validated.itemType === "weighted" ? 1 : itemReq.quantity;
+        const lineTotalCents = validated.unitPriceCents * effectiveQuantity;
         subtotalCents += lineTotalCents;
         linesForDiscount.push({
           id: `line-${index}`,
           resourceId: itemReq.catalogItemId,
           categoryId:
             (catalog as { categoryId?: string | null }).categoryId ?? null,
-          quantity: itemReq.quantity,
+          quantity: effectiveQuantity,
           unitPriceCents: validated.unitPriceCents,
           lineTotalCents,
         });

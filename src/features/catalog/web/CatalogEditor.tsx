@@ -23,6 +23,7 @@ type Item = {
   description?: string | null;
   price: string;
   currency: string;
+  itemType?: "unit" | "weighted";
   imageAssetId?: string | null;
   videoAssetId?: string | null;
   imageUrl?: string | null;
@@ -416,9 +417,21 @@ export function CatalogEditor({
                     <div className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-bold">{item.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold">{item.name}</h3>
+                            {item.itemType === "weighted" ? (
+                              <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                                Balanza {item.barcode ? `• PLU ${item.barcode}` : ""}
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="text-lg font-black text-[var(--color-accent-tertiary)]">
                             ${item.price}
+                            {item.itemType === "weighted" ? (
+                              <span className="ml-1 text-xs font-medium text-zinc-400">
+                                / kg ref.
+                              </span>
+                            ) : null}
                           </p>
                         </div>
                       </div>
@@ -563,6 +576,9 @@ function ItemModal({
   const [selectedGroups, setSelectedGroups] = useState(
     item?.addonGroupIds ?? [],
   );
+  const [itemType, setItemType] = useState<"unit" | "weighted">(
+    item?.itemType ?? "unit",
+  );
   const [trackStock, setTrackStock] = useState(item?.trackStock ?? false);
   const [stock, setStock] = useState(String(item?.stockQuantity ?? 0));
   const [barcode, setBarcode] = useState(item?.barcode ?? "");
@@ -575,22 +591,41 @@ function ItemModal({
       setError("Ingresá un precio válido, por ejemplo 3500 o 3500,50.");
       return;
     }
+    const rawDigits = barcode.trim().replace(/\D/g, "");
+    const normalizedPlu = /^(2[0-9])\d{11}$/.test(rawDigits)
+      ? rawDigits.slice(2, 7)
+      : rawDigits
+        ? rawDigits.slice(-5).padStart(5, "0")
+        : "";
+    if (isExpress && itemType === "weighted" && !/^(?!00000)\d{5}$/.test(normalizedPlu)) {
+      setError("Ingresá un Código PLU numérico válido de hasta 5 dígitos (ej. 00123).");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
+      const normalizedBarcode = isExpress
+        ? itemType === "weighted"
+          ? normalizedPlu
+          : barcode.trim() || null
+        : null;
       const body = {
         categoryId: selectedCategory,
         name,
         description: description.trim() || null,
         price: normalizedPrice,
         currency: "ARS",
+        itemType: isExpress ? itemType : "unit",
         imageAssetId: image.assetId,
         videoAssetId: video.assetId,
-        barcode: isExpress ? barcode.trim() || null : null,
+        barcode: normalizedBarcode,
         isGeneric: false,
         genericIcon: null,
-        trackStock: isExpress && trackStock,
-        stockQuantity: isExpress && trackStock ? Number(stock) || 0 : 0,
+        trackStock: isExpress && itemType === "unit" && trackStock,
+        stockQuantity:
+          isExpress && itemType === "unit" && trackStock
+            ? Number(stock) || 0
+            : 0,
         status: item?.status ?? "draft",
         addonGroupIds: isExpress ? [] : selectedGroups,
         ...(item ? { version: item.version } : {}),
@@ -706,33 +741,54 @@ function ItemModal({
             {isExpress ? (
               <>
                 <label className="block text-sm font-semibold">
-                  Código de barras
+                  Tipo de producto
+                  <select
+                    value={itemType}
+                    onChange={(event) =>
+                      setItemType(event.target.value as "unit" | "weighted")
+                    }
+                    className={`${inputClass} mt-1`}
+                  >
+                    <option value="unit">Unidad (código de barras estándar)</option>
+                    <option value="weighted">Balanza (PLU 5 dígitos)</option>
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold">
+                  {itemType === "weighted"
+                    ? "Código PLU (5 dígitos, ej. 00123)"
+                    : "Código de barras"}
                   <input
                     value={barcode}
                     onChange={(event) => setBarcode(event.target.value)}
                     className={`${inputClass} mt-1`}
-                    placeholder="Opcional"
+                    placeholder={
+                      itemType === "weighted" ? "Ej: 00123" : "Opcional"
+                    }
                   />
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={trackStock}
-                    onChange={(event) => setTrackStock(event.target.checked)}
-                  />{" "}
-                  Controlar stock
-                </label>
-                {trackStock ? (
-                  <label className="block text-sm font-semibold">
-                    Stock inicial
-                    <input
-                      type="number"
-                      min="0"
-                      value={stock}
-                      onChange={(event) => setStock(event.target.value)}
-                      className={`${inputClass} mt-1`}
-                    />
-                  </label>
+                {itemType === "unit" ? (
+                  <>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={trackStock}
+                        onChange={(event) => setTrackStock(event.target.checked)}
+                      />{" "}
+                      Controlar stock
+                    </label>
+                    {trackStock ? (
+                      <label className="block text-sm font-semibold">
+                        Stock inicial
+                        <input
+                          type="number"
+                          min="0"
+                          value={stock}
+                          onChange={(event) => setStock(event.target.value)}
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
+                    ) : null}
+                  </>
                 ) : null}
               </>
             ) : null}
