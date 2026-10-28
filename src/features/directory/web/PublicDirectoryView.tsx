@@ -196,7 +196,7 @@ export function PublicDirectoryView({ tenants }: Props) {
     : fallbackFilteredTenants.length;
 
   return (
-    <div className="relative flex min-h-screen flex-col justify-between overflow-x-clip text-zinc-100">
+    <div className="relative flex min-h-[150svh] flex-col justify-between overflow-x-clip text-zinc-100">
       {/* Background Video Layer */}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[100svh] overflow-hidden bg-cover bg-center bg-[url('/videos/directory-bg-poster.webp')]">
         <video
@@ -216,9 +216,9 @@ export function PublicDirectoryView({ tenants }: Props) {
           <source src="/videos/directory-bg.mp4" type="video/mp4" />
           <source src="/videos/directory-bg.webm" type="video/webm" />
         </video>
-        <AsciiVideoOverlay videoRef={videoRef} />
         {/* Dark Overlay for Readability and Contrast */}
         <div className="absolute inset-0 bg-black/45" />
+        <AsciiVideoOverlay videoRef={videoRef} />
       </div>
 
       <div className="flex-1">
