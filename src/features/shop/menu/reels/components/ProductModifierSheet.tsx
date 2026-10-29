@@ -42,7 +42,6 @@ export default function ProductModifierSheet({
     [item.modifierGroups],
   );
 
-  // Initial selection: for required single-choice groups, select first option by default
   const initialSelections = useMemo(() => {
     const map: Record<string, string[]> = {};
     for (const group of groups) {
@@ -131,7 +130,6 @@ export default function ProductModifierSheet({
     [],
   );
 
-  // Validation: every group must respect its min/max selection bounds
   const isValid = useMemo(() => {
     return groups.every((group) => {
       const selections = selectedOptions[group.id] ?? [];
@@ -142,7 +140,6 @@ export default function ProductModifierSheet({
     });
   }, [groups, selectedOptions]);
 
-  // Calculate total price and selected details
   const { calculatedPrice, totalDelta, selectedCount } = useMemo(() => {
     let delta = 0;
     let count = 0;
@@ -210,7 +207,7 @@ export default function ProductModifierSheet({
       data-testid="product-modifier-overlay"
       className={`fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 select-none pointer-events-auto transition-all duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         showActiveState
-          ? "bg-black/80 backdrop-blur-md opacity-100"
+          ? "bg-black/70 backdrop-blur-xl opacity-100"
           : "bg-black/0 backdrop-blur-none opacity-0"
       }`}
       onClick={triggerAnimatedClose}
@@ -220,49 +217,43 @@ export default function ProductModifierSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modifier-sheet-title"
-        className={`relative flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden bg-[#161822] text-white rounded-[28px] border border-white/15 p-6 shadow-[0_28px_80px_-12px_rgba(0,0,0,0.85),0_0_40px_-10px_rgba(255,77,45,0.22)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`liquid-prism-ring liquid-glass-card relative flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden bg-[#161822] text-[#f4f3f1] rounded-[28px] p-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           showActiveState
             ? "translate-y-0 scale-100 opacity-100"
-            : "translate-y-6 scale-[0.94] opacity-0"
+            : "translate-y-5 scale-[0.95] opacity-0"
         }`}
         style={{
           backgroundColor: "#161822",
         }}
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
-        {/* Top Ambient Highlight */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-24 left-1/2 h-44 w-72 -translate-x-1/2 rounded-full bg-[#ff4d2d]/20 blur-3xl"
-        />
-
         {/* Header */}
-        <div className="relative z-10 flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="relative z-10 flex items-start justify-between gap-3 border-b border-white/[0.08] pb-4">
           <div className="flex min-w-0 items-center gap-3.5">
             {item.image ? (
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black/40 shadow-inner">
+              <div className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-[#202024] ring-1 ring-white/15">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="h-full w-full object-cover"
+                  className="size-full object-cover"
                 />
               </div>
             ) : null}
             <div className="min-w-0 space-y-1">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff4d2d]/30 bg-[#ff4d2d]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#ff7a61]">
-                <span>✦</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-medium text-[#9b9ba4]">
+                <span className="size-1.5 rounded-full bg-[#d97757]" />
                 <span>Dale tu toque</span>
               </span>
               <h3
                 id="modifier-sheet-title"
                 data-testid="modifier-sheet-title"
-                className="truncate text-xl font-extrabold leading-tight text-white"
+                className="truncate text-xl font-medium tracking-tight text-[#f4f3f1]"
               >
                 {item.name}
               </h3>
               <p
                 data-testid="modifier-sheet-subtitle"
-                className="text-xs font-medium text-zinc-300"
+                className="text-xs text-[#9b9ba4]"
               >
                 Acompañá tu pedido con un adicional
               </p>
@@ -274,14 +265,14 @@ export default function ProductModifierSheet({
             data-testid="modifier-sheet-close-btn"
             onClick={triggerAnimatedClose}
             aria-label="Cerrar opciones"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-neutral-300 transition-all duration-200 hover:scale-105 hover:border-white/25 hover:bg-white/15 hover:text-white active:scale-95 cursor-pointer"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] text-xs text-[#9b9ba4] transition duration-200 hover:bg-white/15 hover:text-[#f4f3f1] active:scale-95 cursor-pointer"
           >
             ✕
           </button>
         </div>
 
-        {/* Options Groups */}
-        <div className="relative z-10 mt-4 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+        {/* Options Groups (Dabbit Divided Widget Style) */}
+        <div className="relative z-10 mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           {groups.map((group) => {
             const currentSelected = selectedOptions[group.id] ?? [];
             const minSelect = groupMinSelect(group);
@@ -291,14 +282,14 @@ export default function ProductModifierSheet({
               <div
                 key={group.id}
                 data-testid={`modifier-group-${group.id}`}
-                className="space-y-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3.5"
+                className="space-y-2.5"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2 px-0.5">
                   <div>
-                    <span className="block text-sm font-bold tracking-tight text-white">
+                    <span className="block text-sm font-medium tracking-tight text-[#f4f3f1]">
                       {group.name}
                     </span>
-                    <p className="mt-0.5 text-[11px] text-zinc-400">
+                    <p className="mt-0.5 text-xs text-[#9b9ba4]">
                       {isSingleSelect
                         ? minSelect > 0
                           ? "Elegí tu opción preferida"
@@ -307,18 +298,18 @@ export default function ProductModifierSheet({
                     </p>
                   </div>
                   {minSelect > 0 ? (
-                    <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                    <span className="shrink-0 rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-[#f4f3f1]">
                       Requerido
                     </span>
                   ) : (
-                    <span className="shrink-0 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[11px] font-medium text-[#9b9ba4]">
                       Sugerido
                     </span>
                   )}
                 </div>
 
                 <div
-                  className="space-y-2 pt-1"
+                  className="divide-y divide-white/[0.08] overflow-hidden rounded-2xl border border-white/10 bg-[#141416]/75"
                   data-testid="modifier-options-group"
                 >
                   {group.options.map((option: ProductModifierOption) => {
@@ -336,37 +327,36 @@ export default function ProductModifierSheet({
                           handleToggleOption(group, option.id, isSingleSelect)
                         }
                         aria-disabled={reachedLimit}
-                        className={`group flex items-center justify-between gap-3 rounded-xl border p-3.5 transition-all duration-200 ${
+                        className={`group flex items-center justify-between gap-3 px-4 py-3.5 transition duration-200 ${
                           isSelected
-                            ? "border-[#ff4d2d] bg-[#ff4d2d]/15 text-white shadow-[0_6px_20px_-6px_rgba(255,77,45,0.45)] scale-[1.01] cursor-pointer"
+                            ? "bg-white/[0.09] text-[#f4f3f1] cursor-pointer"
                             : reachedLimit
-                              ? "border-transparent bg-white/[0.02] text-neutral-500 opacity-50 cursor-not-allowed"
-                              : "border-white/8 bg-white/[0.04] text-neutral-200 hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.99] cursor-pointer"
+                              ? "text-[#9b9ba4]/40 opacity-50 cursor-not-allowed"
+                              : "text-[#f4f3f1]/90 hover:bg-white/[0.04] cursor-pointer"
                         }`}
                       >
                         <div className="flex min-w-0 items-center gap-3">
-                          {/* Radio / checkbox visual indicator */}
                           <div
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center border-2 transition-all duration-200 ${
-                              isSingleSelect ? "rounded-full" : "rounded-md"
+                            className={`flex size-4.5 shrink-0 items-center justify-center border transition duration-200 ${
+                              isSingleSelect ? "rounded-full" : "rounded-[5px]"
                             } ${
                               isSelected
-                                ? "border-[#ff4d2d] bg-[#ff4d2d] text-white shadow-[0_0_10px_rgba(255,77,45,0.5)]"
-                                : "border-zinc-500 bg-black/20 group-hover:border-zinc-300"
+                                ? "border-[#f4f3f1] bg-[#f4f3f1] text-[#141416]"
+                                : "border-white/25 bg-transparent group-hover:border-white/45"
                             }`}
                           >
                             {isSelected ? (
-                              <span className="text-[11px] font-black leading-none">
+                              <span className="text-[10px] font-bold leading-none">
                                 ✓
                               </span>
                             ) : null}
                           </div>
                           <div className="min-w-0 space-y-0.5">
-                            <span className="block text-sm font-semibold leading-snug text-white">
+                            <span className="block text-sm font-medium leading-snug text-[#f4f3f1]">
                               {option.name}
                             </span>
                             {option.description ? (
-                              <p className="text-xs leading-4 text-zinc-400">
+                              <p className="text-xs leading-4 text-[#9b9ba4]">
                                 {option.description}
                               </p>
                             ) : null}
@@ -374,12 +364,12 @@ export default function ProductModifierSheet({
                         </div>
 
                         <span
-                          className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums transition-colors ${
                             isSelected
-                              ? "bg-[#ff4d2d] text-white"
+                              ? "bg-[#f4f3f1] text-[#141416]"
                               : option.priceDelta && option.priceDelta > 0
-                                ? "bg-white/8 text-emerald-400 group-hover:bg-white/12"
-                                : "bg-emerald-500/15 text-emerald-300"
+                                ? "border border-white/10 bg-white/[0.04] text-[#f4f3f1]"
+                                : "text-[#9ec4b5]"
                           }`}
                         >
                           {option.priceDelta && option.priceDelta > 0
@@ -395,17 +385,17 @@ export default function ProductModifierSheet({
           })}
         </div>
 
-        {/* Footer Summary & CTA Confirmation Button */}
-        <div className="relative z-10 mt-4 border-t border-white/10 pt-4 space-y-2.5">
-          <div className="flex items-center justify-between px-1 text-xs text-zinc-400">
+        {/* Footer Summary & Dabbit Pill CTA */}
+        <div className="relative z-10 mt-5 border-t border-white/[0.08] pt-4 space-y-3">
+          <div className="flex items-center justify-between px-1 text-xs text-[#9b9ba4] tabular-nums">
             <span>
               {selectedCount > 0
                 ? `${selectedCount} ${selectedCount === 1 ? "adicional elegido" : "adicionales elegidos"}`
                 : "Sin adicionales extra"}
             </span>
             {totalDelta > 0 ? (
-              <span className="font-semibold text-emerald-400">
-                Adicionales +${formatReelPrice(totalDelta)}
+              <span className="font-medium text-[#f4f3f1]">
+                +${formatReelPrice(totalDelta)} en adicionales
               </span>
             ) : (
               <span>Base ${formatReelPrice(item.price)}</span>
@@ -417,14 +407,14 @@ export default function ProductModifierSheet({
             data-testid="modifier-confirm-btn"
             disabled={!isValid}
             onClick={handleConfirm}
-            className="flex w-full items-center justify-between rounded-2xl bg-[#ff4d2d] px-5 py-4 text-base font-extrabold tracking-wide text-white shadow-[0_10px_28px_-4px_rgba(255,77,45,0.5)] transition-all duration-200 hover:bg-[#ff5c3e] hover:shadow-[0_14px_32px_-4px_rgba(255,77,45,0.65)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+            className="flex h-11 w-full items-center justify-between rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] shadow-lg transition duration-200 ease-out hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
           >
             <span>
               {selectedCount > 0
                 ? "Sumar a mi pedido"
                 : "Confirmar sin adicionales"}
             </span>
-            <span className="rounded-xl bg-black/25 px-3 py-1 text-sm font-black text-white">
+            <span className="rounded-full bg-[#141416]/12 px-3 py-0.5 text-xs font-semibold tabular-nums text-[#141416]">
               ${formatReelPrice(calculatedPrice)}
             </span>
           </button>

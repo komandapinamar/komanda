@@ -4,16 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { PublicDirectoryTenant } from "@/features/tenancy/application/public-tenant.service";
-import {
-  buildGoogleMapsDirectUrl,
-} from "@/features/directory/utils/directory-maps";
+import { buildGoogleMapsDirectUrl } from "@/features/directory/utils/directory-maps";
 import { LocationMapPreview } from "@/features/location/web/LocationMapPreview";
-import type {
-  SearchResultData,
-} from "@/features/search/domain/search.schemas";
+import type { SearchResultData } from "@/features/search/domain/search.schemas";
 import { ProductSearchResultCard } from "@/features/directory/web/ProductSearchResultCard";
 import { OpeningHoursSummary } from "@/features/directory/web/OpeningHoursSummary";
 import { AsciiVideoOverlay } from "@/features/directory/web/AsciiVideoOverlay";
+import { LiquidGlassMark } from "@/features/directory/web/LiquidGlassMark";
 import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
 
 export type DirectoryTenantItem = PublicDirectoryTenant & {
@@ -35,13 +32,24 @@ export function PublicDirectoryView({ tenants }: Props) {
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<SearchResultData | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResultData | null>(
+    null,
+  );
 
   useEffect(() => {
-    let lastScrollY = Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop);
+    let lastScrollY = Math.max(
+      window.scrollY,
+      document.documentElement.scrollTop,
+      document.body.scrollTop,
+    );
     const onScroll = () => {
-      const scrollY = Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop);
-      const pinned = (headerSlotRef.current?.getBoundingClientRect().top ?? 1) < 0;
+      const scrollY = Math.max(
+        window.scrollY,
+        document.documentElement.scrollTop,
+        document.body.scrollTop,
+      );
+      const pinned =
+        (headerSlotRef.current?.getBoundingClientRect().top ?? 1) < 0;
       setIsPinned(pinned);
       if (!pinned) {
         setShowRegister(true);
@@ -52,7 +60,10 @@ export function PublicDirectoryView({ tenants }: Props) {
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    document.addEventListener("scroll", onScroll, {
+      capture: true,
+      passive: true,
+    });
     const frame = window.requestAnimationFrame(onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -64,12 +75,19 @@ export function PublicDirectoryView({ tenants }: Props) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const motionPreference = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
     video.defaultMuted = true;
     video.muted = true;
 
     const play = () => {
-      if (document.hidden || motionPreference.matches || autoplayBlocked.current) return;
+      if (
+        document.hidden ||
+        motionPreference.matches ||
+        autoplayBlocked.current
+      )
+        return;
       video.play().catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "NotAllowedError") {
           autoplayBlocked.current = true;
@@ -167,7 +185,6 @@ export function PublicDirectoryView({ tenants }: Props) {
     };
   }, [searchTerm]);
 
-  // Client-side fallback filter if server search fails or is empty
   const fallbackFilteredTenants = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return tenants;
@@ -181,7 +198,8 @@ export function PublicDirectoryView({ tenants }: Props) {
   }, [tenants, searchTerm]);
 
   const hasSearchQuery = searchTerm.trim().length > 0;
-  const isServerSearchActive = hasSearchQuery && searchResults !== null && !searchError;
+  const isServerSearchActive =
+    hasSearchQuery && searchResults !== null && !searchError;
 
   const directoryById = useMemo(
     () => new Map(tenants.map((tenant) => [tenant.id, tenant])),
@@ -196,8 +214,8 @@ export function PublicDirectoryView({ tenants }: Props) {
     : fallbackFilteredTenants.length;
 
   return (
-    <div className="relative flex min-h-[150svh] flex-col justify-between overflow-x-clip text-zinc-100">
-      {/* Background Video Layer */}
+    <div className="relative flex min-h-svh flex-col justify-between overflow-x-clip bg-[#141416] text-[#f4f3f1] antialiased">
+      {/* Background Video & Live ASCII Layer */}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[100svh] overflow-hidden bg-cover bg-center bg-[url('/videos/directory-bg-poster.webp')]">
         <video
           ref={videoRef}
@@ -216,294 +234,374 @@ export function PublicDirectoryView({ tenants }: Props) {
           <source src="/videos/directory-bg.mp4" type="video/mp4" />
           <source src="/videos/directory-bg.webm" type="video/webm" />
         </video>
-        {/* Dark Overlay for Readability and Contrast */}
-        <div className="absolute inset-0 bg-black/45" />
         <AsciiVideoOverlay videoRef={videoRef} />
       </div>
 
-      <div className="flex-1">
-        {/* Top Navigation */}
-        <div ref={headerSlotRef} className="relative z-30 h-[65px]">
-          <header className={`${isPinned ? "fixed inset-x-0 top-0 z-50" : "relative"} border-b-2 border-white/10 bg-black/60 px-6 py-4 backdrop-blur-md`}>
-            <div className="mx-auto flex max-w-6xl items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Link
-                  className="text-2xl font-black tracking-tighter text-white transition hover:text-[var(--color-accent-secondary)]"
-                  href="/"
-                >
-                  Komanda
-                </Link>
-              </div>
-              <div
-                aria-hidden={isPinned && !showRegister}
-                className={`flex items-center overflow-hidden transition-[max-width,opacity,transform] duration-300 ease-out motion-reduce:transition-none ${isPinned && !showRegister ? "pointer-events-none max-w-0 translate-x-2 opacity-0" : "max-w-48 translate-x-0 opacity-100"}`}
-              >
-                <Link
-                  href="/register"
-                  tabIndex={isPinned && !showRegister ? -1 : undefined}
-                  className="whitespace-nowrap rounded-lg bg-[var(--color-accent-secondary)] px-4 py-1.5 text-xs font-semibold text-[var(--color-accent-primary)] transition hover:bg-[var(--color-accent-tertiary)] hover:opacity-90"
-                >
-                  Registrar Negocio
-                </Link>
-              </div>
-            </div>
-          </header>
-        </div>
-
-        {/* Hero Section */}
-        <section className="relative z-10 mx-auto max-w-6xl px-6 pt-20 pb-12 text-center">
-          <h1 className="mb-6 text-6xl font-black uppercase leading-[0.9] tracking-tighter text-white md:text-7xl drop-shadow-lg">
-            Pedí, Pagá y Disfrutá.
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg font-bold text-zinc-300 drop-shadow">
-            Explorá nuestra oferta gastronómica y gestioná tu pedido en segundos.
-          </p>
-
-          {/* Search Bar */}
-          <div className="mx-auto mt-10 max-w-xl">
-            <div className="relative">
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscá productos, negocios o ubicaciones..."
-                className="w-full rounded-2xl bg-white/95 px-6 py-4 text-base font-normal text-zinc-900 placeholder:text-zinc-500 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-[var(--color-accent-secondary)]"
-              />
-              {isSearching && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-black" />
+      {/* Architectural Dabbit Stage Container */}
+      <div className="relative z-10 flex min-h-svh w-full flex-1 flex-col justify-between 2xl:mx-auto 2xl:max-w-[1440px] 2xl:border-x 2xl:border-white/[0.08]">
+        <div>
+          {/* Floating Liquid Glass Pill Navigation */}
+          <div ref={headerSlotRef} className="relative z-30 h-[65px]">
+            <header
+              className={`${
+                isPinned ? "fixed inset-x-0 top-4 z-50" : "relative pt-4"
+              } px-5 sm:px-8 lg:px-10`}
+            >
+              <div className="liquid-glass-pill mx-auto flex max-w-4xl items-center justify-between rounded-full px-4 py-2">
+                <div className="flex items-center gap-2.5 pl-1">
+                  <LiquidGlassMark className="size-6" />
+                  <Link
+                    className="text-base font-medium tracking-tight text-[#f4f3f1] transition hover:opacity-80"
+                    href="/"
+                  >
+                    Komanda
+                  </Link>
                 </div>
-              )}
-            </div>
 
-            <div className="mt-3 flex items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-400">
-              <span>
-                {hasSearchQuery
-                  ? isServerSearchActive
-                    ? `${products.length} productos y ${businesses.length} locales encontrados`
-                    : `${totalResultsCount} resultados`
-                  : `${tenants.length} locales disponibles`}
-              </span>
-              {hasSearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="text-zinc-400 hover:text-white underline cursor-pointer"
-                >
-                  Limpiar
-                </button>
-              )}
-            </div>
-
-            {searchError && (
-              <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-950/40 p-3 text-left text-xs text-amber-200">
-                <p className="font-semibold">Búsqueda en vivo no disponible: {searchError}</p>
-                <p className="mt-0.5 text-amber-300/80">Mostrando comercios disponibles localmente.</p>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    className="rounded-full px-3.5 py-1.5 text-xs font-medium text-[#9b9ba4] transition hover:text-[#f4f3f1]"
+                  >
+                    Ingresar
+                  </Link>
+                  <div
+                    aria-hidden={isPinned && !showRegister}
+                    className={`flex items-center overflow-hidden transition-[max-width,opacity,transform] duration-300 ease-out motion-reduce:transition-none ${
+                      isPinned && !showRegister
+                        ? "pointer-events-none max-w-0 translate-x-2 opacity-0"
+                        : "max-w-48 translate-x-0 opacity-100"
+                    }`}
+                  >
+                    <Link
+                      href="/register"
+                      tabIndex={isPinned && !showRegister ? -1 : undefined}
+                      className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white active:scale-[0.98]"
+                    >
+                      Registrar Negocio
+                    </Link>
+                  </div>
+                </div>
               </div>
-            )}
+            </header>
           </div>
-        </section>
 
-        {/* Search Results / Tenants Grid */}
-        <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 space-y-12">
-          {/* SECTION 1: PRODUCTOS (when searching on server and products exist) */}
-          {isServerSearchActive && products.length > 0 && (
-            <div className="space-y-6">
-              <div className="border-b-2 border-white/20 pb-3 flex items-center justify-between">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-                  <span>Productos</span>
-                  <span className="rounded-full bg-[var(--color-accent-secondary)] px-2.5 py-0.5 text-xs text-black">
-                    {products.length}
-                  </span>
-                </h2>
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {products.map((product) => (
-                  <ProductSearchResultCard key={product.itemId} product={product} />
-                ))}
+          {/* Dabbit Editorial Split Hero */}
+          <section className="grid w-full grid-cols-1 gap-8 border-b border-white/[0.08] px-5 pt-12 pb-12 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:px-10 lg:pt-16 lg:pb-14">
+            <div className="max-w-xl space-y-6 text-pretty">
+              <LiquidGlassMark className="size-16" />
+              <div className="space-y-3">
+                <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1] sm:text-5xl lg:text-balance">
+                  Pedí, pagá y disfrutá sin filas.
+                </h1>
+                <p className="text-base/6 text-[#9b9ba4] sm:text-lg/7">
+                  Explorá comercios y cartas digitales en vivo. Elegí tus platos
+                  o productos, personalizalos a tu gusto y retiralos listos.
+                </p>
               </div>
             </div>
-          )}
 
-          {/* SECTION 2: COMERCIOS (either from server search or initial directory list) */}
-          {(!isServerSearchActive || businesses.length > 0 || !hasSearchQuery) && (
-            <div className="space-y-6">
-              {isServerSearchActive && (
-                <div className="border-b-2 border-white/20 pb-3 flex items-center justify-between">
-                  <h2 className="text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-                    <span>Comercios</span>
-                    <span className="rounded-full bg-[var(--color-accent-secondary)] px-2.5 py-0.5 text-xs text-black">
-                      {businesses.length}
+            {/* Liquid Glass Loupe Search Module */}
+            <div className="w-full">
+              <div className="liquid-prism-ring liquid-glass-card rounded-3xl p-4 sm:p-5">
+                <div className="relative flex items-center">
+                  <svg
+                    className="pointer-events-none absolute left-4 size-4 text-[#9b9ba4]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscá productos, negocios o ubicaciones..."
+                    className="h-11 w-full rounded-full border border-white/10 bg-[#141416]/85 pl-11 pr-10 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4]/75 focus:border-white/30 focus:outline-none focus:ring-2 focus:ring-white/15"
+                  />
+                  {isSearching && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <span className="inline-block size-4 animate-spin rounded-full border-2 border-white/25 border-t-[#f4f3f1]" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between px-2 text-xs text-[#9b9ba4] tabular-nums">
+                  <span className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-emerald-400" />
+                    {hasSearchQuery
+                      ? isServerSearchActive
+                        ? `${products.length} productos · ${businesses.length} locales`
+                        : `${totalResultsCount} resultados`
+                      : `${tenants.length} ${tenants.length === 1 ? "local disponible" : "locales disponibles"}`}
+                  </span>
+                  {hasSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm("")}
+                      className="font-medium text-[#f4f3f1] transition hover:opacity-75 cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                {searchError && (
+                  <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-3.5 py-2.5 text-left text-xs text-amber-200">
+                    <p className="font-medium">
+                      Búsqueda en vivo no disponible: {searchError}
+                    </p>
+                    <p className="mt-0.5 text-amber-200/70">
+                      Mostrando comercios disponibles localmente.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Search Results / Tenants Architectural Grid */}
+          <section className="w-full px-5 py-10 sm:px-8 lg:px-10 space-y-12">
+            {/* SECTION 1: PRODUCTOS */}
+            {isServerSearchActive && products.length > 0 && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <h2 className="flex items-center gap-2.5 text-xl font-medium tracking-tight text-[#f4f3f1]">
+                    <span>Productos encontrados</span>
+                    <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-xs font-medium text-[#9b9ba4] tabular-nums">
+                      {products.length}
                     </span>
                   </h2>
                 </div>
-              )}
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-                {(isServerSearchActive ? businesses : fallbackFilteredTenants).map((tenant) => {
-                  const storefrontUrl =
-                    "storefrontUrl" in tenant
-                      ? (tenant as DirectoryTenantItem).storefrontUrl
-                      : `${buildStorefrontUrl(tenant.slug, typeof window !== "undefined" ? { host: window.location.host, protocol: window.location.protocol } : undefined)}/order`;
-                  const directoryTenant = directoryById.get(tenant.id);
-                  const openingHours = directoryTenant?.openingHours ?? null;
-                  const contactPhone = directoryTenant?.contactPhone ?? null;
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {products.map((product) => (
+                    <ProductSearchResultCard
+                      key={product.itemId}
+                      product={product}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-                  return (
-                    <article
-                      key={tenant.id}
-                      data-testid="search-business-card"
-                      className="flex flex-col justify-between rounded-xl border-2 border-zinc-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] backdrop-blur-2xl p-6 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0_var(--color-zinc-200)]"
-                    >
-                      <div>
-                        <div className="flex items-start gap-4">
-                          <div className="flex  shrink-0 items-center justify-center rounded-sm border-3 border-black bg-[var(--color-accent-secondary)] text-2xl font-black text-black shadow-[0px_0px_0px_3px_var(--color-zinc-100)]">
-                            {/*
-                              refill hardcodeado para mostrar el logo real, sin necesitar bucket en infra
-                            */}
-                            {tenant.name === "refill" ? (
-                              <Image
-                                src="/images/logo_refill.jpg"
-                                alt={tenant.name}
-                                width={40}
-                                height={40}
-                                className="h-10 w-10 object-contain"
+            {/* SECTION 2: COMERCIOS */}
+            {(!isServerSearchActive ||
+              businesses.length > 0 ||
+              !hasSearchQuery) && (
+              <div className="space-y-5">
+                {isServerSearchActive && (
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                    <h2 className="flex items-center gap-2.5 text-xl font-medium tracking-tight text-[#f4f3f1]">
+                      <span>Comercios</span>
+                      <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-xs font-medium text-[#9b9ba4] tabular-nums">
+                        {businesses.length}
+                      </span>
+                    </h2>
+                  </div>
+                )}
+
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+                  {(isServerSearchActive
+                    ? businesses
+                    : fallbackFilteredTenants
+                  ).map((tenant) => {
+                    const storefrontUrl =
+                      "storefrontUrl" in tenant
+                        ? (tenant as DirectoryTenantItem).storefrontUrl
+                        : `${buildStorefrontUrl(tenant.slug, typeof window !== "undefined" ? { host: window.location.host, protocol: window.location.protocol } : undefined)}/order`;
+                    const directoryTenant = directoryById.get(tenant.id);
+                    const openingHours = directoryTenant?.openingHours ?? null;
+                    const contactPhone = directoryTenant?.contactPhone ?? null;
+
+                    return (
+                      <article
+                        key={tenant.id}
+                        data-testid="search-business-card"
+                        className="liquid-prism-ring liquid-glass-card flex flex-col justify-between rounded-3xl p-6 sm:p-7 transition duration-300 ease-out hover:-translate-y-0.5"
+                      >
+                        <div>
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex min-w-0 items-center gap-3.5">
+                              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f4f3f1] text-lg font-semibold text-[#141416] ring-1 ring-white/15">
+                                {tenant.name === "refill" ? (
+                                  <Image
+                                    src="/images/logo_refill.jpg"
+                                    alt={tenant.name}
+                                    width={48}
+                                    height={48}
+                                    className="size-full object-cover"
+                                  />
+                                ) : (
+                                  tenant.name.slice(0, 1).toUpperCase()
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <h2 className="truncate text-2xl font-medium tracking-tight text-[#f4f3f1]">
+                                  {tenant.name}
+                                </h2>
+                                <p className="text-xs font-medium text-[#9b9ba4]">
+                                  @{tenant.slug}
+                                </p>
+                              </div>
+                            </div>
+
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-[#9b9ba4]">
+                              <span className="size-1.5 rounded-full bg-emerald-400" />
+                              Online
+                            </span>
+                          </div>
+
+                          {/* Divided Info Panel (Dabbit Widget Style) */}
+                          <div className="mt-6 divide-y divide-white/[0.08] overflow-hidden rounded-2xl border border-white/10 bg-[#141416]/65 text-xs">
+                            <div className="p-3.5">
+                              <div className="mb-2 flex items-center justify-between text-[#9b9ba4]">
+                                <span className="font-medium">
+                                  Horarios de atención
+                                </span>
+                              </div>
+                              <OpeningHoursSummary
+                                openingHours={openingHours}
                               />
-                            ) : (
-                              tenant.name.slice(0, 1).toUpperCase()
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h2 className="truncate text-3xl font-black uppercase tracking-tight text-white underline">
-                              {tenant.name}
-                            </h2>
-                            <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                              @{tenant.slug}
-                            </p>
-                          </div>
-                        </div>
+                            </div>
 
-                        <div className="mt-5 space-y-3">
-                          <div className="rounded-xl border-3 border-black bg-zinc-950/60 p-3 shadow-[3px_3px_0_0_black]">
-                            <div className="flex items-center justify-between border-b-2 border-white/10 pb-1.5">
-                              <span className="text-[11px] font-black uppercase tracking-wider text-zinc-300">
-                                Horarios de apertura
-                              </span>
-                            </div>
-                            <div className="mt-2">
-                              <OpeningHoursSummary openingHours={openingHours} />
-                            </div>
                             {contactPhone ? (
-                              <div className="mt-2 flex items-center justify-between gap-3 border-t border-white/10 pt-2">
-                                <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                                  Celular
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <span className="font-medium text-[#9b9ba4]">
+                                  Contacto directo
                                 </span>
                                 <a
                                   href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}
-                                  className="text-sm font-semibold text-white underline decoration-zinc-500 underline-offset-2 transition hover:text-[var(--color-accent-secondary)]"
+                                  className="font-medium text-[#f4f3f1] tabular-nums underline decoration-white/25 underline-offset-4 transition hover:decoration-white"
                                 >
                                   {contactPhone}
                                 </a>
                               </div>
                             ) : null}
-                          </div>
 
-                          {/* Mapa abierto del local confirmado */}
-                          <div className="pt-1">
-                            <div className="overflow-hidden rounded-xl border-3 border-black bg-zinc-100 shadow-[3px_3px_0_0_black]">
-                              <div className="flex items-center justify-between border-b-2 border-black bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-800">
-                                <span className="truncate text-[11px] font-bold text-zinc-700">
-                                  Ubicación
-                                </span>
-                                <a
-                                  href={buildGoogleMapsDirectUrl(tenant.mapQuery)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="shrink-0 text-[10px] font-black uppercase tracking-wide text-zinc-900 underline hover:text-black"
-                                  title="Abrir en Google Maps"
-                                >
-                                  Como llegar ↗
-                                </a>
-                              </div>
-                              <div className="relative h-44 w-full bg-zinc-200">
-                                <LocationMapPreview
-                                  lat={tenant.lat}
-                                  lng={tenant.lng}
-                                  name={tenant.name}
-                                />
+                            {/* Map Loupe Frame */}
+                            <div className="p-2">
+                              <div className="relative overflow-hidden rounded-xl ring-1 ring-white/10">
+                                <div className="relative h-44 w-full bg-[#202024]">
+                                  <LocationMapPreview
+                                    lat={tenant.lat}
+                                    lng={tenant.lng}
+                                    name={tenant.name}
+                                  />
+                                </div>
+                                <div className="pointer-events-none absolute inset-x-0 bottom-2.5 z-20 flex justify-center px-3">
+                                  <a
+                                    href={buildGoogleMapsDirectUrl(
+                                      tenant.mapQuery,
+                                    )}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="pointer-events-auto inline-flex h-7 items-center gap-2 rounded-full border border-white/15 bg-[#141416]/90 px-3 text-[11px] font-medium text-[#f4f3f1] shadow-lg backdrop-blur-md transition hover:bg-[#141416]"
+                                    title="Abrir en Google Maps"
+                                  >
+                                    <span className="size-2 rounded-full bg-[#d97757]" />
+                                    <span>Cómo llegar</span>
+                                    <span className="text-[#9b9ba4]">↗</span>
+                                  </a>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="mt-8">
-                        <a
-                          href={storefrontUrl}
-                          className="block w-full rounded-xl border-2 border-[var(--color-zinc-200)] py-3 px-4 text-center text-sm font-black uppercase tracking-wider text-[var(--color-accent-secondary)] shadow-[3px_3px_0_0_black] transition hover:bg-zinc-500 active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0_0_white]"
-                        >
-                          Ver Menú & Pedir →
-                        </a>
-                      </div>
-                    </article>
-                  );
-                })}
+                        {/* Primary Pill Action */}
+                        <div className="mt-6 flex items-center justify-between gap-3">
+                          <a
+                            href={storefrontUrl}
+                            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition duration-200 ease-out hover:bg-white active:scale-[0.98]"
+                          >
+                            <span>Ver carta y pedir</span>
+                            <span aria-hidden="true">→</span>
+                          </a>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* EMPTY STATES */}
-          {((isServerSearchActive && products.length === 0 && businesses.length === 0) ||
-            (!isServerSearchActive && fallbackFilteredTenants.length === 0)) && (
-            <div className="rounded-2xl border-4 border-dashed border-white/30 bg-black/40 p-12 text-center backdrop-blur-sm">
-              {tenants.length === 0 ? (
-                <div className="mx-auto max-w-md space-y-4">
-                  <p className="text-2xl font-black uppercase text-white">
-                    No hay locales activos disponibles
-                  </p>
-                  <p className="text-sm font-bold text-zinc-300">
-                    Actualmente no hay locales gastronómicos disponibles para pedir. Si administrás un local, ingresá a tu panel.
-                  </p>
-                  <Link
-                    href="/login"
-                    className="inline-block rounded-xl border-3 border-black bg-[var(--color-accent-secondary)] px-6 py-3 text-sm font-black uppercase tracking-wider text-black shadow-[3px_3px_0_0_black]"
-                  >
-                    Ir al Panel de Administración
-                  </Link>
-                </div>
-              ) : (
-                <div className="mx-auto max-w-md space-y-3">
-                  <p className="text-xl font-black uppercase text-white">
-                    No se encontraron productos ni locales
-                  </p>
-                  <p className="text-sm font-bold text-zinc-300">
-                    Ningún producto ni comercio coincide con &ldquo;{searchTerm}&rdquo;. Intentá con otro término de búsqueda.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    className="mt-2 text-sm font-black underline uppercase text-[var(--color-accent-secondary)] hover:text-amber-300 cursor-pointer"
-                  >
-                    Restablecer búsqueda
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      </div>
+            {/* EMPTY STATES */}
+            {((isServerSearchActive &&
+              products.length === 0 &&
+              businesses.length === 0) ||
+              (!isServerSearchActive &&
+                fallbackFilteredTenants.length === 0)) && (
+              <div className="liquid-glass-card rounded-3xl p-12 text-center">
+                {tenants.length === 0 ? (
+                  <div className="mx-auto max-w-md space-y-4">
+                    <p className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+                      No hay locales activos disponibles
+                    </p>
+                    <p className="text-sm text-[#9b9ba4]">
+                      Actualmente no hay comercios disponibles para pedir. Si
+                      administrás un local, ingresá a tu panel.
+                    </p>
+                    <Link
+                      href="/login"
+                      className="inline-flex h-9 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
+                    >
+                      Ir al panel de administración
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mx-auto max-w-md space-y-3">
+                    <p className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+                      Sin resultados para &ldquo;{searchTerm}&rdquo;
+                    </p>
+                    <p className="text-sm text-[#9b9ba4]">
+                      Probá buscando otro plato, bebida o nombre de comercio.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm("")}
+                      className="mt-2 inline-flex h-9 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/10 cursor-pointer"
+                    >
+                      Restablecer búsqueda
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
 
-      {/* Footer */}
-      <footer className="relative z-10 mt-auto border-t border-white/10 bg-black/60 px-6 py-6 backdrop-blur-md mb-0">
-        <div className="mx-auto flex flex-col items-center justify-between gap-4 text-center">
-          <div>
-            <Link href="/login" className="text-2xl font-normal text-white tracking-tighter">
+        {/* Minimal Dabbit Footer */}
+        <footer className="mt-auto flex w-full flex-col items-start justify-between gap-4 border-t border-white/[0.08] px-5 py-6 text-xs text-[#9b9ba4] sm:flex-row sm:items-center sm:px-8 lg:px-10">
+          <div className="flex items-center gap-2.5">
+            <LiquidGlassMark className="size-5" />
+            <span className="font-medium text-[#f4f3f1]">Komanda</span>
+            <span>·</span>
+            <span>Plataforma gastronómica y retail</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link
+              className="font-medium text-[#9b9ba4] transition hover:text-[#f4f3f1]"
+              href="/login"
+            >
               Komanda Business
             </Link>
+            <Link
+              className="font-medium text-[#9b9ba4] transition hover:text-[#f4f3f1]"
+              href="/register"
+            >
+              Sumar mi comercio
+            </Link>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

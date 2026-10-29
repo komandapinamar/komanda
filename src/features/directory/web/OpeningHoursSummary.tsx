@@ -10,20 +10,20 @@ export function OpeningHoursSummary({
   openingHours?: OpeningHours | null;
 }) {
   if (!hasOpeningHours(openingHours)) {
-    return <p className="text-sm text-zinc-400">Horarios no informados.</p>;
+    return <p className="text-xs text-[#9b9ba4]">Horarios no informados.</p>;
   }
 
   return (
-    <dl className="grid gap-1">
+    <dl className="divide-y divide-white/[0.06] tabular-nums">
       {formatOpeningHoursLines(openingHours).map((line) => (
         <div
           key={line.days}
-          className="flex items-baseline justify-between gap-3"
+          className="flex items-baseline justify-between gap-3 py-1 first:pt-0 last:pb-0"
         >
-          <dt className="shrink-0 text-xs font-bold uppercase tracking-wide text-zinc-400">
+          <dt className="shrink-0 text-xs font-medium text-[#9b9ba4]">
             {line.days}
           </dt>
-          <dd className="text-right text-sm font-semibold text-white">
+          <dd className="text-right text-xs font-medium text-[#f4f3f1]">
             {line.schedule}
           </dd>
         </div>

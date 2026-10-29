@@ -3,9 +3,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export const categoryPillClassName = "flex h-11 shrink-0 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-inset";
-export const inactiveCategoryPillClassName = "border-white/15 bg-white/5 text-slate-200 hover:border-white/30 hover:bg-white/10 hover:text-white";
-export const activeCategoryPillClassName = "border-white bg-white text-black shadow-sm";
+export const categoryPillClassName =
+  "flex h-9 shrink-0 items-center rounded-full border px-4 text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-inset";
+export const inactiveCategoryPillClassName =
+  "border-transparent bg-transparent text-[#9b9ba4] hover:bg-white/[0.06] hover:text-[#f4f3f1]";
+export const activeCategoryPillClassName =
+  "border-transparent bg-[#f4f3f1] text-[#141416] shadow-sm";
 
 export default function MenuViewToolbar({
   mode,
@@ -17,16 +20,29 @@ export default function MenuViewToolbar({
   const switchToGrid = mode === "reels";
 
   return (
-    <div className="pointer-events-auto flex min-w-0 items-center gap-2 rounded-[28px] border border-white/10 bg-[#0f1117]/80 p-1.5 text-white shadow-lg backdrop-blur-xl">
+    <div className="liquid-glass-pill pointer-events-auto flex min-w-0 items-center gap-1.5 rounded-full p-1.5 text-[#f4f3f1]">
       {mode && (
         <Link
           href={switchToGrid ? "/order?view=list" : "/order"}
-          data-testid={switchToGrid ? "reels-view-list-btn" : "classic-view-reels-btn"}
-          aria-label={switchToGrid ? "Ver el menú en grid" : "Volver a reels"}
+          data-testid={
+            switchToGrid ? "reels-view-list-btn" : "classic-view-reels-btn"
+          }
+          aria-label={
+            switchToGrid ? "Ver el menú en grid" : "Volver a reels"
+          }
           title={switchToGrid ? "Ver el menú en grid" : "Volver a reels"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/8 text-[#f4f3f1] transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            className="size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             {switchToGrid ? (
               <>
                 <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -37,7 +53,11 @@ export default function MenuViewToolbar({
             ) : (
               <>
                 <rect x="5" y="2" width="14" height="20" rx="4" />
-                <path d="m10 8 5 4-5 4V8Z" fill="currentColor" stroke="none" />
+                <path
+                  d="m10 8 5 4-5 4V8Z"
+                  fill="currentColor"
+                  stroke="none"
+                />
               </>
             )}
           </svg>

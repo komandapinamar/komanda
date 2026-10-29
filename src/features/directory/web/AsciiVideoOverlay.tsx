@@ -5,7 +5,8 @@ import { useEffect, useRef, type RefObject } from "react";
 const GLYPHS = " .:-=+*#%@";
 
 /**
- * Renders the background logo video as a continuously animated ASCII canvas.
+ * Renders the background logo video as a continuously animated ASCII canvas
+ * tuned to the Dabbit graphite & warm-stone palette.
  */
 export function AsciiVideoOverlay({
   videoRef,
@@ -52,7 +53,7 @@ export function AsciiVideoOverlay({
       sample.width = columns;
       sample.height = rows;
 
-      context.font = `700 ${Math.round(cellSize * 1.05)}px "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+      context.font = `500 ${Math.round(cellSize)}px "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
       context.textAlign = "center";
       context.textBaseline = "middle";
       lastPaint = -Infinity;
@@ -103,7 +104,7 @@ export function AsciiVideoOverlay({
         );
         const data = pixels.getImageData(0, 0, columns, rows).data;
 
-        context.fillStyle = "#050508";
+        context.fillStyle = "#141416";
         context.fillRect(0, 0, width, height);
 
         const cellWidth = width / columns;
@@ -118,9 +119,9 @@ export function AsciiVideoOverlay({
             const b = data[offset + 2] ?? 0;
 
             const luminance = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
-            if (luminance < 0.012) continue;
+            if (luminance < 0.015) continue;
 
-            const boosted = Math.min(1, Math.pow(luminance, 0.5) * 1.28);
+            const boosted = Math.min(1, Math.pow(luminance, 0.55) * 1.2);
             const glyphIndex = Math.min(
               GLYPHS.length - 1,
               Math.max(1, Math.floor(boosted * GLYPHS.length)),
@@ -128,11 +129,12 @@ export function AsciiVideoOverlay({
             const glyph = GLYPHS[glyphIndex];
             if (!glyph || glyph === " ") continue;
 
-            const cr = Math.min(255, Math.round(r * 1.4 + 80));
-            const cg = Math.min(255, Math.round(g * 1.4 + 85));
-            const cb = Math.min(255, Math.round(b * 1.4 + 95));
+            const alpha = Math.min(0.68, 0.14 + boosted * 0.55);
+            const cr = Math.min(244, Math.round(r * 0.9 + 110));
+            const cg = Math.min(243, Math.round(g * 0.9 + 108));
+            const cb = Math.min(241, Math.round(b * 0.9 + 115));
 
-            context.fillStyle = `rgb(${cr} ${cg} ${cb})`;
+            context.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${alpha})`;
             context.fillText(glyph, (x + 0.5) * cellWidth, cy);
           }
         }

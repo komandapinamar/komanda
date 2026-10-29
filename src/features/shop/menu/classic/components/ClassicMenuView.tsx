@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import MenuViewToolbar, { categoryPillClassName, inactiveCategoryPillClassName } from "../../MenuViewToolbar";
+import MenuViewToolbar, {
+  categoryPillClassName,
+  inactiveCategoryPillClassName,
+} from "../../MenuViewToolbar";
 import OrderProductCard from "@/features/shop/order/components/OrderProductCard";
 import OrderShell from "@/features/shop/order/components/OrderShell";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
@@ -37,13 +40,24 @@ export default function ClassicMenuView({
 
     const scrollTimer = setTimeout(() => {
       try {
-        const safeId = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(targetItemId) : targetItemId;
+        const safeId =
+          typeof CSS !== "undefined" && CSS.escape
+            ? CSS.escape(targetItemId)
+            : targetItemId;
         const el = document.querySelector(`[data-item-id="${safeId}"]`);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "center" });
-          el.classList.add("ring-4", "ring-[var(--color-accent-secondary)]", "transition-all", "duration-500");
+          el.classList.add(
+            "ring-2",
+            "ring-[var(--color-accent-secondary)]",
+            "transition-all",
+            "duration-500",
+          );
           highlightTimer = setTimeout(() => {
-            el.classList.remove("ring-4", "ring-[var(--color-accent-secondary)]");
+            el.classList.remove(
+              "ring-2",
+              "ring-[var(--color-accent-secondary)]",
+            );
           }, 2500);
         }
       } catch {
@@ -79,12 +93,23 @@ export default function ClassicMenuView({
   return (
     <OrderShell showCart={!isExpressRetail}>
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
-      <main className={`space-y-6 p-4 bg-[var(--color-accent-primary)] min-h-[100dvh] ${showReelsLink ? "pt-24 md:pt-[calc(4vh+6rem)]" : ""}`}>
-        <div className={showReelsLink
-          ? "fixed top-4 left-4 right-4 z-40 md:top-[calc(4vh+1rem)] md:left-1/2 md:right-auto md:w-[calc(28rem-2rem)] md:-translate-x-1/2"
-          : "sticky top-4 z-10"}>
+      <main
+        className={`min-h-[100dvh] space-y-8 bg-[#141416] p-4 sm:p-6 ${
+          showReelsLink ? "pt-24 md:pt-[calc(4vh+6rem)]" : ""
+        }`}
+      >
+        <div
+          className={
+            showReelsLink
+              ? "fixed top-4 left-4 right-4 z-40 md:top-[calc(4vh+1rem)] md:left-1/2 md:right-auto md:w-[calc(28rem-2rem)] md:-translate-x-1/2"
+              : "sticky top-4 z-20"
+          }
+        >
           <MenuViewToolbar mode={showReelsLink ? "grid" : undefined}>
-            <nav aria-label="Categorías de menú" className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <nav
+              aria-label="Categorías de menú"
+              className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {sections.map((section) => (
                 <a
                   key={section.id}
@@ -97,46 +122,62 @@ export default function ClassicMenuView({
             </nav>
           </MenuViewToolbar>
         </div>
-        <header className="space-y-2 text-[var(--color-accent-secondary)]">
+
+        <header className="space-y-2 border-b border-white/[0.08] pb-6 text-[#f4f3f1]">
           {isExpressRetail ? (
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-light tracking-tighter sm:text-xl">Komanda</h2>
-              <h1 className="text-3xl font-black sm:text-4xl">Vidriera Digital y Precios</h1>
+              <h2 className="text-xs font-medium uppercase tracking-widest text-[#9b9ba4]">
+                Komanda · {tenantSlug}
+              </h2>
+              <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+                Vidriera Digital y Precios
+              </h1>
               <p
                 data-testid="storefront-express-legend"
-                className="max-w-2xl text-sm opacity-80 sm:text-base"
+                className="max-w-2xl text-sm text-[#9b9ba4] sm:text-base"
               >
-                Consultá precios y disponibilidad de productos. Las compras se realizan de manera presencial en tienda mediante nuestras terminales de autoservicio o caja.
+                Consultá precios y disponibilidad de productos. Las compras se
+                realizan de manera presencial en tienda mediante nuestras
+                terminales de autoservicio o caja.
               </p>
             </div>
           ) : (
             <>
-              <h2 className="text-xl font-light tracking-tighter sm:text-xl">Komanda</h2>
-              <h1 className="text-3xl font-black sm:text-4xl">Nuestro menu</h1>
-              <p className="max-w-2xl text-sm opacity-80 sm:text-base">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-[#9b9ba4]">
+                Komanda · {tenantSlug}
+              </h2>
+              <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+                Nuestro menu
+              </h1>
+              <p className="max-w-2xl text-sm text-[#9b9ba4] sm:text-base">
                 Selecciona categorias y agregá productos al carrito.
               </p>
               {!orderingAvailable && (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-300">
-                  Pedidos online no disponibles temporalmente. Podés consultar la carta.
+                <div className="mt-2 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-xs font-medium text-amber-200">
+                  Pedidos online no disponibles temporalmente. Podés consultar
+                  la carta.
                 </div>
               )}
             </>
           )}
         </header>
 
-        <div className="space-y-10">
+        <div className="space-y-12">
           {sections.map((section) => (
             <section
               key={section.id}
               id={section.id}
-              className={`${showReelsLink ? "scroll-mt-24 md:scroll-mt-[calc(4vh+6rem)]" : "scroll-mt-24"} space-y-4`}
+              className={`${
+                showReelsLink
+                  ? "scroll-mt-24 md:scroll-mt-[calc(4vh+6rem)]"
+                  : "scroll-mt-24"
+              } space-y-4`}
             >
-              <div className="space-y-1 text-[var(--color-accent-secondary)]">
-                <h2 className="text-2xl font-black sm:text-3xl">
+              <div className="flex items-baseline justify-between border-b border-white/[0.08] pb-2.5 text-[#f4f3f1]">
+                <h2 className="text-xl font-medium tracking-tight sm:text-2xl">
                   {section.title}
                 </h2>
-                <p className="text-sm opacity-75">
+                <p className="text-xs font-medium text-[#9b9ba4] tabular-nums">
                   {section.items.length} producto
                   {section.items.length === 1 ? "" : "s"}
                 </p>
@@ -152,8 +193,8 @@ export default function ClassicMenuView({
                     />
                   ))
                 ) : (
-                  <div className="rounded-sm border border-dashed border-[var(--color-accent-secondary)]/50 p-4 text-sm text-[var(--color-accent-secondary)]/75">
-                    Esta categoria todavia no tiene productos visibles.
+                  <div className="liquid-glass-card rounded-2xl p-6 text-sm text-[#9b9ba4]">
+                    Esta categoría todavía no tiene productos visibles.
                   </div>
                 )}
               </div>
