@@ -114,6 +114,14 @@ async function resolvePublicUrl(storage: ObjectStorage, storageKey: string) {
     "",
   );
   if (publicBaseUrl) {
+    // Convert local 127.0.0.1 / localhost storage URLs to same-origin relative paths
+    // so mobile devices accessing via tunnel (e.g. kda.ar) proxy through Next.js rewrites.
+    const localMatch = publicBaseUrl.match(
+      /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(\/.*)$/i,
+    );
+    if (localMatch && localMatch[1]) {
+      return `${localMatch[1]}/${storageKey}`;
+    }
     return `${publicBaseUrl}/${storageKey}`;
   }
   return storage.createReadUrl(storageKey, 3600);
