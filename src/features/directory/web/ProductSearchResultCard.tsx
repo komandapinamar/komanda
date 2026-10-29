@@ -26,25 +26,25 @@ export function ProductSearchResultCard({ product }: Props) {
       <div>
         <div className="flex items-start justify-between gap-3.5">
           <div className="min-w-0 flex-1">
-            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-[#9b9ba4]">
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-[#101013] px-2.5 py-0.5 text-[11px] font-medium text-[#d4d4dc]">
               {product.category}
             </span>
             <h3 className="mt-2.5 line-clamp-2 text-lg font-medium tracking-tight text-[#f4f3f1]">
               {product.name}
             </h3>
-            <p className="mt-1 text-xs text-[#9b9ba4]">
+            <p className="mt-1 text-xs text-[#c2c2cc]">
               En{" "}
               <span className="font-medium text-[#f4f3f1]">
                 {product.tenant.name}
               </span>{" "}
-              <span className="text-[#9b9ba4]/70">
+              <span className="text-[#c2c2cc]">
                 (@{product.tenant.slug})
               </span>
             </p>
           </div>
 
           {product.imageUrl ? (
-            <div className="relative size-18 shrink-0 overflow-hidden rounded-2xl bg-[#202024] ring-1 ring-white/12">
+            <div className="relative size-18 shrink-0 overflow-hidden rounded-2xl bg-[#202024] ring-1 ring-white/15">
               <Image
                 src={product.imageUrl}
                 alt={product.name}
@@ -55,7 +55,7 @@ export function ProductSearchResultCard({ product }: Props) {
               />
             </div>
           ) : (
-            <div className="flex size-18 shrink-0 items-center justify-center rounded-2xl bg-[#202024] text-xl text-[#9b9ba4] ring-1 ring-white/10">
+            <div className="flex size-18 shrink-0 items-center justify-center rounded-2xl bg-[#101013] text-xl text-[#c2c2cc] ring-1 ring-white/12">
               ✦
             </div>
           )}
@@ -65,7 +65,7 @@ export function ProductSearchResultCard({ product }: Props) {
           <span className="text-2xl font-medium tracking-tight text-[#f4f3f1]">
             ${product.price}
           </span>
-          <span className="text-xs font-medium text-[#9b9ba4]">
+          <span className="text-xs font-medium text-[#c2c2cc]">
             {product.currency}
           </span>
         </div>

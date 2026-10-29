@@ -259,7 +259,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                 <div className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className="rounded-full px-3.5 py-1.5 text-xs font-medium text-[#9b9ba4] transition hover:text-[#f4f3f1]"
+                    className="rounded-full px-3.5 py-1.5 text-xs font-medium text-[#d4d4dc] transition hover:bg-white/[0.06] hover:text-white"
                   >
                     Ingresar
                   </Link>
@@ -284,24 +284,26 @@ export function PublicDirectoryView({ tenants }: Props) {
             </header>
           </div>
 
-          {/* Dabbit Editorial Split Hero */}
-          <section className="grid w-full grid-cols-1 gap-8 border-b border-white/[0.08] px-5 pt-12 pb-12 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:px-10 lg:pt-16 lg:pb-14">
-            <div className="max-w-xl space-y-3 text-pretty">
-              <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1] sm:text-5xl lg:text-balance">
-                Pedí, pagá y disfrutá sin filas.
-              </h1>
-              <p className="text-base/6 text-[#9b9ba4] sm:text-lg/7">
-                Explorá comercios y cartas digitales en vivo. Elegí tus platos
-                o productos, personalizalos a tu gusto y retiralos listos.
-              </p>
+          {/* Dabbit Editorial Split Hero with High-Contrast Backing Cards */}
+          <section className="grid w-full grid-cols-1 gap-6 border-b border-white/[0.08] px-5 pt-10 pb-12 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch lg:px-10 lg:pt-14 lg:pb-14">
+            <div className="liquid-prism-ring liquid-glass-card flex flex-col justify-center rounded-3xl p-6 sm:p-8 text-pretty">
+              <div className="space-y-3">
+                <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1] sm:text-5xl lg:text-balance">
+                  Pedí, pagá y disfrutá sin filas.
+                </h1>
+                <p className="max-w-xl text-base/6 text-[#d4d4dc] sm:text-lg/7">
+                  Explorá comercios y cartas digitales en vivo. Elegí tus platos
+                  o productos, personalizalos a tu gusto y retiralos listos.
+                </p>
+              </div>
             </div>
 
             {/* Liquid Glass Loupe Search Module */}
-            <div className="w-full">
-              <div className="liquid-prism-ring liquid-glass-card rounded-3xl p-4 sm:p-5">
+            <div className="flex w-full flex-col justify-center">
+              <div className="liquid-prism-ring liquid-glass-card flex h-full flex-col justify-center rounded-3xl p-5 sm:p-6">
                 <div className="relative flex items-center">
                   <svg
-                    className="pointer-events-none absolute left-4 size-4 text-[#9b9ba4]"
+                    className="pointer-events-none absolute left-4 size-4 text-[#c2c2cc]"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -318,7 +320,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Buscá productos, negocios o ubicaciones..."
-                    className="h-11 w-full rounded-full border border-white/10 bg-[#141416]/85 pl-11 pr-10 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4]/75 focus:border-white/30 focus:outline-none focus:ring-2 focus:ring-white/15"
+                    className="h-12 w-full rounded-full border border-white/15 bg-[#101013] pl-11 pr-10 text-sm text-[#f4f3f1] placeholder:text-[#a8a8b3] focus:border-white/35 focus:outline-none focus:ring-2 focus:ring-white/20"
                   />
                   {isSearching && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -327,9 +329,9 @@ export function PublicDirectoryView({ tenants }: Props) {
                   )}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between px-2 text-xs text-[#9b9ba4] tabular-nums">
+                <div className="mt-3.5 flex items-center justify-between px-2 text-xs font-medium text-[#d4d4dc] tabular-nums">
                   <span className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-emerald-400" />
+                    <span className="size-2 rounded-full bg-emerald-400" />
                     {hasSearchQuery
                       ? isServerSearchActive
                         ? `${products.length} productos · ${businesses.length} locales`
@@ -340,7 +342,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                     <button
                       type="button"
                       onClick={() => setSearchTerm("")}
-                      className="font-medium text-[#f4f3f1] transition hover:opacity-75 cursor-pointer"
+                      className="font-medium text-[#f4f3f1] underline underline-offset-4 transition hover:text-white cursor-pointer"
                     >
                       Limpiar
                     </button>
@@ -348,11 +350,11 @@ export function PublicDirectoryView({ tenants }: Props) {
                 </div>
 
                 {searchError && (
-                  <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-3.5 py-2.5 text-left text-xs text-amber-200">
+                  <div className="mt-3 rounded-2xl border border-amber-400/30 bg-[#1c1610]/95 px-3.5 py-2.5 text-left text-xs text-amber-100">
                     <p className="font-medium">
                       Búsqueda en vivo no disponible: {searchError}
                     </p>
-                    <p className="mt-0.5 text-amber-200/70">
+                    <p className="mt-0.5 text-amber-200/85">
                       Mostrando comercios disponibles localmente.
                     </p>
                   </div>
@@ -366,13 +368,13 @@ export function PublicDirectoryView({ tenants }: Props) {
             {/* SECTION 1: PRODUCTOS */}
             {isServerSearchActive && products.length > 0 && (
               <div className="space-y-5">
-                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-                  <h2 className="flex items-center gap-2.5 text-xl font-medium tracking-tight text-[#f4f3f1]">
-                    <span>Productos encontrados</span>
-                    <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-xs font-medium text-[#9b9ba4] tabular-nums">
-                      {products.length}
-                    </span>
+                <div className="liquid-glass-pill inline-flex items-center gap-2.5 rounded-full px-4 py-2">
+                  <h2 className="text-base font-medium tracking-tight text-[#f4f3f1]">
+                    Productos encontrados
                   </h2>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-[#f4f3f1] tabular-nums">
+                    {products.length}
+                  </span>
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -392,13 +394,13 @@ export function PublicDirectoryView({ tenants }: Props) {
               !hasSearchQuery) && (
               <div className="space-y-5">
                 {isServerSearchActive && (
-                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-                    <h2 className="flex items-center gap-2.5 text-xl font-medium tracking-tight text-[#f4f3f1]">
-                      <span>Comercios</span>
-                      <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-xs font-medium text-[#9b9ba4] tabular-nums">
-                        {businesses.length}
-                      </span>
+                  <div className="liquid-glass-pill inline-flex items-center gap-2.5 rounded-full px-4 py-2">
+                    <h2 className="text-base font-medium tracking-tight text-[#f4f3f1]">
+                      Comercios
                     </h2>
+                    <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-[#f4f3f1] tabular-nums">
+                      {businesses.length}
+                    </span>
                   </div>
                 )}
 
@@ -425,7 +427,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                           {/* Card Header */}
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex min-w-0 items-center gap-3.5">
-                              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f4f3f1] text-lg font-semibold text-[#141416] ring-1 ring-white/15">
+                              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f4f3f1] text-lg font-semibold text-[#141416] ring-1 ring-white/20">
                                 {tenant.name === "refill" ? (
                                   <Image
                                     src="/images/logo_refill.jpg"
@@ -442,22 +444,22 @@ export function PublicDirectoryView({ tenants }: Props) {
                                 <h2 className="truncate text-2xl font-medium tracking-tight text-[#f4f3f1]">
                                   {tenant.name}
                                 </h2>
-                                <p className="text-xs font-medium text-[#9b9ba4]">
+                                <p className="text-xs font-medium text-[#c2c2cc]">
                                   @{tenant.slug}
                                 </p>
                               </div>
                             </div>
 
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-[#9b9ba4]">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#101013] px-3 py-1 text-xs font-medium text-[#e4e4ec]">
                               <span className="size-1.5 rounded-full bg-emerald-400" />
                               Online
                             </span>
                           </div>
 
-                          {/* Divided Info Panel (Dabbit Widget Style) */}
-                          <div className="mt-6 divide-y divide-white/[0.08] overflow-hidden rounded-2xl border border-white/10 bg-[#141416]/65 text-xs">
+                          {/* Divided Info Panel (Dabbit Widget Style, High Contrast) */}
+                          <div className="mt-6 divide-y divide-white/[0.1] overflow-hidden rounded-2xl border border-white/12 bg-[#101013]/95 text-xs">
                             <div className="p-3.5">
-                              <div className="mb-2 flex items-center justify-between text-[#9b9ba4]">
+                              <div className="mb-2 flex items-center justify-between text-[#c2c2cc]">
                                 <span className="font-medium">
                                   Horarios de atención
                                 </span>
@@ -469,12 +471,12 @@ export function PublicDirectoryView({ tenants }: Props) {
 
                             {contactPhone ? (
                               <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                                <span className="font-medium text-[#9b9ba4]">
+                                <span className="font-medium text-[#c2c2cc]">
                                   Contacto directo
                                 </span>
                                 <a
                                   href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}
-                                  className="font-medium text-[#f4f3f1] tabular-nums underline decoration-white/25 underline-offset-4 transition hover:decoration-white"
+                                  className="font-medium text-[#f4f3f1] tabular-nums underline decoration-white/35 underline-offset-4 transition hover:decoration-white"
                                 >
                                   {contactPhone}
                                 </a>
@@ -483,7 +485,7 @@ export function PublicDirectoryView({ tenants }: Props) {
 
                             {/* Map Loupe Frame */}
                             <div className="p-2">
-                              <div className="relative overflow-hidden rounded-xl ring-1 ring-white/10">
+                              <div className="relative overflow-hidden rounded-xl ring-1 ring-white/12">
                                 <div className="relative h-44 w-full bg-[#202024]">
                                   <LocationMapPreview
                                     lat={tenant.lat}
@@ -498,12 +500,12 @@ export function PublicDirectoryView({ tenants }: Props) {
                                     )}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="pointer-events-auto inline-flex h-7 items-center gap-2 rounded-full border border-white/15 bg-[#141416]/90 px-3 text-[11px] font-medium text-[#f4f3f1] shadow-lg backdrop-blur-md transition hover:bg-[#141416]"
+                                    className="pointer-events-auto inline-flex h-7 items-center gap-2 rounded-full border border-white/20 bg-[#101013]/95 px-3 text-[11px] font-medium text-[#f4f3f1] shadow-lg backdrop-blur-md transition hover:bg-black"
                                     title="Abrir en Google Maps"
                                   >
                                     <span className="size-2 rounded-full bg-[#d97757]" />
                                     <span>Cómo llegar</span>
-                                    <span className="text-[#9b9ba4]">↗</span>
+                                    <span className="text-[#c2c2cc]">↗</span>
                                   </a>
                                 </div>
                               </div>
@@ -540,7 +542,7 @@ export function PublicDirectoryView({ tenants }: Props) {
                     <p className="text-xl font-medium tracking-tight text-[#f4f3f1]">
                       No hay locales activos disponibles
                     </p>
-                    <p className="text-sm text-[#9b9ba4]">
+                    <p className="text-sm text-[#d4d4dc]">
                       Actualmente no hay comercios disponibles para pedir. Si
                       administrás un local, ingresá a tu panel.
                     </p>
@@ -556,13 +558,13 @@ export function PublicDirectoryView({ tenants }: Props) {
                     <p className="text-xl font-medium tracking-tight text-[#f4f3f1]">
                       Sin resultados para &ldquo;{searchTerm}&rdquo;
                     </p>
-                    <p className="text-sm text-[#9b9ba4]">
+                    <p className="text-sm text-[#d4d4dc]">
                       Probá buscando otro plato, bebida o nombre de comercio.
                     </p>
                     <button
                       type="button"
                       onClick={() => setSearchTerm("")}
-                      className="mt-2 inline-flex h-9 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/10 cursor-pointer"
+                      className="mt-2 inline-flex h-9 items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/15 cursor-pointer"
                     >
                       Restablecer búsqueda
                     </button>
@@ -573,8 +575,8 @@ export function PublicDirectoryView({ tenants }: Props) {
           </section>
         </div>
 
-        {/* Minimal Dabbit Footer */}
-        <footer className="mt-auto flex w-full flex-col items-start justify-between gap-4 border-t border-white/[0.08] px-5 py-6 text-xs text-[#9b9ba4] sm:flex-row sm:items-center sm:px-8 lg:px-10">
+        {/* High-Contrast Dabbit Footer */}
+        <footer className="mt-auto flex w-full flex-col items-start justify-between gap-4 border-t border-white/[0.1] bg-[#141416]/95 px-5 py-6 text-xs text-[#c2c2cc] backdrop-blur-xl sm:flex-row sm:items-center sm:px-8 lg:px-10">
           <div className="flex items-center gap-2.5">
             <span className="font-medium text-[#f4f3f1]">Komanda</span>
             <span>·</span>
@@ -582,13 +584,13 @@ export function PublicDirectoryView({ tenants }: Props) {
           </div>
           <div className="flex items-center gap-4">
             <Link
-              className="font-medium text-[#9b9ba4] transition hover:text-[#f4f3f1]"
+              className="font-medium text-[#d4d4dc] transition hover:text-white"
               href="/login"
             >
               Komanda Business
             </Link>
             <Link
-              className="font-medium text-[#9b9ba4] transition hover:text-[#f4f3f1]"
+              className="font-medium text-[#d4d4dc] transition hover:text-white"
               href="/register"
             >
               Sumar mi comercio
