@@ -10,7 +10,6 @@ import type { SearchResultData } from "@/features/search/domain/search.schemas";
 import { ProductSearchResultCard } from "@/features/directory/web/ProductSearchResultCard";
 import { OpeningHoursSummary } from "@/features/directory/web/OpeningHoursSummary";
 import { AsciiVideoOverlay } from "@/features/directory/web/AsciiVideoOverlay";
-import { LiquidGlassMark } from "@/features/directory/web/LiquidGlassMark";
 import { buildStorefrontUrl } from "@/features/tenancy/utils/storefront-url";
 
 export type DirectoryTenantItem = PublicDirectoryTenant & {
@@ -248,8 +247,7 @@ export function PublicDirectoryView({ tenants }: Props) {
               } px-5 sm:px-8 lg:px-10`}
             >
               <div className="liquid-glass-pill mx-auto flex max-w-4xl items-center justify-between rounded-full px-4 py-2">
-                <div className="flex items-center gap-2.5 pl-1">
-                  <LiquidGlassMark className="size-6" />
+                <div className="flex items-center gap-2.5 pl-2">
                   <Link
                     className="text-base font-medium tracking-tight text-[#f4f3f1] transition hover:opacity-80"
                     href="/"
@@ -288,17 +286,14 @@ export function PublicDirectoryView({ tenants }: Props) {
 
           {/* Dabbit Editorial Split Hero */}
           <section className="grid w-full grid-cols-1 gap-8 border-b border-white/[0.08] px-5 pt-12 pb-12 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:px-10 lg:pt-16 lg:pb-14">
-            <div className="max-w-xl space-y-6 text-pretty">
-              <LiquidGlassMark className="size-16" />
-              <div className="space-y-3">
-                <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1] sm:text-5xl lg:text-balance">
-                  Pedí, pagá y disfrutá sin filas.
-                </h1>
-                <p className="text-base/6 text-[#9b9ba4] sm:text-lg/7">
-                  Explorá comercios y cartas digitales en vivo. Elegí tus platos
-                  o productos, personalizalos a tu gusto y retiralos listos.
-                </p>
-              </div>
+            <div className="max-w-xl space-y-3 text-pretty">
+              <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1] sm:text-5xl lg:text-balance">
+                Pedí, pagá y disfrutá sin filas.
+              </h1>
+              <p className="text-base/6 text-[#9b9ba4] sm:text-lg/7">
+                Explorá comercios y cartas digitales en vivo. Elegí tus platos
+                o productos, personalizalos a tu gusto y retiralos listos.
+              </p>
             </div>
 
             {/* Liquid Glass Loupe Search Module */}
@@ -581,7 +576,6 @@ export function PublicDirectoryView({ tenants }: Props) {
         {/* Minimal Dabbit Footer */}
         <footer className="mt-auto flex w-full flex-col items-start justify-between gap-4 border-t border-white/[0.08] px-5 py-6 text-xs text-[#9b9ba4] sm:flex-row sm:items-center sm:px-8 lg:px-10">
           <div className="flex items-center gap-2.5">
-            <LiquidGlassMark className="size-5" />
             <span className="font-medium text-[#f4f3f1]">Komanda</span>
             <span>·</span>
             <span>Plataforma gastronómica y retail</span>
