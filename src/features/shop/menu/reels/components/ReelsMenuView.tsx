@@ -97,7 +97,13 @@ export default function ReelsMenuView({
   const handleConfirmModifiers = useCallback(
     (configuredItem: MenuItem) => {
       addItem?.(configuredItem);
-      setSelectedItemForModifiers(null);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => {
+          setSelectedItemForModifiers(null);
+        }, 240);
+      } else {
+        setSelectedItemForModifiers(null);
+      }
     },
     [addItem]
   );

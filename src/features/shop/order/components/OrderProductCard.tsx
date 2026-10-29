@@ -60,7 +60,13 @@ export default function OrderProductCard({
 
   function handleConfirmModifiers(configuredItem: MenuItem) {
     cart?.addItem(configuredItem);
-    setSelectedItemForModifiers(null);
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        setSelectedItemForModifiers(null);
+      }, 240);
+    } else {
+      setSelectedItemForModifiers(null);
+    }
   }
 
   return (
