@@ -461,6 +461,8 @@ export class CreateOrderService {
         paymentStatus: "paid",
         customer: attempt.customerSnapshot,
         notes: attempt.notes ?? undefined,
+        scheduledFor: attempt.scheduledFor ?? null,
+        estimatedReadyAt: attempt.scheduledFor ?? undefined,
         idempotencyKey: `payment-attempt:${attempt.id}`,
         paymentAttemptId: attempt.id,
         approvedAt: input.approvedAt ?? attempt.processedAt ?? new Date(),

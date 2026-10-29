@@ -148,6 +148,7 @@ export type AdminDashboardOrder = {
   currency: string;
   tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  scheduledFor?: string | null;
   paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt?: string | null;
@@ -174,6 +175,7 @@ export type CreatePaymentSessionPayload = {
   cartId: string;
   customer: CustomerInfo;
   notes?: string;
+  scheduledFor?: string | null;
   cartVersion?: number;
 };
 

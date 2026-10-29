@@ -17,6 +17,10 @@ import {
   type CreateCashOrderRequest,
   type CreateCashOrderResponse,
 } from "@/features/orders/domain/cash-order.schemas";
+import {
+  OrderSchedulingError,
+  validateScheduledPickupTime,
+} from "@/features/orders/domain/order-scheduling";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import {
   CouponTenderMismatchError,
@@ -163,7 +167,17 @@ export class CreateCashOrderService {
       }
 
       const now = this.now();
-      const paymentExpiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+      const scheduledDate = validateScheduledPickupTime(request.scheduledFor, {
+        now,
+      });
+      const paymentExpiresAt = scheduledDate
+        ? new Date(
+            Math.max(
+              now.getTime() + 60 * 60 * 1000,
+              scheduledDate.getTime() + 30 * 60 * 1000,
+            ),
+          )
+        : new Date(now.getTime() + 60 * 60 * 1000);
       const secondsRemaining = Math.max(
         0,
         Math.floor((paymentExpiresAt.getTime() - now.getTime()) / 1000),
@@ -182,6 +196,8 @@ export class CreateCashOrderService {
           ...(request.customer.whatsappReadyOptIn === true ? { whatsappReadyOptIn: true } : {}),
         },
         notes: request.notes ?? undefined,
+        scheduledFor: scheduledDate,
+        estimatedReadyAt: scheduledDate ?? undefined,
         idempotencyKey: input.idempotencyKey,
         pickupPin,
         paymentExpiresAt,
@@ -194,6 +210,7 @@ export class CreateCashOrderService {
         pickupPin: order.pickupPin ?? pickupPin,
         total: order.total,
         paymentStatus: "pending",
+        scheduledFor: order.scheduledFor ?? null,
         expiresAt: paymentExpiresAt.toISOString(),
         secondsRemaining,
       };

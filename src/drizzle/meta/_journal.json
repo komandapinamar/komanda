@@ -204,6 +204,13 @@
       "when": 1793200000000,
       "tag": "0028_add_weighted_item_type",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793286400000,
+      "tag": "0029_add_scheduled_for_orders",
+      "breakpoints": true
     }
   ]
 }
