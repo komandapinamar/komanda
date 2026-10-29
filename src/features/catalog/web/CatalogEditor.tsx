@@ -157,12 +157,45 @@ export function CatalogEditor({
   ) {
     try {
       if (action === "archive") {
+        const categoryItems = items.filter(
+          (entry) =>
+            entry.categoryId === category.id && entry.status !== "archived",
+        );
+        for (const entry of categoryItems) {
+          await mutate<Item>(
+            `/api/v1/tenants/${tenantId}/catalog/items/${entry.id}`,
+            {
+              method: "PATCH",
+              headers: catalogHeaders(entry.version),
+              body: JSON.stringify({ status: "archived" }),
+            },
+          );
+        }
+        const categoryCombos = combos.filter(
+          (entry) =>
+            entry.categoryId === category.id && entry.status !== "archived",
+        );
+        for (const entry of categoryCombos) {
+          await mutate<null>(
+            `/api/v1/tenants/${tenantId}/catalog/combos/${entry.id}`,
+            {
+              method: "DELETE",
+              headers: { "If-Match": String(entry.version) },
+            },
+          );
+        }
         await mutate<null>(
           `/api/v1/tenants/${tenantId}/catalog/categories/${category.id}`,
           {
             method: "DELETE",
             headers: { "If-Match": String(category.version) },
           },
+        );
+        setItems((current) =>
+          current.filter((entry) => entry.categoryId !== category.id),
+        );
+        setCombos((current) =>
+          current.filter((entry) => entry.categoryId !== category.id),
         );
         setCategories((current) =>
           current.filter((item) => item.id !== category.id),
@@ -327,9 +360,20 @@ export function CatalogEditor({
                       type="button"
                       title="Publicar categoría"
                       onClick={() => void categoryAction(category, "publish")}
-                      className="text-xs text-[var(--color-accent-tertiary)]"
+                      className="text-xs text-[var(--color-accent-tertiary)] cursor-pointer hover:underline"
                     >
                       Publicar
+                    </button>
+                  ) : null}
+                  {!isReadOnly ? (
+                    <button
+                      type="button"
+                      title="Eliminar categoría"
+                      aria-label={`Eliminar categoría ${category.name}`}
+                      onClick={() => void categoryAction(category, "archive")}
+                      className="text-xs text-red-400 transition hover:text-red-300 cursor-pointer"
+                    >
+                      Borrar
                     </button>
                   ) : null}
                 </div>
@@ -960,6 +1004,66 @@ function AddonPanel({
       setSaving(false);
     }
   }
+  async function archiveGroup(group: AddonGroup) {
+    setSaving(true);
+    try {
+      await mutate<null>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "DELETE",
+          headers: { "If-Match": String(group.version) },
+        },
+      );
+      setGroups(groups.filter((entry) => entry.id !== group.id));
+      onMessage("Grupo de adicionales eliminado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el grupo de adicionales.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function removeOption(group: AddonGroup, optionId: string) {
+    if (group.options.length <= 1) {
+      await archiveGroup(group);
+      return;
+    }
+    setSaving(true);
+    try {
+      const options = group.options
+        .filter((option) => option.id !== optionId)
+        .map((option, index) => ({
+          name: option.name,
+          description: option.description ?? null,
+          priceDelta: option.priceDelta,
+          status: option.status === "unavailable" ? "unavailable" : "active",
+          sortOrder: index,
+        }));
+      const updated = await mutate<AddonGroup>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(group.version),
+          body: JSON.stringify({ options, version: group.version }),
+        },
+      );
+      setGroups(
+        groups.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+      onMessage("Opción adicional eliminada.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar la opción adicional.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
   async function saveOption(group: AddonGroup) {
     if (!editingOption) return;
     const price = normalizeMoneyInput(editingOption.priceDelta);
@@ -1028,20 +1132,33 @@ function AddonPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-bold">{group.name}</h3>
-                    {group.status === "draft" && !readOnly ? (
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => void publishGroup(group)}
-                        className="rounded-md bg-[var(--color-accent-tertiary)] px-2 py-1 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
-                      >
-                        Publicar
-                      </button>
-                    ) : (
-                      <span className="text-[11px] uppercase tracking-wide text-zinc-500">
-                        {group.status === "active" ? "Publicado" : group.status}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {group.status === "draft" && !readOnly ? (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void publishGroup(group)}
+                          className="rounded-md bg-[var(--color-accent-tertiary)] px-2 py-1 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50 cursor-pointer"
+                        >
+                          Publicar
+                        </button>
+                      ) : (
+                        <span className="text-[11px] uppercase tracking-wide text-zinc-500">
+                          {group.status === "active" ? "Publicado" : group.status}
+                        </span>
+                      )}
+                      {!readOnly ? (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          aria-label={`Eliminar grupo ${group.name}`}
+                          onClick={() => void archiveGroup(group)}
+                          className="text-xs font-bold text-red-400 transition hover:text-red-300 disabled:opacity-50 cursor-pointer"
+                        >
+                          Borrar
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-zinc-500">
                     Elegir entre {group.minSelected} y {group.maxSelected}
@@ -1124,21 +1241,31 @@ function AddonPanel({
                             </p>
                           ) : null}
                           {!readOnly ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setEditingOption({
-                                  groupId: group.id,
-                                  optionId: option.id,
-                                  name: option.name,
-                                  description: option.description ?? "",
-                                  priceDelta: option.priceDelta,
-                                })
-                              }
-                              className="text-xs text-[var(--color-accent-tertiary)] underline underline-offset-2"
-                            >
-                              Editar
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingOption({
+                                    groupId: group.id,
+                                    optionId: option.id,
+                                    name: option.name,
+                                    description: option.description ?? "",
+                                    priceDelta: option.priceDelta,
+                                  })
+                                }
+                                className="text-xs text-[var(--color-accent-tertiary)] underline underline-offset-2 cursor-pointer"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => void removeOption(group, option.id)}
+                                className="text-xs text-red-400 underline underline-offset-2 hover:text-red-300 disabled:opacity-50 cursor-pointer"
+                              >
+                                Borrar
+                              </button>
+                            </div>
                           ) : null}
                         </li>
                       );
@@ -1269,6 +1396,49 @@ function ComboPanel({
       );
     }
   }
+  async function publishCombo(combo: Combo) {
+    try {
+      const updated = await mutate<Combo>(
+        `/api/v1/tenants/${tenantId}/catalog/combos/${combo.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(combo.version),
+          body: JSON.stringify({ status: "active" }),
+        },
+      );
+      setCombos(
+        combos.map((entry) =>
+          entry.id === updated.id ? { ...entry, ...updated } : entry,
+        ),
+      );
+      onMessage("Combo publicado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo publicar el combo.",
+      );
+    }
+  }
+  async function archiveCombo(combo: Combo) {
+    try {
+      await mutate<null>(
+        `/api/v1/tenants/${tenantId}/catalog/combos/${combo.id}`,
+        {
+          method: "DELETE",
+          headers: { "If-Match": String(combo.version) },
+        },
+      );
+      setCombos(combos.filter((entry) => entry.id !== combo.id));
+      onMessage("Combo eliminado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el combo.",
+      );
+    }
+  }
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
@@ -1287,8 +1457,29 @@ function ComboPanel({
                   key={combo.id}
                   className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
                 >
-                  <div className="flex justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2">
                     <h3 className="font-bold">{combo.name}</h3>
+                    {!readOnly ? (
+                      <div className="flex items-center gap-2">
+                        {combo.status === "draft" ? (
+                          <button
+                            type="button"
+                            onClick={() => void publishCombo(combo)}
+                            className="rounded-md bg-[var(--color-accent-tertiary)] px-2 py-1 text-xs font-bold text-[var(--color-accent-primary)] cursor-pointer"
+                          >
+                            Publicar
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          aria-label={`Eliminar combo ${combo.name}`}
+                          onClick={() => void archiveCombo(combo)}
+                          className="text-xs font-bold text-red-400 transition hover:text-red-300 cursor-pointer"
+                        >
+                          Borrar
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-lg font-black text-[var(--color-accent-tertiary)]">
                     ${combo.price}

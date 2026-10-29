@@ -22,7 +22,7 @@ export default function ReelMedia({
 
   if (shouldRenderVideo) {
     return (
-      <div className="absolute inset-0 w-full h-full bg-black overflow-hidden z-[1]">
+      <div className="absolute inset-0 z-[1] h-full w-full overflow-hidden bg-[#141416]">
         <video
           ref={videoRef}
           data-testid="reel-video"
@@ -31,9 +31,13 @@ export default function ReelMedia({
           muted
           playsInline
           loop
+          controls={false}
+          disablePictureInPicture
+          disableRemotePlayback
+          controlsList="nodownload nofullscreen noremoteplayback"
           preload="none"
           onError={() => setHasVideoError(true)}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover select-none"
         />
       </div>
     );
@@ -42,7 +46,7 @@ export default function ReelMedia({
   return (
     <div
       data-testid="reel-blur-backdrop"
-      className="absolute inset-0 w-full h-full overflow-hidden z-[1] bg-black flex items-center justify-center"
+      className="absolute inset-0 z-[1] flex h-full w-full items-center justify-center overflow-hidden bg-[#141416]"
     >
       {hasImage ? (
         <>
@@ -51,14 +55,14 @@ export default function ReelMedia({
             src={image}
             alt=""
             aria-hidden="true"
-            className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)] object-cover blur-[24px] brightness-[45%] scale-110 pointer-events-none"
+            className="pointer-events-none absolute -inset-5 h-[calc(100%+40px)] w-[calc(100%+40px)] scale-110 object-cover blur-[24px] brightness-[45%]"
             style={{ filter: "blur(24px) brightness(0.45)" }}
           />
           {/* Sharp centered foreground image */}
           <img
             src={image}
             alt={alt}
-            className="relative w-full h-full object-contain z-[2]"
+            className="relative z-[2] h-full w-full object-contain"
           />
         </>
       ) : null}

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
@@ -28,21 +29,63 @@ const readinessLabels: Record<string, string> = {
 };
 
 const readinessHints: Record<string, string> = {
-  public_slug: "Definí el identificador público (URL) del negocio.",
+  public_slug: "Identificador único de la tienda en la URL pública.",
   primary_location:
-    "Confirmá la ubicación exacta en «Ubicación del local primario», más abajo.",
-  currency: "Asigná la moneda operativa del negocio.",
-  published_item: "Publicá al menos un producto en el catálogo.",
-  payment_connected: "Conectá Mercado Pago para cobrar online.",
-  print_agent_connected: "Enrolá un agente de impresión (opcional).",
+    "Confirmá la dirección y coordenadas en el mapa del local.",
+  currency: "Moneda en la que se expresan los precios del catálogo.",
+  published_item: "Creá y publicá al menos un producto activo en el catálogo.",
+  payment_connected: "Vinculá tu cuenta de Mercado Pago para cobros online.",
+  print_agent_connected: "Conectá Komanda Desktop para imprimir comandas.",
 };
+
+function readinessActionForCheck(
+  code: string,
+  tenantId: string,
+  complete: boolean,
+): { href: string; label: string } {
+  switch (code) {
+    case "public_slug":
+      return {
+        href: "#datos-generales",
+        label: complete ? "Ver datos" : "Completar datos",
+      };
+    case "primary_location":
+      return {
+        href: "#ubicacion-sede",
+        label: complete ? "Editar ubicación" : "Confirmar ubicación",
+      };
+    case "currency":
+      return {
+        href: "#datos-generales",
+        label: complete ? "Ver moneda" : "Configurar moneda",
+      };
+    case "published_item":
+      return {
+        href: `/admin/${tenantId}/catalog`,
+        label: complete ? "Ir al catálogo" : "Publicar producto",
+      };
+    case "payment_connected":
+      return {
+        href: "#mercado-pago",
+        label: complete ? "Gestionar cuenta" : "Conectar Mercado Pago",
+      };
+    case "print_agent_connected":
+      return {
+        href: `/admin/${tenantId}/integrations/printing`,
+        label: complete ? "Gestionar impresora" : "Vincular impresora",
+      };
+    default:
+      return {
+        href: "#datos-generales",
+        label: "Ir al apartado",
+      };
+  }
+}
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/** OAuth sends the owner back here after leaving Mercado Pago, so the outcome
- * travels in the query string instead of rendering a problem document. */
 function mercadoPagoOutcomeFromQuery(
   status: string | undefined,
   reason: string | undefined,
@@ -53,7 +96,9 @@ function mercadoPagoOutcomeFromQuery(
   if (status !== "error") return null;
   return {
     kind: "error",
-    message: mercadoPagoFailureMessage(mercadoPagoReasonFromValue(reason) ?? "failed"),
+    message: mercadoPagoFailureMessage(
+      mercadoPagoReasonFromValue(reason) ?? "failed",
+    ),
   };
 }
 
@@ -101,102 +146,256 @@ export default async function TenantSettingsPage({
   );
 
   return (
-    <main className="mx-auto max-w-4xl space-y-10 px-4 py-8 sm:px-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Configuración</h1>
-        <p className="text-sm text-zinc-400">Los datos básicos y conexiones de tu negocio.</p>
+    <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+      <header className="flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end">
+        <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
+            Administración · @{authority.membership.tenantSlug}
+          </p>
+          <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+            Configuración del negocio
+          </h1>
+          <p className="text-sm text-[#c2c2cc]">
+            Gestioná el estado operativo, ubicación, horarios, cobros e
+            impresión desde un solo lugar.
+          </p>
+        </div>
+
+        <nav className="flex flex-wrap gap-2 text-xs">
+          <a
+            href="#estado-del-negocio"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+          >
+            Estado
+          </a>
+          <a
+            href="#datos-generales"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+          >
+            Datos y Horarios
+          </a>
+          <a
+            href="#ubicacion-sede"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+          >
+            Ubicación
+          </a>
+          <a
+            href="#mercado-pago"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+          >
+            Mercado Pago
+          </a>
+          <a
+            href="#impresion"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+          >
+            Impresión
+          </a>
+        </nav>
       </header>
 
-      <section className="max-w-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Estado del negocio</h2>
-          <span className={readiness.ready ? "text-xs text-emerald-300" : "text-xs text-amber-300"}>
+      {/* 1. ESTADO DEL NEGOCIO & CHECKLIST DE ACTIVACIÓN CON CTAs */}
+      <section
+        id="estado-del-negocio"
+        className="liquid-prism-ring liquid-glass-card scroll-mt-24 rounded-3xl p-6 sm:p-7 space-y-5"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+              Estado del negocio
+            </h2>
+            <p className="mt-0.5 text-xs text-[#c2c2cc]">
+              Cada requisito cuenta con un acceso directo al apartado donde se
+              configura.
+            </p>
+          </div>
+          <span
+            className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium ${
+              readiness.ready
+                ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+                : "border-amber-400/30 bg-amber-500/15 text-amber-300"
+            }`}
+          >
+            <span
+              className={`size-2 rounded-full ${
+                readiness.ready ? "bg-emerald-400" : "bg-amber-400"
+              }`}
+            />
             {readiness.ready ? "Listo" : "Pendiente"}
           </span>
         </div>
-        <ul className="divide-y divide-zinc-800/80 border-y border-zinc-800/80">
-          {readiness.checks.map((check) => (
-            <li key={check.code} className="flex items-start gap-3 px-4 py-2.5">
-              <span
-                aria-hidden
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                  check.complete ? "bg-emerald-400" : "bg-amber-400"
-                }`}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="text-md">
-                    {readinessLabels[check.code] ?? check.code}
-                  </span>
-                  {!check.requiredForActivation ? (
-                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-500">
-                      Opcional
-                    </span>
-                  ) : null}
+
+        <ul className="divide-y divide-white/[0.08] overflow-hidden rounded-2xl border border-white/12 bg-[#101013]/90">
+          {readiness.checks.map((check) => {
+            const action = readinessActionForCheck(
+              check.code,
+              tenantId,
+              check.complete,
+            );
+            const isInternalAnchor = action.href.startsWith("#");
+            return (
+              <li
+                key={check.code}
+                className="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5"
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    aria-hidden
+                    className={`mt-1.5 flex size-2.5 shrink-0 rounded-full ${
+                      check.complete ? "bg-emerald-400" : "bg-amber-400"
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-[#f4f3f1]">
+                        {readinessLabels[check.code] ?? check.code}
+                      </span>
+                      {!check.requiredForActivation ? (
+                        <span className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#c2c2cc]">
+                          Opcional
+                        </span>
+                      ) : null}
+                      <span
+                        className={`text-[11px] font-medium ${
+                          check.complete
+                            ? "text-emerald-400"
+                            : "text-amber-300"
+                        }`}
+                      >
+                        {check.complete ? "Completado" : "Por completar"}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-[#c2c2cc]">
+                      {readinessHints[check.code]}
+                    </p>
+                  </div>
                 </div>
-                {!check.complete && check.requiredForActivation ? (
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {readinessHints[check.code]}
-                  </p>
-                ) : null}
-              </div>
-            </li>
-          ))}
+
+                {isInternalAnchor ? (
+                  <a
+                    href={action.href}
+                    className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition ${
+                      check.complete
+                        ? "border border-white/15 bg-white/[0.05] text-[#f4f3f1] hover:bg-white/[0.12]"
+                        : "bg-[#f4f3f1] text-[#141416] hover:bg-white"
+                    }`}
+                  >
+                    <span>{action.label}</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                ) : (
+                  <Link
+                    href={action.href}
+                    className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition ${
+                      check.complete
+                        ? "border border-white/15 bg-white/[0.05] text-[#f4f3f1] hover:bg-white/[0.12]"
+                        : "bg-[#f4f3f1] text-[#141416] hover:bg-white"
+                    }`}
+                  >
+                    <span>{action.label}</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
         {authority.membership.tenantStatus === "onboarding" ? (
-          <div className="space-y-3 border-t border-zinc-800/80 pt-4">
-            <p className="text-sm text-zinc-400">
+          <div className="flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center">
+            <p className="text-sm text-[#d4d4dc]">
               {readiness.ready
                 ? "Todos los requisitos obligatorios están completos. Activá las ventas para publicar el negocio."
                 : "Las ventas permanecen deshabilitadas hasta completar todos los requisitos obligatorios."}
             </p>
-            <TenantActivationPanel tenantId={tenantId} ready={readiness.ready} />
+            <TenantActivationPanel
+              tenantId={tenantId}
+              ready={readiness.ready}
+            />
           </div>
         ) : readiness.ready ? (
-          <p className="text-sm text-emerald-300">
-            El negocio está operativo y listo para recibir pedidos online.
-          </p>
+          <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            <span>✓</span>
+            <span>
+              El negocio está operativo y listo para recibir pedidos online.
+            </span>
+          </div>
         ) : (
-          <p className="text-sm text-amber-300">
-            Pedidos online no disponibles: completá los requisitos pendientes (ej.
-            conectar Mercado Pago) para figurar en el directorio público y habilitar
-            el checkout.
-          </p>
+          <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            Pedidos online no disponibles: completá los requisitos pendientes
+            (ej. conectar Mercado Pago) para figurar en el directorio público y
+            habilitar el checkout.
+          </div>
         )}
       </section>
 
-      <section className="space-y-5">
-        <div>
-          <h2 className="text-base font-semibold">Datos generales</h2>
+      {/* 2. DATOS GENERALES, UBICACIÓN Y HORARIOS */}
+      <section
+        id="datos-generales"
+        className="liquid-glass-card scroll-mt-24 rounded-3xl p-6 sm:p-7 space-y-6"
+      >
+        <div className="border-b border-white/[0.08] pb-4">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+            Datos operativos, ubicación y horarios
+          </h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            Información de contacto, moneda (`{settings.currency}`), mapa de la
+            sede y horarios de apertura.
+          </p>
         </div>
         <SettingsShell initialSettings={settings} />
       </section>
 
-      <section className="space-y-4 border-t border-zinc-800/80 pt-8">
-        <h2 className="text-base font-semibold">Mercado Pago</h2>
-        <MercadoPagoIntegrationPanel
-          tenantId={tenantId}
-          initialStatus={mpStatus}
-          outcome={mercadoPagoOutcome}
-        />
-      </section>
-
-      <section className="flex flex-col gap-3 border-t border-zinc-800/80 pt-8 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Impresión</h2>
-          <p className="mt-1 text-sm text-zinc-400">Conectá el agente que usará este negocio.</p>
-        </div>
-        <a
-          href={`/admin/${tenantId}/integrations/printing`}
-          className="inline-flex w-fit rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
+      {/* 3. MERCADO PAGO & IMPRESIÓN EN GRILLA */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section
+          id="mercado-pago"
+          className="liquid-glass-card scroll-mt-24 flex flex-col justify-between rounded-3xl p-6 sm:p-7 space-y-4"
         >
-          Configurar impresión
-        </a>
-      </section>
+          <div className="space-y-1">
+            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+              Mercado Pago
+            </h2>
+            <p className="text-xs text-[#c2c2cc]">
+              Conectá tu cuenta para cobrar pedidos online y con QR.
+            </p>
+          </div>
+          <MercadoPagoIntegrationPanel
+            tenantId={tenantId}
+            initialStatus={mpStatus}
+            outcome={mercadoPagoOutcome}
+          />
+        </section>
 
+        <section
+          id="impresion"
+          className="liquid-glass-card scroll-mt-24 flex flex-col justify-between rounded-3xl p-6 sm:p-7 space-y-4"
+        >
+          <div className="space-y-1">
+            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+              Agente de impresión térmica
+            </h2>
+            <p className="text-xs text-[#c2c2cc]">
+              Vinculá Komanda Desktop para imprimir tickets y comandas ESC/POS
+              automáticamente en tu local.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href={`/admin/${tenantId}/integrations/printing`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
+            >
+              <span>Configurar impresión</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      {/* 4. ZONA DE PELIGRO */}
       {authority.membership.role === "owner" ? (
-        <section className="border-t border-zinc-800/80 pt-8">
+        <section id="zona-peligro" className="pt-2">
           <DangerZone
             tenantId={tenantId}
             tenantName={authority.membership.tenantName}

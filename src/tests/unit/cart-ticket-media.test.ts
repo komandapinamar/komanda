@@ -27,12 +27,12 @@ const line: CartLine = {
 };
 
 describe("Cart ticket product media", () => {
-  it("renders a controllable inline video with the product photo as poster", () => {
+  it("renders a silent inline video without browser controls and with the product photo as poster", () => {
     const markup = renderToStaticMarkup(createElement(CartItem, { cartLine: line }));
     expect(markup).toContain('<video');
     expect(markup).toContain('src="https://example.com/wrap.mp4"');
     expect(markup).toContain('poster="https://example.com/wrap.jpg"');
-    expect(markup).toContain('controls=""');
+    expect(markup).not.toContain('controls=""');
     expect(markup).toContain('playsInline=""');
     expect(markup).not.toContain('autoPlay');
     expect(markup).toContain('2 × Wrap de pollo');

@@ -155,10 +155,15 @@ export function TenantSettingsPanel({
           />
         </label>
       </div>
-      <div className="grid gap-2 border-t border-zinc-800/80 pt-5">
-        <span className="block text-sm font-medium text-zinc-200">
-          Perfil operativo del negocio
-        </span>
+      <div className="grid gap-2 border-t border-white/[0.08] pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="block text-sm font-medium text-zinc-200">
+            Perfil operativo del negocio
+          </span>
+          <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-0.5 text-xs font-medium text-[#f4f3f1]">
+            Moneda: {settings.currency}
+          </span>
+        </div>
         <span className="block text-sm text-zinc-400">
           {presetLabels[settings.preset ?? "gastronomy"]}
         </span>
@@ -166,7 +171,7 @@ export function TenantSettingsPanel({
           El perfil se define al registrar el negocio y no puede modificarse.
         </span>
       </div>
-      <section className="grid gap-3 border-t border-zinc-800/80 pt-5">
+      <section id="ubicacion-sede" className="scroll-mt-24 grid gap-3 border-t border-white/[0.08] pt-5">
         <div>
           <h2 className="text-sm font-medium text-zinc-200">Ubicación del local primario</h2>
           <p className="text-xs text-zinc-400">La ubicación exacta se publica en el directorio.</p>
@@ -174,7 +179,7 @@ export function TenantSettingsPanel({
         <LocationPicker initialValue={location} onConfirm={setLocation} />
       </section>
 
-      <section className="grid gap-3 border-t border-zinc-800/80 pt-5">
+      <section id="horarios-apertura" className="scroll-mt-24 grid gap-3 border-t border-white/[0.08] pt-5">
         <div>
           <h2 className="text-sm font-medium text-zinc-200">Horarios de apertura</h2>
           <p className="text-xs text-zinc-400">
