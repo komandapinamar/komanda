@@ -1,11 +1,21 @@
 "use client";
 
+import { useId } from "react";
+
 /**
- * Chromatic Liquid-Glass Emblem inspired by Dabbit's HeroMark shader.
- * Renders a four-loop command/clover mark with animated liquid-chrome
- * specular bands and subtle red/blue chromatic dispersion.
+ * Komanda "K" Monogram with Liquid-Glass / Chrome Specular Bevel
+ * and Chromatic Dispersion (inspired by Dabbit's shader finish, using Komanda's own mark).
  */
 export function LiquidGlassMark({ className = "size-14" }: { className?: string }) {
+  const uid = useId().replace(/:/g, "");
+  const chromeGradId = `komanda-chrome-${uid}`;
+  const chromaGradId = `komanda-chroma-${uid}`;
+  const frameGradId = `komanda-frame-${uid}`;
+  const bevelFilterId = `komanda-bevel-${uid}`;
+
+  const kPath =
+    "M 68 56 H 106 V 118 L 160 56 H 204 L 142 124 L 206 200 H 160 L 115 145 L 106 155 V 200 H 68 Z";
+
   return (
     <div
       className={`relative select-none ${className}`}
@@ -13,36 +23,45 @@ export function LiquidGlassMark({ className = "size-14" }: { className?: string 
       aria-label="Komanda mark"
     >
       <svg
-        viewBox="0 0 120 120"
-        className="size-full drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+        viewBox="0 0 256 256"
+        className="size-full drop-shadow-[0_10px_24px_rgba(0,0,0,0.5)]"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <linearGradient id="komanda-liquid-chrome" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={chromeGradId} x1="15%" y1="8%" x2="88%" y2="92%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="22%" stopColor="#d4d8e2" />
-            <stop offset="42%" stopColor="#262830" />
-            <stop offset="56%" stopColor="#faf9f6" />
-            <stop offset="76%" stopColor="#8e96a8" />
+            <stop offset="24%" stopColor="#d8dce6" />
+            <stop offset="44%" stopColor="#2b2d36" />
+            <stop offset="58%" stopColor="#fbfaf9" />
+            <stop offset="78%" stopColor="#949cae" />
             <stop offset="100%" stopColor="#f4f3f1" />
           </linearGradient>
-          <linearGradient id="komanda-chromatic-red" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ff6b4a" stopOpacity="0.65" />
-            <stop offset="45%" stopColor="#e3b878" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.7" />
+
+          <linearGradient id={chromaGradId} x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#d97757" stopOpacity="0.8" />
+            <stop offset="35%" stopColor="#e3b878" stopOpacity="0.45" />
+            <stop offset="70%" stopColor="#9ec4b5" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#9ab3d5" stopOpacity="0.85" />
           </linearGradient>
-          <filter id="komanda-glass-bevel" x="-15%" y="-15%" width="130%" height="130%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="blur" />
+
+          <linearGradient id={frameGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.06)" />
+            <stop offset="100%" stopColor="rgba(217,119,87,0.24)" />
+          </linearGradient>
+
+          <filter id={bevelFilterId} x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3.2" result="blur" />
             <feSpecularLighting
               in="blur"
-              surfaceScale="5"
-              specularConstant="1.15"
-              specularExponent="28"
+              surfaceScale="6"
+              specularConstant="1.2"
+              specularExponent="30"
               lightingColor="#ffffff"
               result="specOut"
             >
-              <fePointLight x="25" y="20" z="90" />
+              <fePointLight x="60" y="45" z="140" />
             </feSpecularLighting>
             <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specMask" />
             <feMerge>
@@ -52,34 +71,53 @@ export function LiquidGlassMark({ className = "size-14" }: { className?: string 
           </filter>
         </defs>
 
-        {/* Subtle chromatic dispersion rim */}
-        <g
-          stroke="url(#komanda-chromatic-red)"
-          strokeWidth="12.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.8"
-          transform="translate(1.2, -1)"
-        >
-          <path d="M36 52H28C19.163 52 12 44.837 12 36C12 27.163 19.163 20 28 20C36.837 20 44 27.163 44 36V52H36Z" />
-          <path d="M84 52H92C100.837 52 108 44.837 108 36C108 27.163 100.837 20 92 20C83.163 20 76 27.163 76 36V52H84Z" />
-          <path d="M36 68H28C19.163 68 12 75.163 12 84C12 92.837 19.163 100 28 100C36.837 100 44 92.837 44 84V68H36Z" />
-          <path d="M84 68H92C100.837 68 108 75.163 108 84C108 92.837 100.837 100 92 100C83.163 100 76 92.837 76 84V68H84Z" />
-        </g>
+        {/* Frosted Liquid Glass Squircle Container */}
+        <rect
+          x="10"
+          y="10"
+          width="236"
+          height="236"
+          rx="56"
+          fill="#18181c"
+          fillOpacity="0.88"
+        />
+        <rect
+          x="12"
+          y="12"
+          width="232"
+          height="232"
+          rx="54"
+          stroke={`url(#${frameGradId})`}
+          strokeWidth="3.5"
+        />
+        <rect
+          x="18"
+          y="18"
+          width="220"
+          height="220"
+          rx="48"
+          stroke={`url(#${chromaGradId})`}
+          strokeWidth="1.5"
+          strokeOpacity="0.55"
+        />
 
-        {/* Main Liquid Metal / Glass Body */}
-        <g
-          filter="url(#komanda-glass-bevel)"
-          stroke="url(#komanda-liquid-chrome)"
-          strokeWidth="11"
-          strokeLinecap="round"
+        {/* Chromatic Dispersion Offset Layer on the K */}
+        <path
+          d={kPath}
+          fill="none"
+          stroke={`url(#${chromaGradId})`}
+          strokeWidth="5"
           strokeLinejoin="round"
-        >
-          <path d="M36 52H28C19.163 52 12 44.837 12 36C12 27.163 19.163 20 28 20C36.837 20 44 27.163 44 36V52H36Z" />
-          <path d="M84 52H92C100.837 52 108 44.837 108 36C108 27.163 100.837 20 92 20C83.163 20 76 27.163 76 36V52H84Z" />
-          <path d="M36 68H28C19.163 68 12 75.163 12 84C12 92.837 19.163 100 28 100C36.837 100 44 92.837 44 84V68H36Z" />
-          <path d="M84 68H92C100.837 68 108 75.163 108 84C108 92.837 100.837 100 92 100C83.163 100 76 92.837 76 84V68H84Z" />
-        </g>
+          transform="translate(2.5, -2)"
+          opacity="0.75"
+        />
+
+        {/* Main Liquid-Chrome Komanda "K" Monogram */}
+        <path
+          d={kPath}
+          fill={`url(#${chromeGradId})`}
+          filter={`url(#${bevelFilterId})`}
+        />
       </svg>
     </div>
   );
