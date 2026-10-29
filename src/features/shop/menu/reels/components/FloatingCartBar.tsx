@@ -39,12 +39,13 @@ export default function FloatingCartBar({
         itemCount === 1 ? "producto" : "productos"
       }, total $${formattedSubtotal}`}
       onClick={isVisible ? handleClick : undefined}
-      className={`group liquid-prism-ring liquid-glass-pill fixed left-3.5 right-3.5 z-35 mx-auto flex max-w-[calc(100vw-1.75rem)] items-center justify-between rounded-full p-1.5 pl-4 text-[#f4f3f1] select-none cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/25 active:scale-[0.98] sm:max-w-md md:bottom-[calc(4vh+1rem)] md:max-w-[26rem] ${
+      className={`group liquid-prism-ring liquid-glass-pill fixed left-3.5 right-3.5 z-40 mx-auto flex w-[calc(100vw-1.75rem)] max-w-[calc(100vw-1.75rem)] items-center justify-between rounded-full p-1.5 pl-4 text-[#f4f3f1] select-none cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/25 active:scale-[0.98] sm:w-full sm:max-w-[26rem] md:!bottom-[calc(4vh+1rem)] ${
         isVisible
           ? "translate-y-0 scale-100 opacity-100 pointer-events-auto"
           : "translate-y-32 scale-95 opacity-0 pointer-events-none invisible"
       }`}
       style={{
+        position: "fixed",
         borderRadius: "9999px",
         bottom: `calc(${chromeOffset}px + env(safe-area-inset-bottom, 0px) + 1rem)`,
       }}

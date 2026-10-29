@@ -93,18 +93,8 @@ export default function ClassicMenuView({
   return (
     <OrderShell showCart={!isExpressRetail}>
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
-      <main
-        className={`min-h-[100dvh] space-y-8 bg-[#141416] p-4 sm:p-6 ${
-          showReelsLink ? "pt-24 md:pt-[calc(4vh+6rem)]" : ""
-        }`}
-      >
-        <div
-          className={
-            showReelsLink
-              ? "fixed top-4 left-4 right-4 z-40 md:top-[calc(4vh+1rem)] md:left-1/2 md:right-auto md:w-[calc(28rem-2rem)] md:-translate-x-1/2"
-              : "sticky top-4 z-20"
-          }
-        >
+      <main className="min-h-[100dvh] w-full max-w-full space-y-8 overflow-x-clip bg-[#141416] p-4 sm:p-6">
+        <div className="sticky top-4 z-30 w-full max-w-full">
           <MenuViewToolbar mode={showReelsLink ? "grid" : undefined}>
             <nav
               aria-label="Categorías de menú"
