@@ -98,6 +98,34 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
       expect(parsed.customer.name).toBe("Martín Autoservicio");
     });
 
+    it("accepts an optional discount code", () => {
+      const parsed = createKioskPaymentSessionSchema.parse({
+        items: [
+          {
+            catalogItemId: "11111111-1111-4111-8111-111111111111",
+            quantity: 1,
+          },
+        ],
+        discountCode: "PROMO10",
+      });
+
+      expect(parsed.discountCode).toBe("PROMO10");
+    });
+
+    it("rejects an oversized discount code", () => {
+      expect(() =>
+        createKioskPaymentSessionSchema.parse({
+          items: [
+            {
+              catalogItemId: "11111111-1111-4111-8111-111111111111",
+              quantity: 1,
+            },
+          ],
+          discountCode: "X".repeat(51),
+        }),
+      ).toThrow();
+    });
+
     it("rejects empty items array", () => {
       expect(() =>
         createKioskPaymentSessionSchema.parse({
@@ -442,6 +470,139 @@ describe("Story 2.1: Kiosk Payment Session Domain & HTTP", () => {
       expect(result.purchaseNumber).toBe("1042");
       expect(result.total).toBe("3500.00");
       expect(result.paymentId).toBe("mp-pay-9988");
+    });
+
+    it("supports weighted scale items with calculatedSubtotal in createSession and previewDiscount", async () => {
+      mockCurrentMercadoPago.mockResolvedValueOnce({
+        id: "acc-1",
+        status: "active",
+        webhookRoutingKey: "routing-key-1",
+      });
+
+      mockIdempotencyClaim.mockResolvedValueOnce({
+        replayed: false,
+        recordId: "claim-rec-weighted",
+        requestHash: "hash-weighted",
+      });
+
+      mockDecryptTokens.mockReturnValueOnce({
+        accessToken: "TEST-TOKEN",
+      });
+
+      mockLoadSelection.mockResolvedValue({
+        id: "22222222-2222-4222-8222-222222222222",
+        currency: "ARS",
+        name: "Jamón Cocido",
+        itemType: "weighted",
+        price: "15000.00",
+        status: "active",
+        addonGroups: [],
+        imageUrl: null,
+      });
+
+      mockCartCreate.mockImplementationOnce(async (args) => ({
+        id: "cart-weighted-1",
+        total: args.total,
+        currency: args.currency,
+        expiresAt: args.expiresAt,
+        lines: args.lines,
+      }));
+
+      mockCreatePaymentAttempt.mockResolvedValueOnce({
+        id: "att-weighted-1",
+      });
+
+      const mockMpClient = {
+        createPreference: vi.fn().mockResolvedValueOnce({
+          preferenceId: "pref-weighted-1",
+          redirectUrl: "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=pref-weighted-1",
+        }),
+      };
+
+      vi.mocked(withTenantTransaction).mockImplementationOnce(async (_ctx, callback) => {
+        const tx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi
+                  .fn()
+                  .mockResolvedValueOnce([{ currency: "ARS" }])
+                  .mockResolvedValueOnce([{ id: "loc-1" }]),
+              }),
+            }),
+          }),
+        };
+        return callback(tx as unknown as Parameters<typeof callback>[0]);
+      });
+
+      const service = new KioskPaymentService(
+        mockMpClient as unknown as ConstructorParameters<typeof KioskPaymentService>[0],
+      );
+      const sessionResult = await service.createSession({
+        context: mockContext,
+        body: {
+          items: [
+            {
+              catalogItemId: "22222222-2222-4222-8222-222222222222",
+              quantity: 1,
+              calculatedSubtotal: "2450.00",
+            },
+          ],
+        },
+        idempotencyKey: "idem-weighted-session",
+        baseUrl: "https://kiosk.komanda.test",
+      });
+
+      expect(sessionResult.total).toBe("2450.00");
+      expect(mockCartCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subtotal: "2450.00",
+          total: "2450.00",
+          lines: [
+            expect.objectContaining({
+              resourceId: "22222222-2222-4222-8222-222222222222",
+              itemType: "weighted",
+              quantity: 1,
+              unitPrice: "2450.00",
+              lineTotal: "2450.00",
+            }),
+          ],
+        }),
+      );
+
+      // Verify previewDiscount also uses calculatedSubtotal (2450.00) instead of catalog price (15000.00)
+      vi.mocked(withTenantTransaction).mockImplementationOnce(async (_ctx, callback) => {
+        const tx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi
+                  .fn()
+                  .mockResolvedValueOnce([{ currency: "ARS" }])
+                  .mockResolvedValueOnce([]), // discount not found -> returns calculated subtotal
+              }),
+            }),
+          }),
+        };
+        return callback(tx as unknown as Parameters<typeof callback>[0]);
+      });
+
+      const preview = await service.previewDiscount({
+        context: mockContext,
+        body: {
+          items: [
+            {
+              catalogItemId: "22222222-2222-4222-8222-222222222222",
+              quantity: 1,
+              calculatedSubtotal: "2450.00",
+            },
+          ],
+          discountCode: "NOEXISTE",
+        },
+      });
+
+      expect(preview.subtotal).toBe("2450.00");
+      expect(preview.total).toBe("2450.00");
     });
   });
 });

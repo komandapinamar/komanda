@@ -18,7 +18,6 @@ export function DiscountCouponInput({
   onApply,
   onRemove,
   disabled = false,
-  appearance = "default",
 }: DiscountCouponInputProps) {
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +39,9 @@ export function DiscountCouponInput({
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error inesperado al aplicar cupón.",
+        err instanceof Error
+          ? err.message
+          : "Error inesperado al aplicar cupón.",
       );
     } finally {
       setIsSubmitting(false);
@@ -66,13 +67,13 @@ export function DiscountCouponInput({
     return (
       <div
         data-testid="applied-discount-badge"
-        className={`flex items-center justify-between rounded-sm border border-emerald-600/40 px-3 py-2 text-xs ${appearance === "ticket" ? "bg-emerald-50 text-emerald-800" : "bg-emerald-950/20 text-emerald-400"}`}
+        className="flex items-center justify-between rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-2 text-xs text-emerald-300"
       >
         <div className="flex items-center gap-2">
-          <span className="font-mono font-bold tracking-wider">
+          <span className="font-mono font-semibold tracking-wider text-[#f4f3f1]">
             {appliedDiscount.code}
           </span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${appearance === "ticket" ? "bg-emerald-100 text-emerald-800" : "bg-emerald-800/40 text-emerald-300"}`}>
+          <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-medium text-emerald-300 tabular-nums">
             {formattedBenefit}
           </span>
         </div>
@@ -81,7 +82,7 @@ export function DiscountCouponInput({
           aria-label="Quitar cupón"
           onClick={handleRemove}
           disabled={isSubmitting || disabled}
-          className={`ml-2 font-bold transition disabled:opacity-50 ${appearance === "ticket" ? "text-red-700 hover:text-red-900" : "text-red-400 hover:text-red-300"}`}
+          className="ml-2 flex size-5 items-center justify-center rounded-full text-xs text-[#c2c2cc] transition hover:bg-white/10 hover:text-white disabled:opacity-50 cursor-pointer"
         >
           ✕
         </button>
@@ -90,7 +91,7 @@ export function DiscountCouponInput({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           data-testid="discount-code-input"
@@ -102,13 +103,13 @@ export function DiscountCouponInput({
             if (error) setError(null);
           }}
           disabled={isSubmitting || disabled}
-          className="min-w-0 flex-1 rounded-sm border border-[var(--color-accent-secondary)]/40 bg-transparent px-3 py-1.5 text-xs text-[var(--color-accent-secondary)] placeholder:text-[var(--color-accent-secondary)]/50 focus:border-[var(--color-accent-secondary)] focus:outline-none"
+          className="h-9 min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.04] px-3.5 text-xs text-[#f4f3f1] placeholder:text-[#c2c2cc]/60 focus:border-white/30 focus:outline-none"
         />
         <button
           data-testid="apply-discount-btn"
           type="submit"
           disabled={!code.trim() || isSubmitting || disabled}
-          className="rounded-sm bg-[var(--color-accent-secondary)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-primary)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
         >
           {isSubmitting ? "..." : "Aplicar"}
         </button>
@@ -116,7 +117,7 @@ export function DiscountCouponInput({
       {error ? (
         <p
           data-testid="discount-error-message"
-          className="text-xs text-red-600 font-medium"
+          className="px-2 text-xs font-medium text-red-400"
         >
           {error}
         </p>

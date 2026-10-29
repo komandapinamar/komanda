@@ -19,6 +19,7 @@ import {
   addonOptions,
   catalogCombos,
   catalogItems,
+  type CatalogItemType,
 } from "./catalog";
 import { tenantLocations, tenants } from "./platform";
 import { integrationAccounts } from "./integrations";
@@ -99,6 +100,7 @@ export const cartLines = pgTable(
     cartId: uuid("cart_id").notNull(),
     itemId: uuid("item_id"),
     comboId: uuid("combo_id"),
+    itemType: text("item_type").$type<CatalogItemType>().default("unit").notNull(),
     quantity: integer("quantity").notNull(),
     nameSnapshot: text("name_snapshot").notNull(),
     unitPriceSnapshot: numeric("unit_price_snapshot", {
@@ -135,6 +137,7 @@ export const cartLines = pgTable(
       sql`((${table.itemId} is not null)::int + (${table.comboId} is not null)::int) = 1`,
     ),
     check("cart_lines_quantity_check", sql`${table.quantity} > 0`),
+    check("cart_lines_item_type_check", sql`${table.itemType} in ('unit', 'weighted')`),
     check("cart_lines_amount_check", sql`${table.unitPriceSnapshot} >= 0 and ${table.lineTotal} >= 0`),
   ],
 );
@@ -205,6 +208,7 @@ export const paymentAttempts = pgTable(
     currency: text("currency").notNull(),
     customerSnapshot: jsonb("customer_snapshot").$type<Record<string, unknown>>().notNull(),
     notes: text("notes"),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true, mode: "date" }),
     idempotencyKey: text("idempotency_key").notNull(),
     processedAt: timestamp("processed_at", { withTimezone: true, mode: "date" }),
     failureCode: text("failure_code"),
@@ -275,6 +279,7 @@ export const tenantOrders = pgTable(
     pickupPin: text("pickup_pin"),
     estimatedWaitMinutes: integer("estimated_wait_minutes"),
     estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true, mode: "date" }),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true, mode: "date" }),
     paymentExpiresAt: timestamp("payment_expires_at", { withTimezone: true, mode: "date" }),
     currency: text("currency").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
@@ -349,6 +354,7 @@ export const orderLines = pgTable(
     orderId: uuid("order_id").notNull(),
     sourceItemId: uuid("source_item_id"),
     sourceComboId: uuid("source_combo_id"),
+    itemType: text("item_type").$type<CatalogItemType>().default("unit").notNull(),
     name: text("name").notNull(),
     quantity: integer("quantity").notNull(),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
@@ -378,6 +384,7 @@ export const orderLines = pgTable(
     unique("order_lines_tenant_id_id_key").on(table.tenantId, table.id),
     index("order_lines_tenant_order_idx").on(table.tenantId, table.orderId),
     check("order_lines_quantity_check", sql`${table.quantity} > 0`),
+    check("order_lines_item_type_check", sql`${table.itemType} in ('unit', 'weighted')`),
     check(
       "order_lines_amount_check",
       sql`${table.unitPrice} >= 0 and ${table.lineTotal} >= 0`,

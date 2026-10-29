@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/shop/cart/context/cart.context";
 import {
@@ -23,6 +23,10 @@ import {
   normalizeOptionalPhone,
 } from "@/features/shop/checkout/components/checkout-payload";
 import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
+import {
+  formatScheduledForDisplay,
+  generateScheduledDaysAndSlots,
+} from "@/features/orders/domain/order-scheduling";
 
 const initialFormValues: CheckoutFormValues = {
   customer: {
@@ -258,6 +262,14 @@ export default function CheckoutPayPage() {
   } = useCart();
   const [formValues, setFormValues] = useState(initialFormValues);
   const [paymentMethod, setPaymentMethod] = useState<"mercadopago" | "cash">("mercadopago");
+  const [deliveryTiming, setDeliveryTiming] = useState<"asap" | "scheduled">("asap");
+  const scheduledDays = useMemo(() => generateScheduledDaysAndSlots(), []);
+  const [selectedDayKey, setSelectedDayKey] = useState<string>(
+    () => scheduledDays[0]?.dateKey ?? "",
+  );
+  const [selectedSlotIso, setSelectedSlotIso] = useState<string>(
+    () => scheduledDays[0]?.slots[0]?.iso ?? "",
+  );
   const [showNotes, setShowNotes] = useState(false);
   const [pendingNotesClear, setPendingNotesClear] = useState<string | null>(null);
   const submittingRef = useRef(false);
@@ -404,6 +416,12 @@ export default function CheckoutPayPage() {
       return;
     }
     const orderNotes = formValues.notes.trim();
+    const scheduledForValue =
+      deliveryTiming === "scheduled" ? selectedSlotIso.trim() : null;
+    if (deliveryTiming === "scheduled" && !scheduledForValue) {
+      setSubmitError("Seleccioná un horario válido para programar tu pedido.");
+      return;
+    }
 
     // Synchronous re-entry guard: isSubmitting only disables the button on the
     // next render, so a double tap could otherwise start two payment sessions.
@@ -423,6 +441,7 @@ export default function CheckoutPayPage() {
             whatsappReadyOptIn: formValues.customer.whatsappReadyOptIn === true,
           },
           notes: orderNotes || undefined,
+          scheduledFor: scheduledForValue,
         });
 
         const targetTenantId = order.tenantId;
@@ -456,6 +475,7 @@ export default function CheckoutPayPage() {
           cartVersion: officialCart.version,
           customer: { name: customerName, phone: customerPhone, whatsappReadyOptIn: formValues.customer.whatsappReadyOptIn === true },
           notes: orderNotes,
+          scheduledFor: scheduledForValue,
         });
 
         const session = await createPaymentSession(tenantSlug, payload);
@@ -688,6 +708,130 @@ export default function CheckoutPayPage() {
                 ) : null}
               </div>
             )}
+          </div>
+
+          <div className="space-y-3" data-testid="checkout-scheduling-section">
+            <div>
+              <h3 className="text-sm font-semibold">¿Cuándo retirás tu pedido?</h3>
+              <p className="text-xs opacity-75">
+                Pedilo para ahora o programalo para retirar más tarde.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                data-testid="schedule-mode-asap"
+                onClick={() => setDeliveryTiming("asap")}
+                className={`rounded-2xl border p-3.5 text-left transition-all ${
+                  deliveryTiming === "asap"
+                    ? "border-[#f4f3f1] bg-white/[0.08] font-medium text-[#f4f3f1]"
+                    : "border-white/15 opacity-75 hover:opacity-100 hover:border-white/30"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Lo antes posible</span>
+                  {deliveryTiming === "asap" && (
+                    <span className="text-xs font-semibold text-emerald-400">
+                      ✓ Ahora
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs opacity-75">
+                  Preparación inmediata (~15–25 min).
+                </p>
+              </button>
+
+              <button
+                type="button"
+                data-testid="schedule-mode-scheduled"
+                onClick={() => {
+                  setDeliveryTiming("scheduled");
+                  if (!selectedDayKey && scheduledDays[0]) {
+                    setSelectedDayKey(scheduledDays[0].dateKey);
+                    setSelectedSlotIso(scheduledDays[0].slots[0]?.iso ?? "");
+                  }
+                }}
+                className={`rounded-2xl border p-3.5 text-left transition-all ${
+                  deliveryTiming === "scheduled"
+                    ? "border-[#f4f3f1] bg-white/[0.08] font-medium text-[#f4f3f1]"
+                    : "border-white/15 opacity-75 hover:opacity-100 hover:border-white/30"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Programar retiro</span>
+                  {deliveryTiming === "scheduled" && (
+                    <span className="text-xs font-semibold text-emerald-400">
+                      ✓ Programado
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs opacity-75">
+                  Elegí el día y la hora exacta de retiro.
+                </p>
+              </button>
+            </div>
+
+            {deliveryTiming === "scheduled" && scheduledDays.length > 0 ? (
+              <div
+                data-testid="schedule-slot-picker"
+                className="space-y-3 rounded-2xl border border-white/12 bg-black/30 p-4"
+              >
+                <div className="flex flex-wrap gap-2">
+                  {scheduledDays.map((day) => {
+                    const isActiveDay = day.dateKey === selectedDayKey;
+                    return (
+                      <button
+                        key={day.dateKey}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDayKey(day.dateKey);
+                          setSelectedSlotIso(day.slots[0]?.iso ?? "");
+                        }}
+                        className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                          isActiveDay
+                            ? "bg-[#f4f3f1] text-[#141416]"
+                            : "border border-white/15 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1]"
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(() => {
+                  const activeDay =
+                    scheduledDays.find((d) => d.dateKey === selectedDayKey) ??
+                    scheduledDays[0];
+                  if (!activeDay) return null;
+                  return (
+                    <div className="space-y-2">
+                      <label className="block text-xs text-[#c2c2cc]">
+                        Horario de retiro ({activeDay.label})
+                        <select
+                          data-testid="schedule-slot-select"
+                          value={selectedSlotIso}
+                          onChange={(e) => setSelectedSlotIso(e.target.value)}
+                          className="mt-1.5 h-10 w-full rounded-xl border border-white/15 bg-[#141416] px-3 text-sm font-medium text-[#f4f3f1] tabular-nums focus:border-white/40 focus:outline-none"
+                        >
+                          {activeDay.slots.map((slot) => (
+                            <option key={slot.iso} value={slot.iso}>
+                              {activeDay.label} a las {slot.label} hs
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {selectedSlotIso ? (
+                        <p className="text-xs font-medium text-emerald-400">
+                          ✦ Retiro programado para:{" "}
+                          {formatScheduledForDisplay(selectedSlotIso)} hs
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-3">

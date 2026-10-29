@@ -4,6 +4,39 @@ export class CatalogRuleViolationError extends Error {}
 
 const moneySchema = z.string().regex(/^\d{1,10}\.\d{2}$/);
 const catalogStatusSchema = z.enum(["draft", "active", "unavailable"]);
+export const catalogItemTypeSchema = z.enum(["unit", "weighted"]);
+
+export function normalizePluCode(barcode: string): string {
+  const digitsOnly = barcode.trim().replace(/\D/g, "");
+  if (!digitsOnly) return "";
+  const candidate = /^(2[0-9])\d{11}$/.test(digitsOnly)
+    ? digitsOnly.slice(2, 7)
+    : digitsOnly.slice(-5).padStart(5, "0");
+  if (!/^(?!00000)\d{5}$/.test(candidate)) return "";
+  return candidate;
+}
+
+export function isScaleEan13Prefix(barcode: string): boolean {
+  return /^(2[0-9])\d{11}$/.test(barcode.trim());
+}
+
+export function parseScaleEan13(
+  barcode: string,
+): { pluCode: string; calculatedSubtotal: string } | null {
+  const clean = barcode.trim();
+  if (!/^(2[0-9])\d{11}$/.test(clean)) return null;
+  const digits = clean.split("").map(Number);
+  const sum = digits
+    .slice(0, 12)
+    .reduce((acc, d, idx) => acc + d * (idx % 2 === 0 ? 1 : 3), 0);
+  if ((10 - (sum % 10)) % 10 !== digits[12]) return null;
+  const amountInt = Number.parseInt(clean.slice(7, 12), 10);
+  if (amountInt <= 0) return null;
+  return {
+    pluCode: clean.slice(2, 7),
+    calculatedSubtotal: `${amountInt}.00`,
+  };
+}
 
 export const categoryInputSchema = z
   .object({
@@ -26,6 +59,7 @@ export const catalogItemInputSchema = z
     description: z.string().trim().max(2000).nullable().optional(),
     price: moneySchema,
     currency: z.string().regex(/^[A-Z]{3}$/),
+    itemType: catalogItemTypeSchema.default("unit"),
     imageAssetId: z.uuid().nullable().optional(),
     videoAssetId: z.uuid().nullable().optional(),
     barcode: z.string().trim().min(1).max(64).nullable().optional(),

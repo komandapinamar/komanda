@@ -21,6 +21,7 @@ export function buildCheckoutPayload(input: {
   cartVersion?: number;
   customer: { name: string; phone?: string | null; whatsappReadyOptIn?: boolean };
   notes: string;
+  scheduledFor?: string | null;
 }): CreatePaymentSessionPayload {
   const notes = input.notes.trim();
 
@@ -33,5 +34,6 @@ export function buildCheckoutPayload(input: {
       ...(input.customer.whatsappReadyOptIn === true ? { whatsappReadyOptIn: true } : {}),
     },
     notes: notes.length > 0 ? notes : undefined,
+    ...(input.scheduledFor ? { scheduledFor: input.scheduledFor } : {}),
   };
 }

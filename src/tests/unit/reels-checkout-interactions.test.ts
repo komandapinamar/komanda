@@ -144,7 +144,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
   });
 
   describe("ReelActionRail (Story 3.1)", () => {
-    it("renders cart button with +1 label, info button and cartPop micro-animation style", () => {
+    it("renders cart button with +1 label and cartPop micro-animation style without info button", () => {
       const html = renderToStaticMarkup(
         React.createElement(ReelActionRail, {
           item: mockSimpleItem,
@@ -155,7 +155,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
       expect(html).toContain('data-testid="action-btn-add"');
       expect(html).toContain('data-testid="action-add-label"');
       expect(html).toContain("+1");
-      expect(html).toContain('data-testid="action-btn-info"');
+      expect(html).not.toContain('data-testid="action-btn-info"');
       expect(html).toContain("cartPop");
       expect(html).toContain("animate-cart-pop");
       expect(html).toContain('data-in-cart="false"');
@@ -203,8 +203,7 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
         }) as TestElement;
         const fragmentChildren = el.props.children as TestElement[];
         const railContainer = fragmentChildren[2];
-        const buttons = railContainer.props.children as TestElement[];
-        capturedAddButton = buttons[0];
+        capturedAddButton = railContainer.props.children as TestElement;
         return el;
       }
 
@@ -215,31 +214,6 @@ describe("Reels Checkout and Interactions (Epic 3)", () => {
 
       expect(stopPropagation).toHaveBeenCalled();
       expect(onAddToCart).toHaveBeenCalledTimes(1);
-    });
-
-    it("opens dish info modal when info button is clicked", () => {
-      const onOpenInfo = vi.fn();
-      let capturedInfoButton: TestElement | null = null;
-
-      function TestHarness() {
-        const el = ReelActionRail({
-          item: mockSimpleItem,
-          onOpenInfo,
-        }) as TestElement;
-        const fragmentChildren = el.props.children as TestElement[];
-        const railContainer = fragmentChildren[2];
-        const buttons = railContainer.props.children as TestElement[];
-        capturedInfoButton = buttons[1];
-        return el;
-      }
-
-      renderToStaticMarkup(React.createElement(TestHarness));
-
-      const stopPropagation = vi.fn();
-      capturedInfoButton!.props.onClick!({ stopPropagation });
-
-      expect(stopPropagation).toHaveBeenCalled();
-      expect(onOpenInfo).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -43,6 +43,7 @@ export type OrderView = {
     id: string;
     sourceItemId: string | null;
     sourceComboId: string | null;
+    itemType: "unit" | "weighted";
     name: string;
     quantity: number;
     unitPrice: string;
@@ -73,6 +74,7 @@ export type OrderView = {
   pickupPin?: string | null;
   estimatedWaitMinutes?: number | null;
   estimatedReadyAt?: string | null;
+  scheduledFor?: string | null;
   paymentExpiresAt?: string | null;
   version: number;
   approvedAt: string | null;
@@ -122,6 +124,7 @@ function serializeOrder(
       id: line.id,
       sourceItemId: line.sourceItemId,
       sourceComboId: line.sourceComboId,
+      itemType: (line.itemType as "unit" | "weighted") ?? "unit",
       name: line.name,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
@@ -147,6 +150,7 @@ function serializeOrder(
     pickupPin: order.pickupPin ?? null,
     estimatedWaitMinutes: order.estimatedWaitMinutes ?? null,
     estimatedReadyAt: dateToIso(order.estimatedReadyAt),
+    scheduledFor: dateToIso(order.scheduledFor),
     paymentExpiresAt: dateToIso(order.paymentExpiresAt),
     version: order.version,
     approvedAt: dateToIso(order.approvedAt),
@@ -316,6 +320,7 @@ export class OrderRepository {
     pickupPin?: string | null;
     estimatedWaitMinutes?: number | null;
     estimatedReadyAt?: Date | null;
+    scheduledFor?: Date | null;
     paymentExpiresAt?: Date | null;
   }) {
     const existing = await this.findByIdempotencyKey(input.idempotencyKey);
@@ -357,7 +362,9 @@ export class OrderRepository {
     const estimatedReadyAt =
       input.estimatedReadyAt !== undefined
         ? input.estimatedReadyAt
-        : new Date(now.getTime() + (estimatedWaitMinutes ?? 15) * 60 * 1000);
+        : input.scheduledFor
+          ? input.scheduledFor
+          : new Date(now.getTime() + (estimatedWaitMinutes ?? 15) * 60 * 1000);
     const pickupPin =
       input.pickupPin !== undefined
         ? input.pickupPin
@@ -394,6 +401,7 @@ export class OrderRepository {
         pickupPin,
         estimatedWaitMinutes,
         estimatedReadyAt,
+        scheduledFor: input.scheduledFor ?? null,
         paymentExpiresAt: input.paymentExpiresAt ?? null,
         currency: input.cart.currency,
         idempotencyKey: input.idempotencyKey,
@@ -406,7 +414,8 @@ export class OrderRepository {
     if (!order) throw new Error("Failed to create order.");
 
     for (const cartLine of input.cart.lines) {
-      if (cartLine.itemId) {
+      const lineItemType = (cartLine as { itemType?: "unit" | "weighted" }).itemType ?? "unit";
+      if (cartLine.itemId && lineItemType !== "weighted") {
         const deducted = await this.transaction
           .update(catalogItems)
           .set({
@@ -446,6 +455,7 @@ export class OrderRepository {
           orderId: order.id,
           sourceItemId: cartLine.itemId,
           sourceComboId: cartLine.comboId,
+          itemType: lineItemType,
           name: cartLine.nameSnapshot,
           quantity: cartLine.quantity,
           unitPrice: cartLine.unitPriceSnapshot,

@@ -58,9 +58,11 @@ const directOrderItemSchema = z
     kind: z.enum(["item", "combo"]).default("item"),
     resourceId: z.string().uuid().optional(),
     catalogItemId: z.string().uuid().optional(),
+    itemType: z.enum(["unit", "weighted"]).optional(),
     quantity: z.number().int().positive().max(50),
     optionIds: z.array(z.string().uuid()).max(50).default([]),
     note: z.string().trim().max(500).optional(),
+    calculatedSubtotal: z.string().regex(/^\d{1,10}\.\d{2}$/).optional(),
   })
   .refine(
     (item) => Boolean(item.resourceId || item.catalogItemId),
@@ -69,9 +71,11 @@ const directOrderItemSchema = z
   .transform((item) => ({
     kind: item.kind,
     resourceId: (item.resourceId ?? item.catalogItemId) as string,
+    itemType: item.itemType,
     quantity: item.quantity,
     optionIds: item.optionIds,
     note: item.note,
+    calculatedSubtotal: item.calculatedSubtotal,
   }));
 
 export const createDirectOrderSchemaFromItems = z
@@ -222,6 +226,7 @@ export class CreateOrderService {
       const lines: Array<{
         kind: "item" | "combo";
         resourceId: string;
+        itemType?: "unit" | "weighted";
         quantity: number;
         name: string;
         unitPrice: string;
@@ -245,12 +250,14 @@ export class CreateOrderService {
         }
         categoryMap.set(selection.resourceId, (catalog as { categoryId?: string | null }).categoryId ?? null);
         const validated = revalidateCartSelection(selection, catalog);
-        const lineTotalCents = validated.unitPriceCents * selection.quantity;
+        const effectiveQuantity = validated.itemType === "weighted" ? 1 : selection.quantity;
+        const lineTotalCents = validated.unitPriceCents * effectiveQuantity;
         subtotalCents += lineTotalCents;
         lines.push({
           kind: selection.kind,
           resourceId: selection.resourceId,
-          quantity: selection.quantity,
+          itemType: validated.itemType,
+          quantity: effectiveQuantity,
           name: catalog.name,
           unitPrice: centsToMoney(validated.unitPriceCents),
           lineTotal: centsToMoney(lineTotalCents),
@@ -454,6 +461,8 @@ export class CreateOrderService {
         paymentStatus: "paid",
         customer: attempt.customerSnapshot,
         notes: attempt.notes ?? undefined,
+        scheduledFor: attempt.scheduledFor ?? null,
+        estimatedReadyAt: attempt.scheduledFor ?? undefined,
         idempotencyKey: `payment-attempt:${attempt.id}`,
         paymentAttemptId: attempt.id,
         approvedAt: input.approvedAt ?? attempt.processedAt ?? new Date(),

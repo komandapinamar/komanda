@@ -134,6 +134,7 @@ type TenantOrderResponse = {
   currency: string;
   tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  scheduledFor?: string | null;
   paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt: string | null;
@@ -184,6 +185,7 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
     currency: order.currency,
     tender: order.tender ?? null,
     pickupPin: order.pickupPin ?? null,
+    scheduledFor: order.scheduledFor ?? null,
     paymentExpiresAt: order.paymentExpiresAt ?? null,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
@@ -580,6 +582,14 @@ export default function AdminOrdersLive({
                     <span className="rounded-full border border-[var(--color-accent-secondary)]/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]">
                       {sourceLabel(order.source)}
                     </span>
+                    {order.scheduledFor ? (
+                      <span
+                        data-testid="admin-order-scheduled-badge"
+                        className="rounded-full border border-sky-400/50 bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300"
+                      >
+                        Programado: {formatDate(order.scheduledFor)}
+                      </span>
+                    ) : null}
                     {cashPending ? (
                       <span className="rounded-full border border-amber-500 bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-amber-400">
                         Pendiente de pago - Efectivo

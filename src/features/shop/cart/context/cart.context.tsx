@@ -35,7 +35,6 @@ type PersistedCartState = {
 type CartContextValue = {
   tenantSlug: string;
   items: CartLine[];
-  // snapshot is a minimal version of "items" to sync with backend before payment
   snapshot: CartSnapshotLine[];
   itemCount: number;
   subtotal: number;
@@ -49,6 +48,7 @@ type CartContextValue = {
   addItem: (item: MenuItem) => void;
   decrementItem: (documentId: string) => void;
   removeItem: (documentId: string) => void;
+  removeAddonFromLine?: (lineId: string, optionId: string) => void;
   clearCart: () => void;
   syncCart: () => Promise<OfficialCart | null>;
   beginCheckout: () => Promise<OfficialCart | null>;
@@ -65,49 +65,117 @@ function optionSignature(optionIds?: string[]) {
   return [...(optionIds ?? [])].sort().join(",");
 }
 
-function cartLineId(item: MenuItem) {
+export function cartLineId(item: MenuItem) {
   const signature = optionSignature(item.selectedOptionIds);
   return signature ? `${item.documentId}::${signature}` : item.documentId;
 }
 
-function cartLineToSnapshot(cartLine: CartLine): CartSnapshotLine {
-  return {
-    documentId: cartLine.item.documentId,
-    quantity: cartLine.quantity,
-    name: cartLine.item.name,
-    unitPrice: cartLine.item.basePrice ?? cartLine.item.price,
-    image: cartLine.item.image,
-    optionIds: cartLine.item.selectedOptionIds ?? [],
-    note: cartLine.item.selectedOptionSummary ?? undefined,
-  };
+export function getCartLineOptionsDelta(item: MenuItem): number {
+  return (item.selectedOptions ?? []).reduce(
+    (sum, opt) => sum + (opt.priceDelta ?? 0),
+    0,
+  );
+}
+
+export function getCartLineBaseUnitPrice(item: MenuItem): number {
+  if (typeof item.basePrice === "number" && Number.isFinite(item.basePrice)) {
+    return item.basePrice;
+  }
+  const optionsDelta = getCartLineOptionsDelta(item);
+  if (optionsDelta > 0 && item.price > optionsDelta) {
+    return item.price - optionsDelta;
+  }
+  return item.price;
+}
+
+export function getCartLineSubtotal(cartLine: CartLine): number {
+  const baseUnitPrice = getCartLineBaseUnitPrice(cartLine.item);
+  const optionsDelta = getCartLineOptionsDelta(cartLine.item);
+  return baseUnitPrice * cartLine.quantity + optionsDelta;
+}
+
+function cartLinesToSnapshots(cartLines: CartLine[]): CartSnapshotLine[] {
+  const snapshots: CartSnapshotLine[] = [];
+  for (const cartLine of cartLines) {
+    const basePrice = getCartLineBaseUnitPrice(cartLine.item);
+    const optionIds = cartLine.item.selectedOptionIds ?? [];
+    if (optionIds.length > 0 && cartLine.quantity > 1) {
+      // Send 1 unit with the selected add-ons so the backend does not multiply add-ons by quantity,
+      // and send the remaining (quantity - 1) units as base items.
+      snapshots.push({
+        documentId: cartLine.item.documentId,
+        quantity: 1,
+        name: cartLine.item.name,
+        unitPrice: basePrice,
+        image: cartLine.item.image,
+        optionIds,
+        note: cartLine.item.selectedOptionSummary ?? undefined,
+      });
+      snapshots.push({
+        documentId: cartLine.item.documentId,
+        quantity: cartLine.quantity - 1,
+        name: cartLine.item.name,
+        unitPrice: basePrice,
+        image: cartLine.item.image,
+        optionIds: [],
+      });
+    } else {
+      snapshots.push({
+        documentId: cartLine.item.documentId,
+        quantity: cartLine.quantity,
+        name: cartLine.item.name,
+        unitPrice: basePrice,
+        image: cartLine.item.image,
+        optionIds,
+        note: cartLine.item.selectedOptionSummary ?? undefined,
+      });
+    }
+  }
+  return snapshots;
 }
 
 function officialCartToLines(cart: OfficialCart): CartLine[] {
-  return cart.items.map((line) => ({
-    lineId: line.id ?? cartLineId({
-      documentId: line.documentId,
-      name: line.name,
-      price: line.unitPrice,
-      description: null,
-      image: line.image,
-      category: null,
-      combos: null,
-      selectedOptionIds: line.optionIds,
-    }),
-    quantity: line.quantity,
-    item: {
-      documentId: line.documentId,
-      name: line.name,
-      price: line.unitPrice,
-      description: line.note ?? null,
-      image: line.image,
-      category: null,
-      combos: null,
-      selectedOptionIds: line.optionIds,
-      selectedOptionSummary: line.optionNames?.join(", ") || line.note || null,
-      selectedOptions: line.selectedOptions,
-    },
-  }));
+  return cart.items.map((line) => {
+    const optionsDelta = (line.selectedOptions ?? []).reduce(
+      (sum, opt) => sum + (opt.priceDelta ?? 0),
+      0,
+    );
+    const basePrice =
+      optionsDelta > 0 && line.unitPrice > optionsDelta
+        ? line.unitPrice - optionsDelta
+        : line.unitPrice;
+
+    return {
+      lineId:
+        line.id ??
+        cartLineId({
+          documentId: line.documentId,
+          name: line.name,
+          price: line.unitPrice,
+          basePrice,
+          description: null,
+          image: line.image,
+          category: null,
+          combos: null,
+          selectedOptionIds: line.optionIds,
+        }),
+      quantity: line.quantity,
+      item: {
+        documentId: line.documentId,
+        name: line.name,
+        price: line.unitPrice,
+        basePrice,
+        description: line.note ?? null,
+        image: line.image,
+        category: null,
+        combos: null,
+        selectedOptionIds: line.optionIds,
+        selectedOptionSummary:
+          line.optionNames?.join(", ") || line.note || null,
+        selectedOptions: line.selectedOptions,
+      },
+    };
+  });
 }
 
 function isPersistedCartLine(line: unknown): line is CartLine {
@@ -130,7 +198,8 @@ export function CartProvider({
 }) {
   const [items, setItems] = useState<CartLine[]>([]);
   const [cartId, setCartId] = useState<string | null>(null);
-  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscountInfo | null>(null);
+  const [appliedDiscount, setAppliedDiscount] =
+    useState<AppliedDiscountInfo | null>(null);
   const [discountTotal, setDiscountTotal] = useState<number>(0);
   const [syncStatus, setSyncStatus] = useState<CartSyncStatus>("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -156,6 +225,7 @@ export function CartProvider({
         setItems(
           parsedCart.items.filter(isPersistedCartLine).map((line) => ({
             ...line,
+            lineId: line.lineId ?? cartLineId(line.item),
             item: {
               ...line.item,
               category: line.item.category ?? null,
@@ -213,10 +283,7 @@ export function CartProvider({
       );
 
       if (!existingItem) {
-        return [
-          ...currentItems,
-          { item, quantity: 1, lineId: targetLineId },
-        ];
+        return [...currentItems, { item, quantity: 1, lineId: targetLineId }];
       }
 
       return currentItems.map((cartLine) =>
@@ -231,39 +298,166 @@ export function CartProvider({
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
-    setItems((currentItems) =>
-      currentItems.flatMap((cartLine) => {
+    setItems((currentItems) => {
+      const hasExactLineMatch = currentItems.some(
+        (cartLine) =>
+          (cartLine.lineId ?? cartLineId(cartLine.item)) === lineIdOrDocumentId,
+      );
+
+      const targetIndex = currentItems.findIndex((cartLine) => {
         const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
-        if (
-          lineId !== lineIdOrDocumentId &&
-          cartLine.item.documentId !== lineIdOrDocumentId
-        ) {
+        return hasExactLineMatch
+          ? lineId === lineIdOrDocumentId
+          : cartLine.item.documentId === lineIdOrDocumentId;
+      });
+
+      if (targetIndex < 0) return currentItems;
+
+      const targetLine = currentItems[targetIndex]!;
+      const hasAddons = (targetLine.item.selectedOptionIds ?? []).length > 0;
+
+      // If decrementing a line of quantity 1 that has add-ons, and another plain line
+      // of the same product exists in the cart, transfer the add-ons to the remaining unit
+      // so the add-on is never lost when reducing the product count.
+      if (targetLine.quantity === 1 && hasAddons) {
+        const siblingIndex = currentItems.findIndex(
+          (other, idx) =>
+            idx !== targetIndex &&
+            other.item.documentId === targetLine.item.documentId &&
+            (other.item.selectedOptionIds ?? []).length === 0,
+        );
+        if (siblingIndex >= 0) {
+          const sibling = currentItems[siblingIndex]!;
+          const mergedItem: MenuItem = {
+            ...sibling.item,
+            price: targetLine.item.price,
+            basePrice: getCartLineBaseUnitPrice(targetLine.item),
+            selectedOptionIds: targetLine.item.selectedOptionIds,
+            selectedOptionSummary: targetLine.item.selectedOptionSummary,
+            selectedOptions: targetLine.item.selectedOptions,
+          };
+          const newLineId = cartLineId(mergedItem);
+          return currentItems
+            .map((line, idx) =>
+              idx === siblingIndex
+                ? { ...line, lineId: newLineId, item: mergedItem }
+                : line,
+            )
+            .filter((_, idx) => idx !== targetIndex);
+        }
+      }
+
+      return currentItems.flatMap((cartLine, idx) => {
+        if (idx !== targetIndex) {
           return [cartLine];
         }
 
-        if (cartLine.quantity === 1) {
+        if (cartLine.quantity <= 1) {
           return [];
         }
 
         return [{ ...cartLine, quantity: cartLine.quantity - 1 }];
-      }),
-    );
+      });
+    });
   }, []);
 
   const removeItem = useCallback((lineIdOrDocumentId: string) => {
     setCartId(null);
     setSyncStatus("idle");
     setSyncError(null);
-    setItems((currentItems) =>
-      currentItems.filter((cartLine) => {
+    setItems((currentItems) => {
+      const hasExactLineMatch = currentItems.some(
+        (cartLine) =>
+          (cartLine.lineId ?? cartLineId(cartLine.item)) === lineIdOrDocumentId,
+      );
+
+      const targetIndex = currentItems.findIndex((cartLine) => {
         const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
-        return (
-          lineId !== lineIdOrDocumentId &&
-          cartLine.item.documentId !== lineIdOrDocumentId
+        return hasExactLineMatch
+          ? lineId === lineIdOrDocumentId
+          : cartLine.item.documentId === lineIdOrDocumentId;
+      });
+
+      if (targetIndex < 0) return currentItems;
+
+      const targetLine = currentItems[targetIndex]!;
+      const hasAddons = (targetLine.item.selectedOptionIds ?? []).length > 0;
+
+      if (hasAddons) {
+        const siblingIndex = currentItems.findIndex(
+          (other, idx) =>
+            idx !== targetIndex &&
+            other.item.documentId === targetLine.item.documentId &&
+            (other.item.selectedOptionIds ?? []).length === 0,
         );
-      }),
-    );
+        if (siblingIndex >= 0) {
+          const sibling = currentItems[siblingIndex]!;
+          const mergedItem: MenuItem = {
+            ...sibling.item,
+            price: targetLine.item.price,
+            basePrice: getCartLineBaseUnitPrice(targetLine.item),
+            selectedOptionIds: targetLine.item.selectedOptionIds,
+            selectedOptionSummary: targetLine.item.selectedOptionSummary,
+            selectedOptions: targetLine.item.selectedOptions,
+          };
+          const newLineId = cartLineId(mergedItem);
+          return currentItems
+            .map((line, idx) =>
+              idx === siblingIndex
+                ? { ...line, lineId: newLineId, item: mergedItem }
+                : line,
+            )
+            .filter((_, idx) => idx !== targetIndex);
+        }
+      }
+
+      return currentItems.filter((_, idx) => idx !== targetIndex);
+    });
   }, []);
+
+  const removeAddonFromLine = useCallback(
+    (targetLineId: string, optionId: string) => {
+      setCartId(null);
+      setSyncStatus("idle");
+      setSyncError(null);
+      setItems((currentItems) =>
+        currentItems.map((cartLine) => {
+          const lineId = cartLine.lineId ?? cartLineId(cartLine.item);
+          if (lineId !== targetLineId) return cartLine;
+
+          const nextOptions = (cartLine.item.selectedOptions ?? []).filter(
+            (opt) => opt.id !== optionId,
+          );
+          const nextOptionIds = (cartLine.item.selectedOptionIds ?? []).filter(
+            (id) => id !== optionId,
+          );
+          const basePrice = getCartLineBaseUnitPrice(cartLine.item);
+          const nextDelta = nextOptions.reduce(
+            (sum, opt) => sum + (opt.priceDelta ?? 0),
+            0,
+          );
+          const nextSummary =
+            nextOptions.map((opt) => opt.name).join(", ") || null;
+
+          const updatedItem: MenuItem = {
+            ...cartLine.item,
+            price: basePrice + nextDelta,
+            basePrice,
+            selectedOptions: nextOptions,
+            selectedOptionIds: nextOptionIds,
+            selectedOptionSummary: nextSummary,
+          };
+
+          return {
+            ...cartLine,
+            lineId: cartLineId(updatedItem),
+            item: updatedItem,
+          };
+        }),
+      );
+    },
+    [],
+  );
 
   const clearCart = useCallback(() => {
     setItems([]);
@@ -274,19 +468,20 @@ export function CartProvider({
     setSyncError(null);
   }, []);
 
-  const snapshot = useMemo(
-    () => items.map(cartLineToSnapshot),
-    [items],
-  );
+  const snapshot = useMemo(() => cartLinesToSnapshots(items), [items]);
 
   const applyOfficialCart = useCallback((cart: OfficialCart) => {
-    setItems((currentItems) => officialCartToLines(cart).map((line) => ({
-      ...line,
-      item: {
-        ...line.item,
-        videoUrl: currentItems.find(({ item }) => item.documentId === line.item.documentId)?.item.videoUrl,
-      },
-    })));
+    setItems((currentItems) =>
+      officialCartToLines(cart).map((line) => ({
+        ...line,
+        item: {
+          ...line.item,
+          videoUrl: currentItems.find(
+            ({ item }) => item.documentId === line.item.documentId,
+          )?.item.videoUrl,
+        },
+      })),
+    );
     setCartId(cart.id);
     setDiscountTotal(cart.discountTotal ?? 0);
     setAppliedDiscount(cart.appliedDiscount ?? null);
@@ -306,8 +501,7 @@ export function CartProvider({
   const subtotal = useMemo(
     () =>
       items.reduce(
-        (totalPrice, cartLine) =>
-          totalPrice + cartLine.quantity * cartLine.item.price,
+        (totalPrice, cartLine) => totalPrice + getCartLineSubtotal(cartLine),
         0,
       ),
     [items],
@@ -334,7 +528,7 @@ export function CartProvider({
     try {
       const syncedCart = await createCart(
         tenantSlug,
-        items.map(cartLineToSnapshot),
+        cartLinesToSnapshots(items),
         appliedDiscount?.code,
       );
       applyOfficialCart(syncedCart);
@@ -342,7 +536,9 @@ export function CartProvider({
     } catch (error) {
       setSyncStatus("error");
       setSyncError(
-        error instanceof Error ? error.message : "No se pudo sincronizar el carrito.",
+        error instanceof Error
+          ? error.message
+          : "No se pudo sincronizar el carrito.",
       );
       return null;
     }
@@ -378,95 +574,54 @@ export function CartProvider({
   );
 
   const removeDiscount = useCallback(async () => {
-    if (cartId) {
-      try {
-        const updatedCart = await removeCartDiscount(tenantSlug, cartId);
-        applyOfficialCart(updatedCart);
-      } catch {
-        setAppliedDiscount(null);
-        setDiscountTotal(0);
-      }
-    } else {
+    if (!cartId) {
+      setAppliedDiscount(null);
+      setDiscountTotal(0);
+      return;
+    }
+    try {
+      const updatedCart = await removeCartDiscount(tenantSlug, cartId);
+      applyOfficialCart(updatedCart);
+    } catch {
       setAppliedDiscount(null);
       setDiscountTotal(0);
     }
   }, [applyOfficialCart, cartId, tenantSlug]);
 
-  const backupStorageKey = `komanda.cart.backup.${tenantSlug}`;
+  const beginCheckout = useCallback(async () => {
+    return syncCart();
+  }, [syncCart]);
+
+  const backupKey = `komanda.cart.backup.${tenantSlug}`;
 
   const backupCart = useCallback(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
+    if (typeof window === "undefined") return;
     try {
-      const persistedState: PersistedCartState = {
+      const payload: PersistedCartState = {
         cartId,
         items,
         appliedDiscount,
         discountTotal,
         savedAt: Date.now(),
       };
-
-      window.localStorage.setItem(backupStorageKey, JSON.stringify(persistedState));
+      window.localStorage.setItem(backupKey, JSON.stringify(payload));
     } catch {
-      // Ignore localStorage quota / access errors
+      // Ignore storage errors
     }
-  }, [appliedDiscount, backupStorageKey, cartId, discountTotal, items]);
+  }, [appliedDiscount, backupKey, cartId, discountTotal, items]);
 
-  const restoreCartBackupCallback = useCallback(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
+  const restoreCartBackup = useCallback((): boolean => {
+    return restoreCartBackupForTenant(tenantSlug, (restored) => {
+      setItems(restored.items);
+      setCartId(restored.cartId);
+      setAppliedDiscount(restored.appliedDiscount ?? null);
+      setDiscountTotal(restored.discountTotal ?? 0);
+      setSyncStatus("idle");
+      setSyncError(null);
+    });
+  }, [tenantSlug]);
 
-    try {
-      const storedBackup = window.localStorage.getItem(backupStorageKey);
-      if (!storedBackup) {
-        return false;
-      }
-
-      const parsedCart = JSON.parse(storedBackup) as PersistedCartState;
-
-      if (Array.isArray(parsedCart.items)) {
-        const restoredItems = parsedCart.items.filter(isPersistedCartLine).map((line) => ({
-          ...line,
-          item: {
-            ...line.item,
-            category: line.item.category ?? null,
-            combos: line.item.combos ?? null,
-          },
-        }));
-
-        setItems(restoredItems);
-        setCartId(null);
-        setAppliedDiscount(parsedCart.appliedDiscount ?? null);
-        setDiscountTotal(parsedCart.discountTotal ?? 0);
-        setSyncStatus("idle");
-        setSyncError(null);
-
-        window.localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            cartId: null,
-            items: restoredItems,
-            appliedDiscount: parsedCart.appliedDiscount ?? null,
-            discountTotal: parsedCart.discountTotal ?? 0,
-          }),
-        );
-
-        window.localStorage.removeItem(backupStorageKey);
-        return true;
-      }
-    } catch {
-      return false;
-    }
-
-    return false;
-  }, [backupStorageKey, storageKey]);
-
-  const beginCheckout = useCallback(async () => syncCart(), [syncCart]);
-
-  const value = useMemo(
+  const value = useMemo<CartContextValue>(
     () => ({
       tenantSlug,
       items,
@@ -483,6 +638,7 @@ export function CartProvider({
       addItem,
       decrementItem,
       removeItem,
+      removeAddonFromLine,
       clearCart,
       syncCart,
       beginCheckout,
@@ -490,13 +646,13 @@ export function CartProvider({
       applyDiscount,
       removeDiscount,
       backupCart,
-      restoreCartBackup: restoreCartBackupCallback,
+      restoreCartBackup,
     }),
     [
       addItem,
+      appliedDiscount,
       applyDiscount,
       applyOfficialCart,
-      appliedDiscount,
       backupCart,
       beginCheckout,
       cartId,
@@ -506,9 +662,10 @@ export function CartProvider({
       isHydrated,
       itemCount,
       items,
+      removeAddonFromLine,
       removeDiscount,
       removeItem,
-      restoreCartBackupCallback,
+      restoreCartBackup,
       snapshot,
       subtotal,
       syncCart,
@@ -522,67 +679,72 @@ export function CartProvider({
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-export function useOptionalCart() {
-  return useContext(CartContext);
-}
+const BACKUP_TTL_MS = 60 * 60 * 1000;
 
-export function useCart() {
-  const context = useOptionalCart();
-
-  if (!context) {
-    throw new Error("useCart must be used inside a CartProvider");
-  }
-
-  return context;
-}
-
-export function restoreCartBackup(tenantSlug?: string): boolean {
+export function restoreCartBackup(
+  tenantSlug?: string,
+  onRestored?: (state: PersistedCartState) => void,
+): boolean {
   if (typeof window === "undefined") return false;
   try {
-    let targetKey: string | null = null;
-    let targetSlug = tenantSlug;
-
-    if (targetSlug) {
-      targetKey = `komanda.cart.backup.${targetSlug}`;
-    } else {
-      // No slug: pick the most recently saved backup to avoid injecting a
-      // different tenant's cart into the current storefront.
-      let newestSavedAt = -Infinity;
+    let key = tenantSlug ? `komanda.cart.backup.${tenantSlug}` : null;
+    if (!key) {
       for (let i = 0; i < window.localStorage.length; i++) {
-        const key = window.localStorage.key(i);
-        if (key && key.startsWith("komanda.cart.backup.")) {
-          const raw = window.localStorage.getItem(key);
-          if (!raw) continue;
-          let savedAt = 0;
-          try {
-            const candidate = JSON.parse(raw) as PersistedCartState;
-            savedAt =
-              typeof candidate.savedAt === "number" ? candidate.savedAt : 0;
-          } catch {
-            savedAt = 0;
-          }
-          if (savedAt >= newestSavedAt) {
-            newestSavedAt = savedAt;
-            targetKey = key;
-            targetSlug = key.replace("komanda.cart.backup.", "");
-          }
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith("komanda.cart.backup.")) {
+          key = k;
+          break;
         }
       }
     }
+    if (!key) return false;
 
-    if (!targetKey || !targetSlug) return false;
-    const backupData = window.localStorage.getItem(targetKey);
-    if (!backupData) return false;
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return false;
 
-    const parsedState = JSON.parse(backupData) as PersistedCartState;
-    if (!Array.isArray(parsedState.items)) return false;
-    parsedState.cartId = null; // Ensure new active cart session is created on checkout
+    const parsed = JSON.parse(raw) as PersistedCartState;
+    if (
+      parsed.savedAt &&
+      Date.now() - parsed.savedAt > BACKUP_TTL_MS
+    ) {
+      window.localStorage.removeItem(key);
+      return false;
+    }
 
-    const primaryKey = `komanda.cart.${targetSlug}`;
-    window.localStorage.setItem(primaryKey, JSON.stringify(parsedState));
-    window.localStorage.removeItem(targetKey);
+    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+      return false;
+    }
+
+    const resolvedSlug = key.replace("komanda.cart.backup.", "");
+    const activeStorageKey = `komanda.cart.${resolvedSlug}`;
+    const restoredState: PersistedCartState = {
+      cartId: null,
+      items: parsed.items,
+      appliedDiscount: parsed.appliedDiscount ?? null,
+      discountTotal: parsed.discountTotal ?? 0,
+    };
+    window.localStorage.setItem(
+      activeStorageKey,
+      JSON.stringify(restoredState),
+    );
+    window.localStorage.removeItem(key);
+    onRestored?.(restoredState);
     return true;
   } catch {
     return false;
   }
+}
+
+const restoreCartBackupForTenant = restoreCartBackup;
+
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider.");
+  }
+  return context;
+}
+
+export function useOptionalCart() {
+  return useContext(CartContext);
 }

@@ -27,6 +27,7 @@ const timestamps = {
 };
 
 export type CatalogStatus = "draft" | "active" | "unavailable" | "archived";
+export type CatalogItemType = "unit" | "weighted";
 export type MediaStatus = "pending" | "ready" | "failed" | "archived";
 
 export const mediaAssets = pgTable(
@@ -109,6 +110,7 @@ export const catalogItems = pgTable(
     description: text("description"),
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
+    itemType: text("item_type").$type<CatalogItemType>().default("unit").notNull(),
     barcode: text("barcode"),
     isGeneric: boolean("is_generic").default(false).notNull(),
     genericIcon: text("generic_icon"),
@@ -159,6 +161,7 @@ export const catalogItems = pgTable(
     ),
     check("catalog_items_price_check", sql`${table.price} > 0`),
     check("catalog_items_currency_check", sql`char_length(${table.currency}) = 3`),
+    check("catalog_items_item_type_check", sql`${table.itemType} in ('unit', 'weighted')`),
     check("catalog_items_sort_check", sql`${table.sortOrder} >= 0`),
     check("catalog_items_stock_quantity_check", sql`${table.stockQuantity} >= 0`),
     check("catalog_items_version_check", sql`${table.version} > 0`),

@@ -120,6 +120,17 @@ export class PrintJobService {
 }
 
 function buildTicketPayload(order: OrderView, tenantName?: string) {
+  const scheduledNote = order.scheduledFor
+    ? `[PROGRAMADO: ${new Intl.DateTimeFormat("es-AR", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "America/Argentina/Buenos_Aires",
+      }).format(new Date(order.scheduledFor))}]`
+    : null;
+  const combinedNotes = [scheduledNote, order.notes]
+    .filter(Boolean)
+    .join(" — ");
+
   return {
     orderId: order.id,
     purchaseNumber: order.purchaseNumber,
@@ -127,13 +138,15 @@ function buildTicketPayload(order: OrderView, tenantName?: string) {
     copies: order.source === "admin_direct" ? 2 : 1,
     tenant: tenantName ?? "Komanda",
     customer: order.customer,
-    notes: order.notes ?? undefined,
+    notes: combinedNotes || undefined,
+    scheduledFor: order.scheduledFor ?? undefined,
     currency: order.currency,
     amount: order.total,
     approvedAt: order.approvedAt ?? order.createdAt,
     items: order.lines.map((line) => ({
       id: line.sourceItemId ?? line.sourceComboId ?? line.id,
       name: line.name,
+      itemType: line.itemType ?? "unit",
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       lineTotal: line.lineTotal,

@@ -378,6 +378,7 @@ describe("Story 2.1: Gating Estricto de Cocina en Capa de Repositorio y KDS", ()
             id: "line-1",
             sourceItemId: "item-1",
             sourceComboId: null,
+            itemType: "unit",
             name: "Hamburguesa Doble",
             quantity: 2,
             unitPrice: "5000.00",

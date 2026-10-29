@@ -42,6 +42,7 @@ export async function createPaymentSession(
       body: JSON.stringify({
         customer: payload.customer,
         notes: payload.notes,
+        ...(payload.scheduledFor ? { scheduledFor: payload.scheduledFor } : {}),
         cartVersion: payload.cartVersion,
       }),
     },

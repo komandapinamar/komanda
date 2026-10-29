@@ -4,6 +4,11 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LocationPicker } from "@/features/location/web/LocationPicker";
 import type { LocationAddress } from "@/features/location/application/location.schemas";
+import {
+  normalizeOpeningHours,
+  type OpeningHours,
+} from "@/features/tenancy/domain/opening-hours";
+import { OpeningHoursEditor } from "@/features/tenancy/web/OpeningHoursEditor";
 
 export type TenantSettingsView = {
   tenantId: string;
@@ -19,6 +24,7 @@ export type TenantSettingsView = {
   timezone: string;
   version: number;
   location?: LocationAddress | null;
+  openingHours?: OpeningHours | null;
 };
 
 const presetLabels: Record<
@@ -52,6 +58,9 @@ export function TenantSettingsPanel({
     initialSettings.menuTheme ?? "classic",
   );
   const [location, setLocation] = useState<LocationAddress | null>(initialSettings.location ?? null);
+  const [openingHours, setOpeningHours] = useState<OpeningHours>(
+    normalizeOpeningHours(initialSettings.openingHours),
+  );
   const isExpressRetail = settings.preset === "express_retail";
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -86,11 +95,13 @@ export function TenantSettingsPanel({
               ? { menuTheme }
               : {}),
             ...(location ? { location } : {}),
+            openingHours,
           }),
         }),
       )) as TenantSettingsView;
       setSettings(updated);
       setMenuTheme(updated.menuTheme ?? "classic");
+      setOpeningHours(normalizeOpeningHours(updated.openingHours));
       setMessage("Configuración guardada.");
       router.refresh();
     } catch (error) {
@@ -144,10 +155,15 @@ export function TenantSettingsPanel({
           />
         </label>
       </div>
-      <div className="grid gap-2 border-t border-zinc-800/80 pt-5">
-        <span className="block text-sm font-medium text-zinc-200">
-          Perfil operativo del negocio
-        </span>
+      <div className="grid gap-2 border-t border-white/[0.08] pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="block text-sm font-medium text-zinc-200">
+            Perfil operativo del negocio
+          </span>
+          <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-0.5 text-xs font-medium text-[#f4f3f1]">
+            Moneda: {settings.currency}
+          </span>
+        </div>
         <span className="block text-sm text-zinc-400">
           {presetLabels[settings.preset ?? "gastronomy"]}
         </span>
@@ -155,12 +171,22 @@ export function TenantSettingsPanel({
           El perfil se define al registrar el negocio y no puede modificarse.
         </span>
       </div>
-      <section className="grid gap-3 border-t border-zinc-800/80 pt-5">
+      <section id="ubicacion-sede" className="scroll-mt-24 grid gap-3 border-t border-white/[0.08] pt-5">
         <div>
           <h2 className="text-sm font-medium text-zinc-200">Ubicación del local primario</h2>
           <p className="text-xs text-zinc-400">La ubicación exacta se publica en el directorio.</p>
         </div>
         <LocationPicker initialValue={location} onConfirm={setLocation} />
+      </section>
+
+      <section id="horarios-apertura" className="scroll-mt-24 grid gap-3 border-t border-white/[0.08] pt-5">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-200">Horarios de apertura</h2>
+          <p className="text-xs text-zinc-400">
+            Se muestran en la página principal junto al teléfono del negocio.
+          </p>
+        </div>
+        <OpeningHoursEditor value={openingHours} onChange={setOpeningHours} />
       </section>
 
       {!isExpressRetail ? (

@@ -103,8 +103,9 @@ export default function ReelItem({
       aria-label={`Plato: ${item.name}, Precio: $${item.price}`}
       onClick={handleTap}
       onTouchEnd={handleTap}
-      className="relative w-full h-[100dvh] overflow-hidden flex flex-col justify-end [scroll-snap-align:start] [scroll-snap-stop:always] shrink-0 select-none bg-black"
+      className="relative w-full max-w-full h-[100dvh] max-h-full overflow-hidden flex flex-col justify-end [scroll-snap-align:start] [scroll-snap-stop:always] shrink-0 select-none bg-[#141416]"
       style={{
+        height: "100%",
         scrollSnapAlign: "start",
         scrollSnapStop: "always",
         touchAction: "manipulation",

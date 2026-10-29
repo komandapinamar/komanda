@@ -12,11 +12,11 @@ export default function ReelFeedContainer({
   className = "",
 }: ReelFeedContainerProps) {
   return (
-    <div className="relative w-full h-[100dvh] bg-black flex items-center justify-center overflow-hidden">
+    <div className="relative flex h-full h-[100dvh] max-h-full w-full max-w-full items-center justify-center overflow-hidden bg-[#141416]">
       <div
         ref={containerRef}
         data-testid="reel-feed-container"
-        className={`relative w-full h-[100dvh] overflow-y-scroll [scroll-snap-type:y_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:max-w-md md:h-[92vh] md:rounded-[40px] md:border-8 md:border-[#20222e] md:shadow-2xl flex flex-col bg-black ${className}`}
+        className={`liquid-prism-ring relative flex h-full h-[100dvh] max-h-full w-full min-w-0 flex-col overflow-x-hidden overflow-y-scroll bg-[#141416] [scroll-snap-type:y_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:h-[92vh] md:max-h-[92vh] md:max-w-md md:rounded-[36px] md:border md:border-white/15 md:shadow-[0_32px_90px_-15px_rgba(0,0,0,0.85)] ${className}`}
         style={{
           scrollSnapType: "y mandatory",
         }}

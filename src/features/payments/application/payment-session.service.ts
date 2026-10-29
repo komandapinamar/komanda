@@ -26,6 +26,10 @@ import {
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { normalizeWhatsAppRecipient } from "@/features/orders/domain/whatsapp-consent";
+import {
+  OrderSchedulingError,
+  validateScheduledPickupTime,
+} from "@/features/orders/domain/order-scheduling";
 import type { MercadoPagoTokens } from "@/features/payments/infrastructure/mercadopago-oauth.client";
 
 export class PaymentSessionCartUnavailableError extends Error {}
@@ -64,6 +68,7 @@ const createPaymentSessionSchema = z
         path: ["phone"],
       }),
     notes: optionalTrimmedString,
+    scheduledFor: z.string().datetime({ offset: true }).nullable().optional(),
     cartVersion: z.number().int().positive().optional(),
   })
   .strict();
@@ -596,6 +601,19 @@ export class PaymentSessionService {
           );
         }
 
+        let scheduledDate: Date | null = null;
+        try {
+          scheduledDate = validateScheduledPickupTime(
+            input.request.scheduledFor,
+            { now: this.now() },
+          );
+        } catch (error) {
+          if (error instanceof OrderSchedulingError) {
+            throw new PaymentSessionConflictError(error.message);
+          }
+          throw error;
+        }
+
         let attempt;
         try {
           attempt = await integrations.createPaymentAttempt({
@@ -605,6 +623,7 @@ export class PaymentSessionService {
             currency: cart.currency,
             customer: input.request.customer,
             notes: input.request.notes,
+            scheduledFor: scheduledDate,
             idempotencyKey: input.idempotencyKey,
           });
         } catch (error) {
