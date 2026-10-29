@@ -20,7 +20,7 @@ export default function MenuViewToolbar({
   const switchToGrid = mode === "reels";
 
   return (
-    <div className="liquid-glass-pill pointer-events-auto flex min-w-0 items-center gap-1.5 rounded-full p-1.5 text-[#f4f3f1]">
+    <div className="liquid-glass-pill pointer-events-auto flex w-full max-w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-full p-1.5 text-[#f4f3f1]">
       {mode && (
         <Link
           href={switchToGrid ? "/order?view=list" : "/order"}

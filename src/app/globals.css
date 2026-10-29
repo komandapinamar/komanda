@@ -19,19 +19,24 @@
 html,
 body {
   min-height: 100%;
+  width: 100%;
+  max-width: 100vw;
   overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   background: var(--dabbit-bg);
   color: var(--dabbit-fg);
   scroll-behavior: smooth;
 }
 
 html {
-  touch-action: manipulation;
+  touch-action: pan-y pinch-zoom;
 }
 
 body {
   font-family: var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  position: relative;
 }
 
 /* Never show native browser multimedia controls or overlays on any video */
@@ -94,7 +99,7 @@ video::-webkit-media-controls-start-playback-button {
 .liquid-prism-ring::before {
   content: "";
   position: absolute;
-  inset: -1px;
+  inset: 0;
   border-radius: inherit;
   padding: 1.25px;
   background: conic-gradient(

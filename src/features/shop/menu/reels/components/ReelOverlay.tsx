@@ -39,7 +39,7 @@ export default function ReelOverlay({
   return (
     <div
       data-testid="reel-overlay"
-      className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end pb-[env(safe-area-inset-bottom,0px)]"
+      className="pointer-events-none absolute inset-0 z-10 flex w-full max-w-full flex-col justify-end overflow-hidden pb-[env(safe-area-inset-bottom,0px)]"
     >
       {/* Scrim bottom gradient of at least 340px height */}
       <div
@@ -51,9 +51,13 @@ export default function ReelOverlay({
         }}
       />
 
-      {/* Optional action rail slot on right side */}
+      {/* Action rail (+1 cart button) anchored safely inside bottom-right */}
       {actionRailSlot ? (
-        <div className="pointer-events-auto absolute right-4 bottom-28 z-25">
+        <div
+          className={`pointer-events-auto absolute right-4 z-25 transition-all duration-300 ${
+            isCartActive ? "bottom-24" : "bottom-6"
+          }`}
+        >
           {actionRailSlot}
         </div>
       ) : null}
@@ -61,24 +65,24 @@ export default function ReelOverlay({
       {/* Card details with strict immutable order: 1. Price -> 2. Title -> 3. Description */}
       <div
         data-testid="reel-overlay-content"
-        className={`relative z-20 flex max-w-[calc(100%-76px)] flex-col gap-1.5 px-5 transition-all duration-300 ${
+        className={`relative z-20 flex w-full max-w-[calc(100%-76px)] min-w-0 flex-col gap-1.5 pl-4 pr-2 transition-all duration-300 ${
           isCartActive ? "pb-28" : "pb-8"
         }`}
       >
-        <div className="liquid-glass-card rounded-2xl p-3.5 space-y-1">
+        <div className="liquid-glass-card min-w-0 overflow-hidden rounded-2xl p-3.5 space-y-1">
           {/* 1. PRECIO */}
           <div
             data-testid="reel-price"
-            className="inline-flex items-baseline gap-0.5 rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-0.5 text-lg font-semibold tracking-tight text-[#f4f3f1] tabular-nums"
+            className="inline-flex items-baseline gap-0.5 rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-0.5 text-base font-semibold tracking-tight text-[#f4f3f1] tabular-nums"
           >
-            <span className="text-sm font-medium text-[#9ec4b5]">$</span>
+            <span className="text-xs font-medium text-[#9ec4b5]">$</span>
             <span>{formattedPrice}</span>
           </div>
 
           {/* 2. TÍTULO */}
           <h2
             data-testid="reel-title"
-            className="text-xl font-medium leading-tight tracking-tight text-[#f4f3f1]"
+            className="truncate text-lg font-medium leading-tight tracking-tight text-[#f4f3f1] sm:text-xl"
           >
             {title}
           </h2>
@@ -87,7 +91,7 @@ export default function ReelOverlay({
           {description ? (
             <p
               data-testid="reel-description"
-              className="line-clamp-3 text-xs leading-relaxed text-[#d4d4dc]"
+              className="line-clamp-2 text-xs leading-relaxed text-[#d4d4dc]"
             >
               {description}
             </p>

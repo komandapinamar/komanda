@@ -146,7 +146,7 @@ export default function ReelsMenuView({
   return (
     <div
       data-testid="reels-menu-view"
-      className="relative h-[100dvh] w-full overflow-hidden bg-[#141416] text-[#f4f3f1]"
+      className="fixed inset-0 w-full max-w-[100vw] overflow-hidden bg-[#141416] text-[#f4f3f1]"
     >
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
 
@@ -177,7 +177,7 @@ export default function ReelsMenuView({
         ) : (
           <div
             data-testid="reels-empty-state"
-            className="flex min-h-[100dvh] flex-1 flex-col items-center justify-center space-y-3 p-6 text-center md:min-h-full"
+            className="flex h-full min-h-[100dvh] flex-1 flex-col items-center justify-center space-y-3 p-6 text-center md:min-h-full"
           >
             <div className="liquid-glass-pill flex size-14 items-center justify-center rounded-full text-xl">
               ✦
@@ -192,9 +192,9 @@ export default function ReelsMenuView({
         )}
       </ReelFeedContainer>
 
-      {/* Persistent top UI layer: never scrolls away with the feed */}
-      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center md:p-4">
-        <div className="relative h-full w-full md:h-[92vh] md:max-w-md md:overflow-hidden md:rounded-[36px]">
+      {/* Persistent top UI layer: strictly aligned with ReelFeedContainer */}
+      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center overflow-hidden">
+        <div className="relative h-full w-full min-w-0 overflow-hidden md:h-[92vh] md:max-w-md md:rounded-[36px]">
           {/* Scrim gradient top for nav readability */}
           <div
             data-testid="reel-scrim-top"
@@ -205,7 +205,7 @@ export default function ReelsMenuView({
             }}
           />
 
-          <div className="absolute top-3.5 left-3.5 right-3.5 z-40">
+          <div className="absolute top-3 left-3 right-3 z-40 min-w-0 max-w-full">
             <MenuViewToolbar mode="reels">
               <ReelsCategoryNav
                 categories={categories}
@@ -216,15 +216,15 @@ export default function ReelsMenuView({
           </div>
 
           {!orderingAvailable ? (
-            <div className="liquid-glass-pill absolute top-18 left-4 right-4 z-30 rounded-full px-4 py-2 text-center text-xs font-medium text-amber-200">
+            <div className="liquid-glass-pill absolute top-16 left-3 right-3 z-30 rounded-full px-4 py-2 text-center text-xs font-medium text-amber-200">
               Pedidos online no disponibles temporalmente.
             </div>
           ) : null}
         </div>
 
-        {/* Desktop PC Navigation Controls outside the Reel stage */}
+        {/* Desktop PC Navigation Controls positioned absolutely outside the centered md:max-w-md frame */}
         {items.length > 1 ? (
-          <div className="pointer-events-auto hidden md:flex flex-col gap-2.5 ml-5">
+          <div className="pointer-events-auto absolute left-[calc(50%+15.25rem)] top-1/2 hidden -translate-y-1/2 flex-col gap-2.5 md:flex">
             <button
               type="button"
               onClick={() => scrollFeedByStep(-1)}
