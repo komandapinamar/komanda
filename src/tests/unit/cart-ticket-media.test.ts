@@ -4,13 +4,21 @@ import { describe, expect, it, vi } from "vitest";
 import CartItem from "@/features/shop/cart/components/item/CartItem";
 import type { CartLine } from "@/types/types";
 
-vi.mock("@/features/shop/cart/context/cart.context", () => ({
-  useCart: () => ({
-    addItem: vi.fn(),
-    decrementItem: vi.fn(),
-    removeItem: vi.fn(),
-  }),
-}));
+vi.mock("@/features/shop/cart/context/cart.context", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/features/shop/cart/context/cart.context")
+    >();
+  return {
+    ...actual,
+    useCart: () => ({
+      addItem: vi.fn(),
+      decrementItem: vi.fn(),
+      removeItem: vi.fn(),
+      removeAddonFromLine: vi.fn(),
+    }),
+  };
+});
 
 const line: CartLine = {
   quantity: 2,

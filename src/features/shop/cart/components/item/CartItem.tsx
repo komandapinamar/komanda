@@ -1,18 +1,25 @@
 "use client";
 
-import { useCart } from "../../context/cart.context";
+import {
+  cartLineId,
+  getCartLineBaseUnitPrice,
+  getCartLineSubtotal,
+  useCart,
+} from "../../context/cart.context";
 import type { CartLine } from "@/types/types";
 import Image from "next/image";
 import { useState } from "react";
 
 export default function CartItem({ cartLine }: { cartLine: CartLine }) {
-  const { addItem, decrementItem, removeItem } = useCart();
+  const { addItem, decrementItem, removeItem, removeAddonFromLine } = useCart();
   const [failedVideo, setFailedVideo] = useState<string | null>(null);
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const { item, quantity } = cartLine;
-  const lineId = cartLine.lineId ?? item.documentId;
+  const lineId = cartLine.lineId ?? cartLineId(item);
   const optionsSummary = item.selectedOptionSummary;
   const selectedOptions = item.selectedOptions ?? [];
+  const baseUnitPrice = getCartLineBaseUnitPrice(item);
+  const lineSubtotal = getCartLineSubtotal(cartLine);
 
   return (
     <>
@@ -75,22 +82,35 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
             {quantity} × {item.name}
           </h3>
           {selectedOptions.length > 0 ? (
-            <div className="space-y-0.5 pt-0.5">
+            <div className="space-y-1 pt-0.5">
               <p className="text-[11px] font-medium text-[#c2c2cc]">
                 Adicionales
               </p>
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {selectedOptions.map((option) => (
                   <li
                     key={option.id}
-                    className="flex items-start justify-between gap-2 text-xs text-[#d4d4dc] tabular-nums"
+                    className="flex items-center justify-between gap-2 text-xs text-[#d4d4dc] tabular-nums"
                   >
                     <span className="break-words">• {option.name}</span>
-                    {option.priceDelta && option.priceDelta > 0 ? (
-                      <span className="shrink-0 font-medium text-emerald-400">
-                        +${option.priceDelta.toLocaleString("es-AR")}
-                      </span>
-                    ) : null}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {option.priceDelta && option.priceDelta > 0 ? (
+                        <span className="font-medium text-emerald-400">
+                          +${option.priceDelta.toLocaleString("es-AR")}
+                        </span>
+                      ) : null}
+                      {removeAddonFromLine ? (
+                        <button
+                          type="button"
+                          onClick={() => removeAddonFromLine(lineId, option.id)}
+                          aria-label={`Quitar adicional ${option.name}`}
+                          title="Quitar adicional"
+                          className="flex size-4 items-center justify-center rounded-full text-[10px] text-[#c2c2cc] transition hover:bg-white/10 hover:text-white cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -101,7 +121,7 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
             </p>
           ) : null}
           <p className="text-xs text-[#c2c2cc] tabular-nums">
-            ${item.price.toLocaleString("es-AR")} c/u
+            ${baseUnitPrice.toLocaleString("es-AR")} c/u
           </p>
           <button
             type="button"
@@ -138,7 +158,7 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
         </div>
 
         <p className="text-sm font-semibold tabular-nums text-[#f4f3f1]">
-          ${(item.price * quantity).toLocaleString("es-AR")}
+          ${lineSubtotal.toLocaleString("es-AR")}
         </p>
       </div>
     </>
