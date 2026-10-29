@@ -47,13 +47,24 @@ export default function ReelsMenuView({
 
     const scrollTimer = setTimeout(() => {
       try {
-        const safeId = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(targetItemId) : targetItemId;
+        const safeId =
+          typeof CSS !== "undefined" && CSS.escape
+            ? CSS.escape(targetItemId)
+            : targetItemId;
         const el = document.querySelector(`[data-item-id="${safeId}"]`);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
-          el.classList.add("ring-4", "ring-[var(--color-accent-secondary)]", "transition-all", "duration-500");
+          el.classList.add(
+            "ring-2",
+            "ring-[var(--color-accent-secondary)]",
+            "transition-all",
+            "duration-500",
+          );
           highlightTimer = setTimeout(() => {
-            el.classList.remove("ring-4", "ring-[var(--color-accent-secondary)]");
+            el.classList.remove(
+              "ring-2",
+              "ring-[var(--color-accent-secondary)]",
+            );
           }, 2500);
         }
       } catch {
@@ -91,7 +102,7 @@ export default function ReelsMenuView({
         addItem?.(item);
       }
     },
-    [addItem]
+    [addItem],
   );
 
   const handleConfirmModifiers = useCallback(
@@ -105,7 +116,7 @@ export default function ReelsMenuView({
         setSelectedItemForModifiers(null);
       }
     },
-    [addItem]
+    [addItem],
   );
 
   const handleCloseModifiers = useCallback(() => {
@@ -120,10 +131,22 @@ export default function ReelsMenuView({
     setIsCartOpen(false);
   }, []);
 
+  const scrollFeedByStep = useCallback((direction: -1 | 1) => {
+    if (typeof document === "undefined") return;
+    const container = document.querySelector(
+      '[data-testid="reel-feed-container"]',
+    ) as HTMLElement | null;
+    if (!container) return;
+    container.scrollBy({
+      top: direction * container.clientHeight,
+      behavior: "smooth",
+    });
+  }, []);
+
   return (
     <div
       data-testid="reels-menu-view"
-      className="relative w-full h-[100dvh] bg-black text-white overflow-hidden"
+      className="relative h-[100dvh] w-full overflow-hidden bg-[#141416] text-[#f4f3f1]"
     >
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
 
@@ -154,13 +177,15 @@ export default function ReelsMenuView({
         ) : (
           <div
             data-testid="reels-empty-state"
-            className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3 min-h-[100dvh]"
+            className="flex min-h-[100dvh] flex-1 flex-col items-center justify-center space-y-3 p-6 text-center md:min-h-full"
           >
-            <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-2xl">
-              🍽️
+            <div className="liquid-glass-pill flex size-14 items-center justify-center rounded-full text-xl">
+              ✦
             </div>
-            <h2 className="text-xl font-bold text-white">Menú en preparación</h2>
-            <p className="text-sm text-neutral-400 max-w-xs">
+            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+              Menú en preparación
+            </h2>
+            <p className="max-w-xs text-sm text-[#c2c2cc]">
               Pronto podrás ver y pedir todos los platos de nuestra carta aquí.
             </p>
           </div>
@@ -168,19 +193,19 @@ export default function ReelsMenuView({
       </ReelFeedContainer>
 
       {/* Persistent top UI layer: never scrolls away with the feed */}
-      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-        <div className="relative w-full h-full md:max-w-md md:h-[92vh] md:overflow-hidden md:rounded-[40px]">
+      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center md:p-4">
+        <div className="relative h-full w-full md:h-[92vh] md:max-w-md md:overflow-hidden md:rounded-[36px]">
           {/* Scrim gradient top for nav readability */}
           <div
             data-testid="reel-scrim-top"
-            className="absolute top-0 left-0 right-0 h-[140px] pointer-events-none z-20"
+            className="pointer-events-none absolute top-0 left-0 right-0 z-20 h-[130px]"
             style={{
               background:
-                "linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
+                "linear-gradient(to bottom, rgba(20,20,22,0.88) 0%, rgba(20,20,22,0.35) 60%, transparent 100%)",
             }}
           />
 
-          <div className="absolute top-4 left-4 right-4 z-40">
+          <div className="absolute top-3.5 left-3.5 right-3.5 z-40">
             <MenuViewToolbar mode="reels">
               <ReelsCategoryNav
                 categories={categories}
@@ -191,11 +216,55 @@ export default function ReelsMenuView({
           </div>
 
           {!orderingAvailable ? (
-            <div className="absolute top-20 left-4 right-4 z-30 rounded-md bg-amber-500/90 px-3 py-1.5 text-center text-xs font-bold text-black shadow">
+            <div className="liquid-glass-pill absolute top-18 left-4 right-4 z-30 rounded-full px-4 py-2 text-center text-xs font-medium text-amber-200">
               Pedidos online no disponibles temporalmente.
             </div>
           ) : null}
         </div>
+
+        {/* Desktop PC Navigation Controls outside the Reel stage */}
+        {items.length > 1 ? (
+          <div className="pointer-events-auto hidden md:flex flex-col gap-2.5 ml-5">
+            <button
+              type="button"
+              onClick={() => scrollFeedByStep(-1)}
+              aria-label="Plato anterior"
+              title="Plato anterior"
+              className="liquid-glass-pill flex size-11 items-center justify-center rounded-full text-[#f4f3f1] transition duration-200 hover:scale-105 hover:border-white/30 active:scale-95 cursor-pointer"
+            >
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollFeedByStep(1)}
+              aria-label="Siguiente plato"
+              title="Siguiente plato"
+              className="liquid-glass-pill flex size-11 items-center justify-center rounded-full text-[#f4f3f1] transition duration-200 hover:scale-105 hover:border-white/30 active:scale-95 cursor-pointer"
+            >
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* Floating contextual checkout bar */}
@@ -243,11 +312,10 @@ export default function ReelsMenuView({
 
         {/* Drawer content */}
         <div
-          className={`relative z-10 w-full max-w-md mx-auto h-[85dvh] p-2 flex flex-col overflow-hidden transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform ${
+          className={`relative z-10 mx-auto flex h-[85dvh] w-full max-w-md flex-col overflow-hidden p-2 transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform ${
             isCartOpen ? "translate-y-0" : "translate-y-full"
           }`}
         >
-
           <div className="min-h-0 flex-1">
             {cartContext ? <CartPanel /> : null}
           </div>

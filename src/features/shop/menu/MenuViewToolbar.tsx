@@ -6,9 +6,9 @@ import type { ReactNode } from "react";
 export const categoryPillClassName =
   "flex h-9 shrink-0 items-center rounded-full border px-4 text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-inset";
 export const inactiveCategoryPillClassName =
-  "border-transparent bg-transparent text-[#9b9ba4] hover:bg-white/[0.06] hover:text-[#f4f3f1]";
+  "border-transparent bg-transparent text-[#c2c2cc] hover:bg-white/[0.08] hover:text-[#f4f3f1]";
 export const activeCategoryPillClassName =
-  "border-transparent bg-[#f4f3f1] text-[#141416] shadow-sm";
+  "border-white bg-white text-black shadow-sm";
 
 export default function MenuViewToolbar({
   mode,

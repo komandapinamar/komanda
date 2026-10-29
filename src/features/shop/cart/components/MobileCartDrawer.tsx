@@ -10,17 +10,18 @@ export default function MobileCartDrawer() {
 
   return (
     <>
-    {/* in big screen it's hidden, only showing in mobile*/}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-4 shadow-2xl lg:hidden">
+      <div className="fixed inset-x-4 bottom-4 z-30 lg:hidden">
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex w-full items-center justify-between rounded-sm bg-[var(--color-accent-secondary)] px-4 py-3 text-left text-[var(--color-accent-primary)]"
+          className="liquid-prism-ring liquid-glass-pill mx-auto flex w-full max-w-md items-center justify-between rounded-full p-1.5 pl-4 text-left text-[#f4f3f1] transition active:scale-[0.98]"
         >
-          <span>
+          <span className="text-sm font-medium tracking-tight">
             Ver carrito ({itemCount} {itemCount === 1 ? "item" : "items"})
           </span>
-          <span className="font-semibold">${subtotal}</span>
+          <span className="rounded-full bg-[#f4f3f1] px-4 py-2 text-xs font-semibold tabular-nums text-[#141416]">
+            ${subtotal}
+          </span>
         </button>
       </div>
 
@@ -30,10 +31,10 @@ export default function MobileCartDrawer() {
             type="button"
             aria-label="Cerrar carrito"
             onClick={() => setIsOpen(false)}
-            className="absolute inset-0 bg-[var(--color-accent-primary)]/70"
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
           />
 
-          <div className="absolute inset-x-0 bottom-0 h-[85vh] rounded-t-2xl bg-transparent p-2">
+          <div className="absolute inset-x-0 bottom-0 h-[85vh] rounded-t-3xl bg-transparent p-2">
             <div className="flex h-full flex-col overflow-hidden">
               <div className="min-h-0 flex-1">
                 <CartPanel />

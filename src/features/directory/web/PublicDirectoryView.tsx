@@ -24,6 +24,7 @@ export function PublicDirectoryView({ tenants }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const headerSlotRef = useRef<HTMLDivElement>(null);
   const [isPinned, setIsPinned] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [showRegister, setShowRegister] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const autoplayBlocked = useRef(false);
@@ -48,9 +49,11 @@ export function PublicDirectoryView({ tenants }: Props) {
         document.body.scrollTop,
       );
       const pinned =
-        (headerSlotRef.current?.getBoundingClientRect().top ?? 1) < 0;
+        (headerSlotRef.current?.getBoundingClientRect().top ?? 1) < 0 ||
+        scrollY > 12;
       setIsPinned(pinned);
-      if (!pinned) {
+      setIsScrolled(scrollY > 28);
+      if (scrollY <= 28) {
         setShowRegister(true);
         lastScrollY = scrollY;
       } else if (Math.abs(scrollY - lastScrollY) > 8) {
@@ -239,17 +242,25 @@ export function PublicDirectoryView({ tenants }: Props) {
       {/* Architectural Dabbit Stage Container */}
       <div className="relative z-10 flex min-h-svh w-full flex-1 flex-col justify-between 2xl:mx-auto 2xl:max-w-[1440px] 2xl:border-x 2xl:border-white/[0.08]">
         <div>
-          {/* Floating Liquid Glass Pill Navigation */}
+          {/* Dynamic Scroll-Reactive Floating Liquid Glass Pill Navigation */}
           <div ref={headerSlotRef} className="relative z-30 h-[65px]">
             <header
               className={`${
-                isPinned ? "fixed inset-x-0 top-4 z-50" : "relative pt-4"
-              } px-5 sm:px-8 lg:px-10`}
+                isPinned ? "fixed inset-x-0 top-3 z-50" : "relative pt-4"
+              } px-5 sm:px-8 lg:px-10 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]`}
             >
-              <div className="liquid-glass-pill mx-auto flex max-w-4xl items-center justify-between rounded-full px-4 py-2">
-                <div className="flex items-center gap-2.5 pl-2">
+              <div
+                className={`liquid-prism-ring liquid-glass-pill mx-auto flex items-center justify-between rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  isScrolled
+                    ? "max-w-md px-3.5 py-1.5 scale-[0.95] shadow-[0_18px_40px_-8px_rgba(0,0,0,0.75)]"
+                    : "max-w-5xl px-6 py-3 scale-100"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 pl-1">
                   <Link
-                    className="text-base font-medium tracking-tight text-[#f4f3f1] transition hover:opacity-80"
+                    className={`font-medium tracking-tight text-[#f4f3f1] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:opacity-80 ${
+                      isScrolled ? "text-sm" : "text-lg"
+                    }`}
                     href="/"
                   >
                     Komanda
@@ -259,13 +270,17 @@ export function PublicDirectoryView({ tenants }: Props) {
                 <div className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className="rounded-full px-3.5 py-1.5 text-xs font-medium text-[#d4d4dc] transition hover:bg-white/[0.06] hover:text-white"
+                    className={`rounded-full font-medium text-[#d4d4dc] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/[0.06] hover:text-white ${
+                      isScrolled
+                        ? "px-2.5 py-1 text-[11px]"
+                        : "px-4 py-1.5 text-xs"
+                    }`}
                   >
                     Ingresar
                   </Link>
                   <div
                     aria-hidden={isPinned && !showRegister}
-                    className={`flex items-center overflow-hidden transition-[max-width,opacity,transform] duration-300 ease-out motion-reduce:transition-none ${
+                    className={`flex items-center overflow-hidden transition-[max-width,opacity,transform] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
                       isPinned && !showRegister
                         ? "pointer-events-none max-w-0 translate-x-2 opacity-0"
                         : "max-w-48 translate-x-0 opacity-100"
@@ -274,7 +289,11 @@ export function PublicDirectoryView({ tenants }: Props) {
                     <Link
                       href="/register"
                       tabIndex={isPinned && !showRegister ? -1 : undefined}
-                      className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white active:scale-[0.98]"
+                      className={`inline-flex items-center justify-center whitespace-nowrap rounded-full bg-[#f4f3f1] font-medium text-[#141416] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.98] ${
+                        isScrolled
+                          ? "h-7 px-3 text-[11px]"
+                          : "h-9 px-4 text-xs"
+                      }`}
                     >
                       Registrar Negocio
                     </Link>
