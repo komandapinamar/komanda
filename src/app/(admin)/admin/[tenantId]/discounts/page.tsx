@@ -42,7 +42,7 @@ export default async function DiscountsPage({
   const { items } = await new DiscountService().listDiscounts(context);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
       <AdminDiscountsPanel tenantId={tenantId} initialDiscounts={items} />
     </main>
   );

@@ -1,0 +1,139 @@
+@import "./theme.css";
+@import "./typography.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant rtl (&:dir(rtl));
+@custom-variant ltr (&:dir(ltr));
+
+@utility shadow-2xs {
+  &:where(.dark .shadow-2xs) {
+    --tw-shadow: var(--shadow-2xs);
+  }
+}
+@utility shadow-xs {
+  &:where(.dark .shadow-xs) {
+    --tw-shadow: var(--shadow-xs);
+  }
+}
+@utility shadow-sm {
+  &:where(.dark .shadow-sm) {
+    --tw-shadow: var(--shadow-sm);
+  }
+}
+@utility shadow-md {
+  &:where(.dark .shadow-md) {
+    --tw-shadow: var(--shadow-md);
+  }
+}
+@utility shadow-lg {
+  &:where(.dark .shadow-lg) {
+    --tw-shadow: var(--shadow-lg);
+  }
+}
+@utility shadow-xl {
+  &:where(.dark .shadow-xl) {
+    --tw-shadow: var(--shadow-xl);
+  }
+}
+@utility shadow-card {
+  &:where(.dark .shadow-card) {
+    --tw-shadow: var(--shadow-card);
+  }
+}
+@utility shadow-dropdown {
+  &:where(.dark .shadow-dropdown) {
+    --tw-shadow: var(--shadow-dropdown);
+  }
+}
+@utility shadow-sidebar {
+  &:where(.dark .shadow-sidebar) {
+    --tw-shadow: var(--shadow-sidebar);
+  }
+}
+
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-check-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: check-draw 200ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.bui-table {
+  @apply w-full border-collapse text-start;
+}
+.bui-table th {
+  @apply px-3 py-2.5 text-start align-middle text-body-medium text-text-tertiary whitespace-nowrap outline-none;
+  background-color: var(--color-background-secondary-default);
+  border-top: 1px solid var(--color-separator-border);
+  border-bottom: 1px solid var(--color-separator-border);
+  transition: padding 200ms ease, font-size 200ms ease;
+}
+.bui-table td {
+  @apply px-3 py-2.5 align-middle text-body-medium text-text-primary outline-none;
+  transition: padding 200ms ease, font-size 200ms ease;
+}
+.bui-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid var(--color-separator-border);
+}
+.bui-table tbody tr {
+  @apply transition-colors duration-150;
+}
+.bui-table tbody tr[data-focus-visible] {
+  @apply ring-2 ring-inset ring-border-focus-ring;
+}
+.bui-table.bui-table-sm th,
+.bui-table.bui-table-sm td {
+  @apply px-2.5 py-1.5 text-body-2-medium;
+}
+
+/* Scoped Backoffice BoardUI surface overrides — applies inside .bui-admin without touching Storefront */
+.bui-admin {
+  color-scheme: dark;
+  background-color: var(--color-background-full);
+  color: var(--color-text-primary);
+  font-family: var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.bui-admin .liquid-glass-card {
+  background: var(--color-background-secondary-default);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--color-border-component-detail-container);
+  box-shadow: var(--shadow-card);
+}
+
+.bui-admin .liquid-prism-ring::before {
+  display: none;
+}
+
+.bui-admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
+.bui-admin select,
+.bui-admin textarea {
+  border-radius: var(--radius-2lg);
+  background-color: var(--color-background-tertiary-default);
+  border: 1px solid var(--color-border-button-default);
+  color: var(--color-text-primary);
+  font-family: var(--font-instrument-sans), sans-serif;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.bui-admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):hover:not(:focus):not(:disabled),
+.bui-admin select:hover:not(:focus):not(:disabled),
+.bui-admin textarea:hover:not(:focus):not(:disabled) {
+  border-color: var(--color-border-button-hover);
+}
+
+.bui-admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):focus,
+.bui-admin select:focus,
+.bui-admin textarea:focus {
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-500) 25%, transparent);
+  outline: none;
+}

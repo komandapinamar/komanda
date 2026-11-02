@@ -312,7 +312,7 @@ export function CatalogEditor({
       ) : null}
       {!isExpress ? (
         <nav
-          className="flex flex-wrap gap-2"
+          className="inline-flex flex-wrap gap-1 rounded-2lg bg-background-secondary-default p-1 shadow-card"
           aria-label="Secciones del catálogo"
         >
           {(
@@ -326,10 +326,10 @@ export function CatalogEditor({
               key={value}
               type="button"
               onClick={() => setTab(value)}
-              className={`rounded-full px-4 py-2 text-xs font-medium transition ${
+              className={`cursor-pointer rounded-md px-4 py-1.5 text-body-medium transition ${
                 tab === value
-                  ? "bg-[#f4f3f1] text-[#141416]"
-                  : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                  ? "bg-button-primary text-text-white shadow-xs"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               {label}
@@ -420,7 +420,7 @@ export function CatalogEditor({
                 <button
                   type="button"
                   onClick={() => setEditing(null)}
-                  className="inline-flex h-9 items-center justify-center rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white"
+                  className="bg-button-primary button-press-motion inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg px-4 text-body-medium text-text-white shadow-xs"
                 >
                   + Nuevo producto
                 </button>

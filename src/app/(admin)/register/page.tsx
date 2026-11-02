@@ -15,7 +15,7 @@ export default async function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-accent-primary)] flex flex-col justify-center px-4 py-12 sm:px-6 lg:px-8 text-[var(--color-accent-tertiary)]">
+    <main className="flex min-h-[calc(100dvh-4rem)] flex-col justify-center bg-background-full px-4 py-12 text-text-primary sm:px-6 lg:px-8">
       <BusinessRegistrationWizard authenticatedEmail={authenticatedEmail} />
     </main>
   );

@@ -87,22 +87,22 @@ export default async function TenantOrdersPage({
   const page = await new OrderQueryService().list({ context });
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
-      <header className="flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <header className="flex flex-col justify-between gap-4 border-b border-separator-border pb-5 sm:flex-row sm:items-end">
         <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
+          <p className="text-caption-1-semibold uppercase tracking-wider text-text-secondary">
             Operación · @{authority.membership.tenantSlug}
           </p>
-          <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+          <h1 className="text-title-1-semibold text-text-primary">
             Pedidos en curso
           </h1>
-          <p className="text-sm text-[#c2c2cc]">
+          <p className="text-body-regular text-text-secondary">
             Monitoreá cobros, cocina y entregas en tiempo real.
           </p>
         </div>
         <Link
           href={`/admin/${tenantId}/orders/new`}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
+          className="bg-button-primary button-press-motion inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-2lg px-3.5 text-body-medium text-text-white shadow-xs"
         >
           <span>Crear pedido directo</span>
           <span aria-hidden="true">→</span>
@@ -112,10 +112,10 @@ export default async function TenantOrdersPage({
       {createdRef ? (
         <div
           role="status"
-          className="flex items-center gap-2.5 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+          className="flex items-center gap-2.5 rounded-2lg border border-emerald-500/30 bg-status-lime-background px-4 py-3 text-body-medium text-status-lime-text"
         >
           <span>✓</span>
-          <p className="font-medium">
+          <p>
             Pedido creado correctamente
             {createdRef !== "1" ? ` (#${createdRef})` : ""}.
           </p>

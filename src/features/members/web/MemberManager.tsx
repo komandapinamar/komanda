@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { RiUserAddLine, RiDeleteBinLine } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import { Chip } from "@/components/base/badges/chip";
 
 type Member = {
   id: string;
@@ -90,29 +93,29 @@ export function MemberManager({
   }
 
   const inputClass =
-    "rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30 focus:ring-2 focus:ring-white/15";
+    "rounded-2lg border border-border-button-default bg-background-tertiary-default px-3.5 py-2 text-body-regular text-text-primary placeholder:text-text-tertiary";
 
   return (
     <div className="space-y-6">
       {error ? (
-        <p role="alert" className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3.5 text-xs text-red-200">
+        <p role="alert" className="rounded-2lg border border-red-500/30 bg-status-rose-background p-3.5 text-body-2-medium text-status-rose-text">
           {error}
         </p>
       ) : null}
 
-      <section className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+      <section className="space-y-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7">
         <div>
-          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+          <h2 className="text-title-3-semibold text-text-primary">
             Agregar miembro
           </h2>
-          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+          <p className="mt-0.5 text-body-2-regular text-text-secondary">
             Se usa la contraseña inicial solo si el email todavía no existe en Komanda.
           </p>
         </div>
 
         <form onSubmit={addMember} className="grid gap-4 sm:grid-cols-3 sm:items-end">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-[#c2c2cc]">Email</label>
+            <label className="text-body-medium text-text-primary">Email</label>
             <input
               required
               type="email"
@@ -124,7 +127,7 @@ export function MemberManager({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-[#c2c2cc]">
+            <label className="text-body-medium text-text-primary">
               Contraseña inicial
             </label>
             <div className="relative flex items-center">
@@ -141,7 +144,7 @@ export function MemberManager({
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 text-xs font-medium text-[#c2c2cc] hover:text-[#f4f3f1]"
+                className="absolute right-3 cursor-pointer text-caption-1-semibold text-text-secondary hover:text-text-primary"
               >
                 {showPassword ? "Ocultar" : "Mostrar"}
               </button>
@@ -150,7 +153,7 @@ export function MemberManager({
 
           <div className="flex items-end gap-2.5">
             <div className="flex flex-1 flex-col gap-1.5">
-              <label className="text-xs font-medium text-[#c2c2cc]">Rol</label>
+              <label className="text-body-medium text-text-primary">Rol</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as "admin" | "employee")}
@@ -161,72 +164,74 @@ export function MemberManager({
               </select>
             </div>
 
-            <button className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-xs font-medium text-[#141416] transition hover:bg-white">
+            <Button type="submit" leadingIcon={RiUserAddLine}>
               Agregar miembro
-            </button>
+            </Button>
           </div>
         </form>
       </section>
 
-      <section className="liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-4">
+      <section className="space-y-4 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7">
         <div>
-          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+          <h2 className="text-title-3-semibold text-text-primary">
             Miembros activos
           </h2>
-          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+          <p className="mt-0.5 text-body-2-regular text-text-secondary">
             Administrá el rol de cada integrante o revocá su acceso al local.
           </p>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-white/12 bg-[#101013]/90">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-2lg border border-border-table bg-background-primary-default/50">
+          <table className="bui-table">
             <thead>
-              <tr className="border-b border-white/[0.08] bg-white/[0.03] text-left text-xs uppercase tracking-wider text-[#c2c2cc]">
-                <th className="px-5 py-3.5 font-medium">Email</th>
-                <th className="px-5 py-3.5 font-medium">Rol</th>
-                <th className="px-5 py-3.5 font-medium text-right">Acciones</th>
+              <tr>
+                <th>Email</th>
+                <th>Rol</th>
+                <th className="text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.08]">
+            <tbody>
               {members.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-5 py-8 text-center text-xs text-[#c2c2cc]">
+                  <td colSpan={3} className="px-5 py-8 text-center text-body-2-regular text-text-secondary">
                     No hay miembros registrados aún.
                   </td>
                 </tr>
               ) : (
                 members.map((member) => (
-                  <tr key={member.id} className="transition hover:bg-white/[0.03]">
-                    <td className="px-5 py-3.5 font-medium text-[#f4f3f1]">{member.email}</td>
-                    <td className="px-5 py-3.5">
+                  <tr key={member.id} className="hover:bg-background-primary-hover">
+                    <td className="font-medium text-text-primary">{member.email}</td>
+                    <td>
                       {member.role === "owner" ? (
-                        <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs font-medium text-[#f4f3f1]">
+                        <Chip variant="caption" color="blue">
                           Owner
-                        </span>
+                        </Chip>
                       ) : (
                         <select
                           value={member.role}
                           onChange={(e) =>
                             changeRole(member.id, e.target.value as "owner" | "admin" | "employee")
                           }
-                          className="rounded-full border border-white/15 bg-[#141416] px-3 py-1 text-xs font-medium text-[#f4f3f1] outline-none"
+                          className="rounded-lg border border-border-button-default bg-background-tertiary-default px-2.5 py-1 text-caption-1-semibold text-text-primary"
                         >
                           <option value="admin">Admin</option>
                           <option value="employee">Employee</option>
                         </select>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="text-right">
                       {member.role !== "owner" ? (
-                        <button
+                        <Button
                           type="button"
+                          variant="danger"
+                          size="xs"
+                          leadingIcon={RiDeleteBinLine}
                           onClick={() => deleteMember(member.id)}
-                          className="rounded-full border border-red-400/30 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-300 transition hover:bg-red-500/20"
                         >
                           Eliminar
-                        </button>
+                        </Button>
                       ) : (
-                        <span className="text-[#9b9ba4]">—</span>
+                        <span className="text-text-tertiary">—</span>
                       )}
                     </td>
                   </tr>

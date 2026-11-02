@@ -132,49 +132,49 @@ export default async function TenantSettingsPage({
   );
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
-      <header className="flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <header className="flex flex-col justify-between gap-4 border-b border-separator-border pb-5 sm:flex-row sm:items-end">
         <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
+          <p className="text-caption-1-semibold uppercase tracking-wider text-text-secondary">
             Administración · @{authority.membership.tenantSlug}
           </p>
-          <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+          <h1 className="text-title-1-semibold text-text-primary">
             Configuración del negocio
           </h1>
-          <p className="text-sm text-[#c2c2cc]">
+          <p className="text-body-regular text-text-secondary">
             Gestioná el estado operativo, ubicación, horarios, cobros e
             impresión desde un solo lugar.
           </p>
         </div>
 
-        <nav className="flex flex-wrap gap-2 text-xs">
+        <nav className="flex flex-wrap gap-1.5 rounded-2lg bg-background-secondary-default p-1">
           <a
             href="#estado-del-negocio"
-            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+            className="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition hover:bg-background-primary-hover hover:text-text-primary"
           >
             Estado
           </a>
           <a
             href="#datos-generales"
-            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+            className="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition hover:bg-background-primary-hover hover:text-text-primary"
           >
             Datos y Horarios
           </a>
           <a
             href="#ubicacion-sede"
-            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+            className="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition hover:bg-background-primary-hover hover:text-text-primary"
           >
             Ubicación
           </a>
           <a
             href="#mercado-pago"
-            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+            className="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition hover:bg-background-primary-hover hover:text-text-primary"
           >
             Mercado Pago
           </a>
           <a
             href="#impresion"
-            className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 font-medium text-[#d4d4dc] transition hover:bg-white/[0.1] hover:text-white"
+            className="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition hover:bg-background-primary-hover hover:text-text-primary"
           >
             Impresión
           </a>
@@ -184,23 +184,23 @@ export default async function TenantSettingsPage({
       {/* 1. ESTADO DEL NEGOCIO & CHECKLIST DE ACTIVACIÓN CON CTAs */}
       <section
         id="estado-del-negocio"
-        className="liquid-prism-ring liquid-glass-card scroll-mt-24 rounded-3xl p-6 sm:p-7 space-y-5"
+        className="scroll-mt-24 space-y-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+            <h2 className="text-title-3-semibold text-text-primary">
               Estado del negocio
             </h2>
-            <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            <p className="mt-0.5 text-body-2-regular text-text-secondary">
               Cada requisito cuenta con un acceso directo al apartado donde se
               configura.
             </p>
           </div>
           <span
-            className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium ${
+            className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-caption-1-semibold ${
               readiness.ready
-                ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
-                : "border-amber-400/30 bg-amber-500/15 text-amber-300"
+                ? "bg-status-lime-background text-status-lime-text"
+                : "bg-status-yellow-background text-status-yellow-text"
             }`}
           >
             <span
@@ -212,7 +212,7 @@ export default async function TenantSettingsPage({
           </span>
         </div>
 
-        <ul className="divide-y divide-white/[0.08] overflow-hidden rounded-2xl border border-white/12 bg-[#101013]/90">
+        <ul className="divide-y divide-separator-border overflow-hidden rounded-2lg border border-border-button-default bg-background-primary-default/50">
           {readiness.checks.map((check) => {
             const action = readinessActionForCheck(
               check.code,
@@ -234,25 +234,25 @@ export default async function TenantSettingsPage({
                   />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-[#f4f3f1]">
+                      <span className="text-body-medium text-text-primary">
                         {readinessLabels[check.code] ?? check.code}
                       </span>
                       {!check.requiredForActivation ? (
-                        <span className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#c2c2cc]">
+                        <span className="rounded-sm bg-background-tertiary-default px-1.5 py-0.5 text-caption-2-semibold uppercase text-text-secondary">
                           Opcional
                         </span>
                       ) : null}
                       <span
-                        className={`text-[11px] font-medium ${
+                        className={`text-caption-1-medium ${
                           check.complete
-                            ? "text-emerald-400"
-                            : "text-amber-300"
+                            ? "text-status-lime-text"
+                            : "text-status-yellow-text"
                         }`}
                       >
                         {check.complete ? "Completado" : "Por completar"}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-[#c2c2cc]">
+                    <p className="mt-0.5 text-caption-1-regular text-text-secondary">
                       {readinessHints[check.code]}
                     </p>
                   </div>
@@ -261,10 +261,10 @@ export default async function TenantSettingsPage({
                 {isInternalAnchor ? (
                   <a
                     href={action.href}
-                    className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition ${
+                    className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-body-2-medium transition ${
                       check.complete
-                        ? "border border-white/15 bg-white/[0.05] text-[#f4f3f1] hover:bg-white/[0.12]"
-                        : "bg-[#f4f3f1] text-[#141416] hover:bg-white"
+                        ? "border border-border-button-default bg-background-primary-default text-text-primary hover:bg-background-primary-hover"
+                        : "bg-button-primary text-text-white shadow-xs"
                     }`}
                   >
                     <span>{action.label}</span>
@@ -273,10 +273,10 @@ export default async function TenantSettingsPage({
                 ) : (
                   <Link
                     href={action.href}
-                    className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition ${
+                    className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-body-2-medium transition ${
                       check.complete
-                        ? "border border-white/15 bg-white/[0.05] text-[#f4f3f1] hover:bg-white/[0.12]"
-                        : "bg-[#f4f3f1] text-[#141416] hover:bg-white"
+                        ? "border border-border-button-default bg-background-primary-default text-text-primary hover:bg-background-primary-hover"
+                        : "bg-button-primary text-text-white shadow-xs"
                     }`}
                   >
                     <span>{action.label}</span>
@@ -289,8 +289,8 @@ export default async function TenantSettingsPage({
         </ul>
 
         {authority.membership.tenantStatus === "onboarding" ? (
-          <div className="flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center">
-            <p className="text-sm text-[#d4d4dc]">
+          <div className="flex flex-col justify-between gap-4 rounded-2lg border border-border-button-default bg-background-primary-default/50 p-4 sm:flex-row sm:items-center">
+            <p className="text-body-regular text-text-secondary">
               {readiness.ready
                 ? "Todos los requisitos obligatorios están completos. Activá las ventas para publicar el negocio."
                 : "Las ventas permanecen deshabilitadas hasta completar todos los requisitos obligatorios."}
@@ -301,14 +301,14 @@ export default async function TenantSettingsPage({
             />
           </div>
         ) : readiness.ready ? (
-          <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <div className="flex items-center gap-2.5 rounded-2lg border border-emerald-500/30 bg-status-lime-background px-4 py-3 text-body-medium text-status-lime-text">
             <span>✓</span>
             <span>
               El negocio está operativo y listo para recibir pedidos online.
             </span>
           </div>
         ) : (
-          <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <div className="rounded-2lg border border-amber-500/30 bg-status-yellow-background px-4 py-3 text-body-medium text-status-yellow-text">
             Pedidos online no disponibles: completá los requisitos pendientes
             (ej. conectar Mercado Pago) para figurar en el directorio público y
             habilitar el checkout.
@@ -319,13 +319,13 @@ export default async function TenantSettingsPage({
       {/* 2. DATOS GENERALES, UBICACIÓN Y HORARIOS */}
       <section
         id="datos-generales"
-        className="liquid-glass-card scroll-mt-24 rounded-3xl p-6 sm:p-7 space-y-6"
+        className="scroll-mt-24 space-y-6 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7"
       >
-        <div className="border-b border-white/[0.08] pb-4">
-          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+        <div className="border-b border-separator-border pb-4">
+          <h2 className="text-title-3-semibold text-text-primary">
             Datos operativos, ubicación y horarios
           </h2>
-          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+          <p className="mt-0.5 text-body-2-regular text-text-secondary">
             Información de contacto, mapa de la sede y horarios de apertura.
           </p>
         </div>
@@ -336,13 +336,13 @@ export default async function TenantSettingsPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <section
           id="mercado-pago"
-          className="liquid-glass-card scroll-mt-24 flex flex-col justify-between rounded-3xl p-6 sm:p-7 space-y-4"
+          className="scroll-mt-24 flex flex-col justify-between space-y-4 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7"
         >
           <div className="space-y-1">
-            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+            <h2 className="text-title-3-semibold text-text-primary">
               Mercado Pago
             </h2>
-            <p className="text-xs text-[#c2c2cc]">
+            <p className="text-body-2-regular text-text-secondary">
               Conectá tu cuenta para cobrar pedidos online y con QR.
             </p>
           </div>
@@ -355,13 +355,13 @@ export default async function TenantSettingsPage({
 
         <section
           id="impresion"
-          className="liquid-glass-card scroll-mt-24 flex flex-col justify-between rounded-3xl p-6 sm:p-7 space-y-4"
+          className="scroll-mt-24 flex flex-col justify-between space-y-4 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7"
         >
           <div className="space-y-1">
-            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+            <h2 className="text-title-3-semibold text-text-primary">
               Agente de impresión térmica
             </h2>
-            <p className="text-xs text-[#c2c2cc]">
+            <p className="text-body-2-regular text-text-secondary">
               Vinculá Komanda Desktop para imprimir tickets y comandas ESC/POS
               automáticamente en tu local.
             </p>
@@ -369,7 +369,7 @@ export default async function TenantSettingsPage({
           <div className="pt-2">
             <Link
               href={`/admin/${tenantId}/integrations/printing`}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
+              className="bg-button-primary button-press-motion inline-flex h-9 items-center justify-center gap-1.5 rounded-2lg px-4 text-body-medium text-text-white shadow-xs"
             >
               <span>Configurar impresión</span>
               <span aria-hidden="true">→</span>

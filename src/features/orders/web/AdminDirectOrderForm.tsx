@@ -258,8 +258,8 @@ export function AdminDirectOrderForm({
         </div>
       </section>
 
-      <div className="liquid-glass-card flex items-center justify-between rounded-3xl px-6 py-4">
-        <p className="text-xs font-medium text-[#c2c2cc]">
+      <div className="flex items-center justify-between rounded-2xl border border-border-component-detail-container bg-background-secondary-default px-6 py-4 shadow-card">
+        <p className="text-body-medium text-text-secondary">
           {selectedCount > 0
             ? `${selectedCount} producto${selectedCount !== 1 ? "s" : ""} seleccionado${selectedCount !== 1 ? "s" : ""}`
             : "Ningún producto seleccionado"}
@@ -268,7 +268,7 @@ export function AdminDirectOrderForm({
           type="button"
           disabled={submitting || selectedCount === 0}
           onClick={handleSubmit}
-          className="inline-flex h-10 items-center justify-center rounded-full bg-[#f4f3f1] px-6 text-sm font-medium text-[#141416] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="bg-button-primary button-press-motion inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg px-5 text-body-medium text-text-white shadow-xs disabled:cursor-not-allowed disabled:opacity-45"
         >
           {submitting ? "Creando pedido..." : "Crear pedido directo"}
         </button>

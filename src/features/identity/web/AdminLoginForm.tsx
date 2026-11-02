@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { RiArrowRightLine, RiLockPasswordLine, RiMailLine } from "@remixicon/react";
+import { Button } from "@/components/base/buttons/button";
+import { Chip } from "@/components/base/badges/chip";
+import { Divider } from "@/components/base/divider/divider";
 
 export default function AdminLoginForm() {
-  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -35,63 +37,94 @@ export default function AdminLoginForm() {
   return (
     <form
       onSubmit={submit}
-      className="flex w-full flex-col gap-4 rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-6 shadow-sm"
+      className="flex w-full flex-col gap-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-8"
     >
-      <div className="space-y-1 mb-8">
-        <h1 className="komanda-logo flex justify-center font-sans text-4xl font-normal tracking-tighter text-white normal-case">Komanda Business</h1>
-        <h1 className="text-2xl font-thin text-[var(--color-accent-tertiary)] justify-center flex">Login</h1>
+      <div className="flex flex-col items-start gap-2">
+        <div className="flex w-full items-center justify-between">
+          <span className="komanda-logo font-sans text-2xl font-normal tracking-tighter text-white normal-case">
+            Komanda Business
+          </span>
+          <Chip variant="caption" color="blue">
+            Backoffice
+          </Chip>
+        </div>
+        <h1 className="text-title-2-semibold text-text-primary">
+          Iniciar sesión
+        </h1>
+        <p className="text-body-regular text-text-secondary">
+          Ingresá con tu cuenta para administrar catálogo, pedidos y analíticas.
+        </p>
       </div>
 
-      <label className="flex flex-col gap-2 text-sm text-[var(--color-accent-tertiary)]/80">
+      <div className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5 text-body-medium text-text-primary">
           <span>Email</span>
-        <input
-          required
-            type="email"
-            name="email"
-            autoComplete="email"
-            placeholder="Email"
-          className="rounded-xl border border-[var(--color-accent-tertiary)]/15 px-4 py-3 text-[var(--color-accent-tertiary)] outline-none transition focus:border-[var(--color-accent-tertiary)]/40"
-        />
-      </label>
+          <div className="flex items-center gap-2 rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 transition focus-within:border-accent-500">
+            <RiMailLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+            <input
+              required
+              type="email"
+              name="email"
+              autoComplete="email"
+              placeholder="tu@negocio.com"
+              className="w-full !border-0 !bg-transparent p-0 text-body-regular text-text-primary placeholder:text-text-tertiary focus:!ring-0 focus:outline-none"
+            />
+          </div>
+        </label>
 
-      <label className="flex flex-col gap-2 text-sm text-[var(--color-accent-tertiary)]/80">
-        <span>Password</span>
-        <input
-          required
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          placeholder="Password"
-          className="rounded-xl border border-[var(--color-accent-tertiary)]/15 px-4 py-3 text-[var(--color-accent-tertiary)] outline-none transition focus:border-[var(--color-accent-tertiary)]/40"
-        />
-      </label>
-
-      <Link href="/forgot-password" className="text-right text-sm text-[var(--color-accent-tertiary)] underline">
-        ¿Olvidaste tu contraseña?
-      </Link>
+        <label className="flex flex-col gap-1.5 text-body-medium text-text-primary">
+          <div className="flex items-center justify-between">
+            <span>Password</span>
+            <Link
+              href="/forgot-password"
+              className="text-caption-1-medium text-accent-400 hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 transition focus-within:border-accent-500">
+            <RiLockPasswordLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+            <input
+              required
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className="w-full !border-0 !bg-transparent p-0 text-body-regular text-text-primary placeholder:text-text-tertiary focus:!ring-0 focus:outline-none"
+            />
+          </div>
+        </label>
+      </div>
 
       {message ? (
-        <p
+        <div
           aria-live="polite"
-          className="text-sm text-red-600"
+          className="rounded-2lg border border-red-500/30 bg-status-rose-background px-3.5 py-2.5 text-body-2-medium text-status-rose-text"
         >
           {message}
-        </p>
+        </div>
       ) : null}
 
-
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="rounded-xl bg-[var(--color-accent-secondary)] px-4 py-3 text-sm font-medium text-[var(--color-accent-primary)] transition hover:bg-[var(--color-accent-tertiary)] disabled:cursor-not-allowed disabled:bg-[var(--color-accent-tertiary)]/60"
+        trailingIcon={RiArrowRightLine}
+        className="w-full"
       >
-        {pending ? "Signing in..." : "Login"}
-      </button>
+        {pending ? "Ingresando..." : "Iniciar sesión"}
+      </Button>
 
-      <div className="mt-2 text-center text-xs text-[var(--color-accent-tertiary)]/70">
-        ¿Querés abrir tu propio local?{" "}
-        <Link href="/register" className="font-semibold text-[var(--color-accent-tertiary)] underline hover:opacity-80">
-          Registrá tu negocio
+      <Divider>o creá tu cuenta</Divider>
+
+      <div className="flex items-center justify-between rounded-2lg border border-border-button-default bg-background-primary-default/50 px-4 py-3">
+        <span className="text-body-2-regular text-text-secondary">
+          ¿Querés abrir tu propio local?
+        </span>
+        <Link
+          href="/register"
+          className="text-body-2-semibold text-accent-400 hover:underline"
+        >
+          Registrá tu negocio →
         </Link>
       </div>
     </form>

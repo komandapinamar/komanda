@@ -137,10 +137,9 @@ export default function AnalyticsDashboardLive({
   return (
     <div className="font-[family-name:var(--font-instrument-sans)] space-y-6">
       {/* Controls Bar */}
-      <div className="liquid-prism-ring liquid-glass-card flex flex-col gap-4 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
         {/* Date presets */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="mr-1 font-medium text-[#c2c2cc]">Período:</span>
+        <div className="flex flex-wrap items-center gap-1 rounded-2lg bg-background-full p-1 text-body-2-medium">
           {(
             [
               { id: "today", label: "Hoy" },
@@ -154,10 +153,10 @@ export default function AnalyticsDashboardLive({
               key={p.id}
               type="button"
               onClick={() => handlePresetChange(p.id)}
-              className={`rounded-full px-3.5 py-1.5 font-medium transition ${
+              className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
                 preset === p.id
-                  ? "bg-[#f4f3f1] text-[#141416]"
-                  : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                  ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               {p.label}
@@ -166,9 +165,9 @@ export default function AnalyticsDashboardLive({
         </div>
 
         {/* Source and refresh */}
-        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-body-2-medium">
           <div className="flex items-center gap-1.5">
-            <span className="text-[#c2c2cc]">Canal:</span>
+            <span className="text-text-secondary">Canal:</span>
             <select
               value={source}
               onChange={(e) =>
@@ -176,7 +175,7 @@ export default function AnalyticsDashboardLive({
                   e.target.value as "all" | "mercadopago_webhook" | "admin_direct",
                 )
               }
-              className="rounded-full border border-white/15 bg-[#101013] px-3 py-1.5 text-xs font-medium text-[#f4f3f1] outline-none focus:border-white/35"
+              className="h-8 rounded-lg border border-border-button-default bg-background-tertiary-default px-2.5 py-1 text-body-2-medium text-text-primary"
             >
               <option value="all">Todos los canales</option>
               <option value="mercadopago_webhook">Mercado Pago (Online)</option>
@@ -187,7 +186,7 @@ export default function AnalyticsDashboardLive({
           <a
             href={`/api/v1/tenants/${tenantId}/analytics/export?from=${encodeURIComponent(data.dateRange.from)}&to=${encodeURIComponent(data.dateRange.to)}`}
             download
-            className="inline-flex h-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-3.5 font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border-button-default bg-background-primary-default px-3 text-body-2-medium text-text-primary shadow-xs transition hover:bg-background-primary-hover"
           >
             <span>Exportar CSV</span>
           </a>
@@ -196,7 +195,7 @@ export default function AnalyticsDashboardLive({
             type="button"
             disabled={isPending}
             onClick={() => handlePresetChange(preset)}
-            className="inline-flex h-8 items-center justify-center rounded-full bg-[#f4f3f1] px-3.5 font-medium text-[#141416] transition hover:bg-white disabled:opacity-50"
+            className="bg-button-primary button-press-motion inline-flex h-8 cursor-pointer items-center justify-center rounded-lg px-3.5 text-body-2-medium text-text-white shadow-xs disabled:opacity-50"
           >
             {isPending ? "Actualizando..." : "Refrescar"}
           </button>
@@ -205,29 +204,29 @@ export default function AnalyticsDashboardLive({
 
       {/* Custom Date Picker Inputs (if custom selected) */}
       {preset === "custom" && (
-        <div className="liquid-glass-card flex flex-wrap items-center gap-3 rounded-3xl p-4 text-xs">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-4 text-body-2-medium shadow-card">
           <div className="flex items-center gap-2">
-            <span className="text-[#c2c2cc]">Desde:</span>
+            <span className="text-text-secondary">Desde:</span>
             <input
               type="date"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="rounded-xl border border-white/15 bg-[#101013] px-3 py-1.5 text-[#f4f3f1] outline-none"
+              className="px-3 py-1.5 text-body-2-regular"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[#c2c2cc]">Hasta:</span>
+            <span className="text-text-secondary">Hasta:</span>
             <input
               type="date"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="rounded-xl border border-white/15 bg-[#101013] px-3 py-1.5 text-[#f4f3f1] outline-none"
+              className="px-3 py-1.5 text-body-2-regular"
             />
           </div>
           <button
             type="button"
             onClick={handleApplyCustomRange}
-            className="inline-flex h-8 items-center justify-center rounded-full bg-[#f4f3f1] px-4 font-medium text-[#141416] transition hover:bg-white"
+            className="bg-button-primary button-press-motion inline-flex h-8 cursor-pointer items-center justify-center rounded-lg px-3.5 text-body-2-medium text-text-white shadow-xs"
           >
             Aplicar Rango
           </button>

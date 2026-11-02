@@ -211,20 +211,20 @@ export function AdminDiscountsPanel({
   });
 
   const inputClass =
-    "w-full rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30 focus:ring-2 focus:ring-white/15";
+    "w-full rounded-2lg border border-border-button-default bg-background-tertiary-default px-3.5 py-2 text-body-regular text-text-primary placeholder:text-text-tertiary";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end">
+      <div className="flex flex-col justify-between gap-4 border-b border-separator-border pb-5 sm:flex-row sm:items-end">
         <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
+          <p className="text-caption-1-semibold uppercase tracking-wider text-text-secondary">
             Promociones
           </p>
-          <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+          <h1 className="text-title-1-semibold text-text-primary">
             Códigos de Descuento
           </h1>
-          <p className="text-sm text-[#c2c2cc]">
+          <p className="text-body-regular text-text-secondary">
             Administrá cupones promocionales, porcentajes, límites de canje y vigencia.
           </p>
         </div>
@@ -234,28 +234,28 @@ export function AdminDiscountsPanel({
             resetForm();
             setIsModalOpen(true);
           }}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
+          className="bg-button-primary button-press-motion inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-2lg px-4 text-body-medium text-text-white shadow-xs"
         >
           + Crear Código
         </button>
       </div>
 
       {actionError ? (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-xs text-red-300">
+        <div className="rounded-2lg border border-red-500/30 bg-status-rose-background p-4 text-body-2-medium text-status-rose-text">
           {actionError}
         </div>
       ) : null}
 
-      <section className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+      <section className="space-y-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7">
         {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-2lg bg-background-full p-1 text-body-2-medium">
           <button
             type="button"
             onClick={() => setActiveTab("all")}
-            className={`rounded-full px-3.5 py-1.5 font-medium transition ${
+            className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
               activeTab === "all"
-                ? "bg-[#f4f3f1] text-[#141416]"
-                : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             Todos ({discounts.length})
@@ -263,10 +263,10 @@ export function AdminDiscountsPanel({
           <button
             type="button"
             onClick={() => setActiveTab("active")}
-            className={`rounded-full px-3.5 py-1.5 font-medium transition ${
+            className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
               activeTab === "active"
-                ? "bg-[#f4f3f1] text-[#141416]"
-                : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             Activos ({discounts.filter((d) => d.status === "active").length})
@@ -274,10 +274,10 @@ export function AdminDiscountsPanel({
           <button
             type="button"
             onClick={() => setActiveTab("paused")}
-            className={`rounded-full px-3.5 py-1.5 font-medium transition ${
+            className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
               activeTab === "paused"
-                ? "bg-[#f4f3f1] text-[#141416]"
-                : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             Pausados ({discounts.filter((d) => d.status === "paused").length})
@@ -285,10 +285,10 @@ export function AdminDiscountsPanel({
           <button
             type="button"
             onClick={() => setActiveTab("expired_exhausted")}
-            className={`rounded-full px-3.5 py-1.5 font-medium transition ${
+            className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
               activeTab === "expired_exhausted"
-                ? "bg-[#f4f3f1] text-[#141416]"
-                : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             Vencidos / Agotados (
@@ -302,100 +302,96 @@ export function AdminDiscountsPanel({
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-2xl border border-white/12 bg-[#101013]/90">
+        <div className="overflow-hidden rounded-2lg border border-border-table bg-background-primary-default/50">
           {filteredDiscounts.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#c2c2cc]">
+            <div className="p-8 text-center text-body-2-regular text-text-secondary">
               No se encontraron cupones con este filtro.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-[#d4d4dc]">
-                <thead className="border-b border-white/[0.08] bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#c2c2cc]">
+              <table className="bui-table">
+                <thead>
                   <tr>
-                    <th scope="col" className="px-4 py-3.5 font-medium">
+                    <th scope="col">
                       Código / Nombre
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-medium">
+                    <th scope="col">
                       Beneficio
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-medium">
+                    <th scope="col">
                       Compra Mínima
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-medium">
+                    <th scope="col">
                       Canjes
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-medium">
+                    <th scope="col">
                       Vigencia
                     </th>
-                    <th scope="col" className="px-4 py-3.5 font-medium">
+                    <th scope="col">
                       Estado
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-right font-medium">
+                    <th scope="col" className="text-right">
                       Acciones
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.08]">
+                <tbody>
                   {filteredDiscounts.map((discount) => (
-                    <tr key={discount.id} className="transition hover:bg-white/[0.03]">
-                      <td className="px-4 py-3.5">
-                        <div className="font-mono text-sm font-medium text-[#f4f3f1]">
+                    <tr key={discount.id} className="hover:bg-background-primary-hover">
+                      <td>
+                        <div className="font-mono text-body-semibold text-text-primary">
                           {discount.code}
                         </div>
-                        <div className="text-xs text-[#c2c2cc]">{discount.name}</div>
+                        <div className="text-caption-1-regular text-text-secondary">{discount.name}</div>
                         {discount.applicableTender === "cash" ? (
-                          <span className="mt-1 inline-block rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                          <span className="mt-1 inline-block rounded-md bg-status-lime-background px-2 py-0.5 text-caption-2-semibold text-status-lime-text">
                             Exclusivo Efectivo
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3.5 font-medium text-emerald-400">
+                      <td className="font-medium text-status-lime-text">
                         {discount.discountType === "percentage"
                           ? `${Number(discount.discountValue)}% OFF`
                           : `$${Number(discount.discountValue).toLocaleString("es-AR")} OFF`}
                       </td>
-                      <td className="px-4 py-3.5 text-[#f4f3f1]">
+                      <td className="text-text-primary">
                         {Number(discount.minOrderAmount) > 0
                           ? `$${Number(discount.minOrderAmount).toLocaleString("es-AR")}`
                           : "Sin mínimo"}
                       </td>
-                      <td className="px-4 py-3.5 tabular-nums">
-                        <span className="text-[#f4f3f1]">{discount.redemptionsCount}</span>
-                        <span className="text-[#c2c2cc]">
+                      <td className="tabular-nums">
+                        <span className="text-text-primary">{discount.redemptionsCount}</span>
+                        <span className="text-text-secondary">
                           {discount.maxRedemptions ? ` / ${discount.maxRedemptions}` : " (ilimitado)"}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-[#c2c2cc]">
+                      <td className="text-caption-1-regular text-text-secondary">
                         {discount.endsAt
                           ? `Hasta ${new Date(discount.endsAt).toLocaleDateString("es-AR")}`
                           : "Sin vencimiento"}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td>
                         <span
-                          className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getStatusBadgeClass(
+                          className={`inline-block rounded-md border px-2 py-0.5 text-caption-1-medium ${getStatusBadgeClass(
                             discount.status,
                           )}`}
                         >
                           {getStatusLabel(discount.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-right">
+                      <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => handleToggleActive(discount)}
-                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                              discount.isActive
-                                ? "border-amber-400/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
-                                : "border-emerald-400/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
-                            }`}
+                            className="cursor-pointer rounded-lg border border-border-button-default bg-background-primary-default px-2.5 py-1 text-caption-1-semibold text-text-primary transition hover:bg-background-primary-hover"
                           >
                             {discount.isActive ? "Pausar" : "Reactivar"}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(discount.id)}
-                            className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-xs font-medium text-[#c2c2cc] transition hover:border-red-400/40 hover:text-red-300"
+                            className="cursor-pointer rounded-lg border border-border-button-default bg-background-primary-default px-2.5 py-1 text-caption-1-semibold text-text-secondary transition hover:border-red-500/40 hover:text-status-rose-text"
                           >
                             Archivar
                           </button>
@@ -412,29 +408,29 @@ export function AdminDiscountsPanel({
 
       {/* Creation Modal */}
       {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="liquid-glass-card w-full max-w-lg rounded-3xl p-6 sm:p-7 text-[#f4f3f1] shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-              <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">Crear Código de Descuento</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg space-y-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 text-text-primary shadow-xl sm:p-7">
+            <div className="flex items-center justify-between border-b border-separator-border pb-4">
+              <h2 className="text-title-3-semibold text-text-primary">Crear Código de Descuento</h2>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-lg text-[#c2c2cc] hover:text-white"
+                className="inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-background-tertiary-default text-text-secondary hover:text-text-primary"
               >
                 ✕
               </button>
             </div>
 
             {formError ? (
-              <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3.5 text-xs text-red-300">
+              <div className="rounded-2lg border border-red-500/30 bg-status-rose-background p-3.5 text-body-2-medium text-status-rose-text">
                 {formError}
               </div>
             ) : null}
 
-            <form onSubmit={handleCreateDiscount} className="space-y-4 text-sm">
+            <form onSubmit={handleCreateDiscount} className="space-y-4 text-body-regular">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="code" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="code" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Código promocional *
                   </label>
                   <input
@@ -448,7 +444,7 @@ export function AdminDiscountsPanel({
                   />
                 </div>
                 <div>
-                  <label htmlFor="name" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="name" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Nombre descriptivo *
                   </label>
                   <input
@@ -464,7 +460,7 @@ export function AdminDiscountsPanel({
               </div>
 
               <div>
-                <label htmlFor="desc" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                <label htmlFor="desc" className="mb-1.5 block text-body-2-medium text-text-primary">
                   Descripción (opcional)
                 </label>
                 <input
@@ -479,7 +475,7 @@ export function AdminDiscountsPanel({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="type" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="type" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Tipo de beneficio *
                   </label>
                   <select
@@ -495,7 +491,7 @@ export function AdminDiscountsPanel({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="val" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="val" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Valor del descuento *
                   </label>
                   <input
@@ -512,7 +508,7 @@ export function AdminDiscountsPanel({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="minOrder" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="minOrder" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Compra mínima ($)
                   </label>
                   <input
@@ -525,7 +521,7 @@ export function AdminDiscountsPanel({
                   />
                 </div>
                 <div>
-                  <label htmlFor="maxRedemptions" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="maxRedemptions" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Tope global de canjes
                   </label>
                   <input
@@ -542,7 +538,7 @@ export function AdminDiscountsPanel({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="startsAt" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="startsAt" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Fecha inicio (opcional)
                   </label>
                   <input
@@ -554,7 +550,7 @@ export function AdminDiscountsPanel({
                   />
                 </div>
                 <div>
-                  <label htmlFor="endsAt" className="mb-1.5 block text-xs font-medium text-[#c2c2cc]">
+                  <label htmlFor="endsAt" className="mb-1.5 block text-body-2-medium text-text-primary">
                     Fecha expiración (opcional)
                   </label>
                   <input
@@ -570,7 +566,7 @@ export function AdminDiscountsPanel({
               <div>
                 <label
                   htmlFor="applicableTender"
-                  className="mb-1.5 block text-xs font-medium text-[#c2c2cc]"
+                  className="mb-1.5 block text-body-2-medium text-text-primary"
                   title="Incentivá pagos en efectivo para ahorrar comisiones de cobro online"
                 >
                   Medio de Pago requerido
@@ -585,23 +581,23 @@ export function AdminDiscountsPanel({
                   <option value="all">Todos los medios</option>
                   <option value="cash">Solo Efectivo</option>
                 </select>
-                <p className="mt-1.5 text-xs text-[#9b9ba4]">
+                <p className="mt-1.5 text-caption-1-regular text-text-secondary">
                   Incentivá pagos en efectivo para ahorrar comisiones de cobro online
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2.5 border-t border-white/[0.08] pt-4">
+              <div className="flex justify-end gap-2.5 border-t border-separator-border pt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]"
+                  className="inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg border border-border-button-default bg-background-primary-default px-4 text-body-medium text-text-primary transition hover:bg-background-primary-hover"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-xs font-medium text-[#141416] transition hover:bg-white disabled:opacity-50"
+                  className="bg-button-primary button-press-motion inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg px-5 text-body-medium text-text-white shadow-xs disabled:opacity-50"
                 >
                   {isSubmitting ? "Creando..." : "Crear Cupón"}
                 </button>

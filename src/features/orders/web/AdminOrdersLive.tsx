@@ -535,7 +535,7 @@ export default function AdminOrdersLive({
         </div>
       </div>
 
-      <nav aria-label="Etapas del pedido" className="mt-5 flex flex-wrap gap-2">
+      <nav aria-label="Etapas del pedido" className="mt-5 inline-flex flex-wrap gap-1 rounded-2lg bg-background-full p-1 text-body-2-medium">
         {([
           ["all", "Todos"],
           ["payment", "1. Pago"],
@@ -547,10 +547,10 @@ export default function AdminOrdersLive({
             type="button"
             aria-pressed={stageFilter === stage}
             onClick={() => setStageFilter(stage)}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+            className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
               stageFilter === stage
-                ? "bg-[#f4f3f1] text-[#141416]"
-                : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
+                ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})

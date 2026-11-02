@@ -97,8 +97,8 @@ export function LocationPicker({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-2">
-        <label htmlFor="location-search" className="text-xs font-medium text-[#c2c2cc]">Buscar dirección</label>
+      <div className="grid gap-1.5">
+        <label htmlFor="location-search" className="text-body-medium text-text-primary">Buscar dirección</label>
         <input
           id="location-search"
           value={query}
@@ -109,31 +109,39 @@ export function LocationPicker({
             setSearchError(null);
           }}
           placeholder="Escribí una dirección o comercio"
-          className="rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30"
+          className="rounded-2lg border border-border-button-default bg-background-tertiary-default px-3.5 py-2 text-body-regular text-text-primary placeholder:text-text-tertiary"
           aria-describedby="location-help"
         />
         {results.length > 0 ? (
-          <ul className="grid gap-1 rounded-2xl border border-white/12 bg-[#101013]/95 p-1.5" role="listbox">
+          <ul className="grid gap-1 rounded-2lg border border-border-button-default bg-background-primary-default p-1.5 shadow-dropdown" role="listbox">
             {results.map((result) => (
               <li key={`${result.lat}:${result.lng}`}>
-                <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-sm text-[#f4f3f1] transition hover:bg-white/[0.08]" onClick={() => selectResult(result)}>
+                <button type="button" className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-body-2-regular text-text-primary transition hover:bg-background-primary-hover" onClick={() => selectResult(result)}>
                   {result.formattedAddress}
                 </button>
               </li>
             ))}
           </ul>
         ) : null}
-        {searchError ? <p role="alert" className="text-sm text-amber-300">{searchError} Podés mover el pin manualmente.</p> : null}
+        {searchError ? <p role="alert" className="text-body-2-medium text-status-yellow-text">{searchError} Podés mover el pin manualmente.</p> : null}
       </div>
-      <div className="h-64 overflow-hidden rounded-2xl border border-white/12" aria-label="Mapa para confirmar ubicación">
+      <div className="h-64 overflow-hidden rounded-2xl border border-border-button-default" aria-label="Mapa para confirmar ubicación">
         <LocationMap position={position} editable onMove={moveMarker} />
       </div>
-      <p id="location-help" className="text-xs text-[#c2c2cc]">
+      <p id="location-help" className="text-caption-1-regular text-text-secondary">
         Arrastrá el pin o hacé clic en el mapa. La ubicación exacta se publicará en el directorio y podés cambiarla desde Settings.
       </p>
-      <p className="text-xs text-[#d4d4dc]">{address || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}</p>
-      {error ? <p role="alert" className="text-sm text-red-400">{error}</p> : null}
-      <button type="button" onClick={confirm} className="inline-flex h-9 w-fit items-center justify-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]">
+      <p className="text-caption-1-medium text-text-primary">{address || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}</p>
+      {error ? <p role="alert" className="text-body-2-medium text-status-rose-text">{error}</p> : null}
+      <button
+        type="button"
+        onClick={confirm}
+        className={`inline-flex h-9 w-fit cursor-pointer items-center justify-center rounded-2lg px-3.5 text-body-medium transition ${
+          hasConfirmed
+            ? "bg-status-lime-background text-status-lime-text border border-emerald-500/30"
+            : "bg-background-primary-default text-text-primary border border-border-button-default hover:bg-background-primary-hover"
+        }`}
+      >
         {hasConfirmed ? "Ubicación confirmada" : "Confirmar ubicación pública"}
       </button>
     </div>
