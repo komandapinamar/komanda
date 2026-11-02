@@ -1,41 +1,29 @@
 export default function OfficialCartSkeleton() {
   return (
-    <section className="animate-pulse rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-4">
-      <div className="mb-4 space-y-2">
-        <div className="h-7 w-40 rounded bg-[var(--color-accent-secondary)]/15" />
-        <div className="h-4 w-64 rounded bg-[var(--color-accent-secondary)]/10" />
+    <section className="liquid-glass-card animate-pulse rounded-3xl p-6 space-y-5">
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+        <div className="h-6 w-32 rounded-full bg-white/[0.08]" />
+        <div className="h-5 w-20 rounded-full bg-white/[0.06]" />
       </div>
 
-      <div className="space-y-3">
-        {[0, 1, 2].map((item) => (
+      <div className="space-y-2.5">
+        {[0, 1].map((item) => (
           <div
             key={item}
-            className="rounded-sm border border-[var(--color-accent-secondary)]/20 p-3"
+            className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#101013]/80 p-4"
           >
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="h-5 w-32 rounded bg-[var(--color-accent-secondary)]/15" />
-                <div className="h-4 w-24 rounded bg-[var(--color-accent-secondary)]/10" />
-              </div>
-              <div className="h-5 w-20 rounded bg-[var(--color-accent-secondary)]/15" />
+            <div className="space-y-2">
+              <div className="h-4 w-36 rounded-full bg-white/[0.08]" />
+              <div className="h-3 w-20 rounded-full bg-white/[0.05]" />
             </div>
+            <div className="h-4 w-20 rounded-full bg-white/[0.08]" />
           </div>
         ))}
       </div>
 
-      <div className="mt-4 space-y-2 border-t border-[var(--color-accent-secondary)] pt-4">
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-20 rounded bg-[var(--color-accent-secondary)]/10" />
-          <div className="h-4 w-24 rounded bg-[var(--color-accent-secondary)]/10" />
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-24 rounded bg-[var(--color-accent-secondary)]/10" />
-          <div className="h-4 w-20 rounded bg-[var(--color-accent-secondary)]/10" />
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="h-6 w-24 rounded bg-[var(--color-accent-secondary)]/15" />
-          <div className="h-6 w-28 rounded bg-[var(--color-accent-secondary)]/15" />
-        </div>
+      <div className="flex items-center justify-between border-t border-white/[0.08] pt-4">
+        <div className="h-5 w-16 rounded-full bg-white/[0.08]" />
+        <div className="h-6 w-28 rounded-full bg-white/[0.1]" />
       </div>
     </section>
   );

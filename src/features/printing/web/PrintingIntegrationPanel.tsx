@@ -65,36 +65,44 @@ export function PrintingIntegrationPanel({
   }
 
   return (
-    <section className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+    <section className="liquid-prism-ring liquid-glass-card space-y-5 rounded-3xl p-6 sm:p-7">
       {message ? (
-        <p role="status" className="rounded-md border border-zinc-700 p-3 text-sm">
+        <p role="status" className="rounded-2xl border border-white/12 bg-[#101013]/90 px-4 py-3 text-sm text-[#f4f3f1]">
           {message}
         </p>
       ) : null}
-      <label className="block text-sm">
-        <span className="text-zinc-400">Nombre del agente</span>
+      <label className="grid gap-2 text-sm">
+        <span className="text-xs font-medium text-[#c2c2cc]">Nombre del agente</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100"
+          className="w-full rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] outline-none transition focus:border-white/30"
         />
       </label>
       <button
         type="button"
         onClick={createPairing}
-        className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
+        className="inline-flex h-10 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
       >
         Generate pairing code
       </button>
       {pairing ? (
-        <div className="space-y-2">
-          <p className="text-sm text-zinc-400">One-time pairing code</p>
+        <div className="space-y-2 rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
+          <p className="text-xs text-[#c2c2cc]">One-time pairing code</p>
           <p className="font-mono text-4xl tracking-[0.4em] text-amber-300">{pairing.code}</p>
-          <p className="text-xs text-zinc-500">Expires {new Date(pairing.expiresAt).toLocaleTimeString()}</p>
+          <p className="text-xs text-[#9b9ba4]">Expires {new Date(pairing.expiresAt).toLocaleTimeString()}</p>
         </div>
       ) : null}
-      {agentId && !pairing ? <p className="text-sm text-zinc-400">Paired agent: {agentId} ({status ?? "active"})</p> : null}
-      {agentId && !pairing ? <button type="button" onClick={revoke} className="rounded-md border border-red-400 px-4 py-2 text-sm font-semibold text-red-200">Revoke agent</button> : null}
+      {agentId && !pairing ? <p className="text-sm text-[#c2c2cc]">Paired agent: {agentId} ({status ?? "active"})</p> : null}
+      {agentId && !pairing ? (
+        <button
+          type="button"
+          onClick={revoke}
+          className="inline-flex h-9 items-center justify-center rounded-full border border-red-400/40 bg-red-500/15 px-4 text-xs font-medium text-red-200 transition hover:bg-red-500/25"
+        >
+          Revoke agent
+        </button>
+      ) : null}
     </section>
   );
 }

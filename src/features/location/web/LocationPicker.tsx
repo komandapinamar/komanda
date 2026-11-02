@@ -98,7 +98,7 @@ export function LocationPicker({
   return (
     <div className="grid gap-4">
       <div className="grid gap-2">
-        <label htmlFor="location-search" className="text-sm font-medium text-zinc-200">Buscar dirección</label>
+        <label htmlFor="location-search" className="text-xs font-medium text-[#c2c2cc]">Buscar dirección</label>
         <input
           id="location-search"
           value={query}
@@ -109,14 +109,14 @@ export function LocationPicker({
             setSearchError(null);
           }}
           placeholder="Escribí una dirección o comercio"
-          className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+          className="rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30"
           aria-describedby="location-help"
         />
         {results.length > 0 ? (
-          <ul className="grid gap-1 rounded-md border border-zinc-700 bg-zinc-950 p-1" role="listbox">
+          <ul className="grid gap-1 rounded-2xl border border-white/12 bg-[#101013]/95 p-1.5" role="listbox">
             {results.map((result) => (
               <li key={`${result.lat}:${result.lng}`}>
-                <button type="button" className="w-full rounded px-2 py-2 text-left text-sm hover:bg-zinc-800" onClick={() => selectResult(result)}>
+                <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-sm text-[#f4f3f1] transition hover:bg-white/[0.08]" onClick={() => selectResult(result)}>
                   {result.formattedAddress}
                 </button>
               </li>
@@ -125,15 +125,15 @@ export function LocationPicker({
         ) : null}
         {searchError ? <p role="alert" className="text-sm text-amber-300">{searchError} Podés mover el pin manualmente.</p> : null}
       </div>
-      <div className="h-64 overflow-hidden rounded-lg border border-zinc-700" aria-label="Mapa para confirmar ubicación">
+      <div className="h-64 overflow-hidden rounded-2xl border border-white/12" aria-label="Mapa para confirmar ubicación">
         <LocationMap position={position} editable onMove={moveMarker} />
       </div>
-      <p id="location-help" className="text-xs text-zinc-400">
+      <p id="location-help" className="text-xs text-[#c2c2cc]">
         Arrastrá el pin o hacé clic en el mapa. La ubicación exacta se publicará en el directorio y podés cambiarla desde Settings.
       </p>
-      <p className="text-xs text-zinc-300">{address || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}</p>
+      <p className="text-xs text-[#d4d4dc]">{address || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}</p>
       {error ? <p role="alert" className="text-sm text-red-400">{error}</p> : null}
-      <button type="button" onClick={confirm} className="w-fit rounded-md bg-(--color-accent-secondary) px-4 py-2 text-sm font-semibold text-black">
+      <button type="button" onClick={confirm} className="inline-flex h-9 w-fit items-center justify-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]">
         {hasConfirmed ? "Ubicación confirmada" : "Confirmar ubicación pública"}
       </button>
     </div>

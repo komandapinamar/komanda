@@ -254,7 +254,7 @@ export class CreateOrderService {
         const lineTotalCents = validated.unitPriceCents * effectiveQuantity;
         subtotalCents += lineTotalCents;
         lines.push({
-          kind: selection.kind,
+          kind: catalog.kind,
           resourceId: selection.resourceId,
           itemType: validated.itemType,
           quantity: effectiveQuantity,

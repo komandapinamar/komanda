@@ -468,8 +468,20 @@ export class CatalogService {
     return withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
       await requireCatalogManagement(repository);
-      if (!(await repository.findCombo(comboId))) {
+      const current = await repository.findCombo(comboId);
+      if (!current) {
         throw new CatalogNotFoundError("Combo not found.");
+      }
+      const category = await repository.findCategory(
+        input.categoryId ?? current.categoryId,
+      );
+      const imageAssetId =
+        input.imageAssetId === undefined
+          ? current.imageAssetId
+          : input.imageAssetId;
+      const media = await repository.findMedia(imageAssetId);
+      if (!category || (imageAssetId && !media)) {
+        throw new CatalogNotFoundError("Combo relationship not found.");
       }
       const values = {
         ...input,
@@ -477,13 +489,35 @@ export class CatalogService {
           ? { normalizedName: normalizeCatalogName(input.name) }
           : {}),
       };
+      let foundItems: Awaited<ReturnType<CatalogRepository["findItems"]>> = [];
       if (items) {
-        const found = await repository.findItems(
+        foundItems = await repository.findItems(
           items.map(({ itemId }) => itemId),
         );
-        if (found.length !== new Set(items.map(({ itemId }) => itemId)).size) {
+        if (
+          foundItems.length !== new Set(items.map(({ itemId }) => itemId)).size
+        ) {
           throw new CatalogNotFoundError("Combo item not found.");
         }
+      }
+      if ((input.status ?? current.status) === "active") {
+        const effectiveLines =
+          items ?? (await repository.findComboItems(comboId));
+        const effectiveCatalogItems = items
+          ? foundItems
+          : await repository.findItems(
+              effectiveLines.map(({ itemId }) => itemId),
+            );
+        assertPublishableCombo({
+          categoryStatus: category.status,
+          mediaStatus: media?.status,
+          items: effectiveLines.map((line) => ({
+            status:
+              effectiveCatalogItems.find(({ id }) => id === line.itemId)
+                ?.status ?? "archived",
+            quantity: line.quantity,
+          })),
+        });
       }
       const combo = await repository.updateCombo(
         comboId,

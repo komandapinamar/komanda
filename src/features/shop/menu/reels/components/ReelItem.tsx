@@ -114,6 +114,7 @@ export default function ReelItem({
       <ReelMedia
         image={item.image}
         videoUrl={item.videoUrl}
+        comboMedia={item.comboMedia}
         alt={item.name}
         videoRef={videoRef}
       />

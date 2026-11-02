@@ -87,27 +87,34 @@ export default async function TenantOrdersPage({
   const page = await new OrderQueryService().list({ context });
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm uppercase text-(--color-accent-tertiary)">
-            Operación
+    <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+      <header className="flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end">
+        <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
+            Operación · @{authority.membership.tenantSlug}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold">Pedidos en curso</h1>
+          <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+            Pedidos en curso
+          </h1>
+          <p className="text-sm text-[#c2c2cc]">
+            Monitoreá cobros, cocina y entregas en tiempo real.
+          </p>
         </div>
         <Link
           href={`/admin/${tenantId}/orders/new`}
-          className="rounded-sm bg-(--color-accent-tertiary) px-4 py-3 text-sm font-semibold text-zinc-950"
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition hover:bg-white"
         >
-          Crear pedido directo
+          <span>Crear pedido directo</span>
+          <span aria-hidden="true">→</span>
         </Link>
       </header>
 
       {createdRef ? (
         <div
           role="status"
-          className="rounded-sm border border-emerald-500/40 bg-emerald-950/40 p-4 text-emerald-300"
+          className="flex items-center gap-2.5 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
         >
+          <span>✓</span>
           <p className="font-medium">
             Pedido creado correctamente
             {createdRef !== "1" ? ` (#${createdRef})` : ""}.

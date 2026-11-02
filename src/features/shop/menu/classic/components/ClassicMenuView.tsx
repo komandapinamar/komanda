@@ -84,14 +84,36 @@ export default function ClassicMenuView({
     itemsByCategory.set(categoryId, categoryItems);
   }
 
-  const sections = categories.map((category) => ({
-    id: category.documentId,
-    title: category.name,
-    items: itemsByCategory.get(category.documentId) ?? [],
-  }));
+  const sections = categories.map((category) => {
+    const categoryItems = [...(itemsByCategory.get(category.documentId) ?? [])];
+    for (const combo of category.combos ?? []) {
+      if (!categoryItems.some((entry) => entry.documentId === combo.documentId)) {
+        categoryItems.push({
+          documentId: combo.documentId,
+          kind: "combo",
+          name: combo.name,
+          price: combo.price,
+          basePrice: combo.price,
+          description: combo.description,
+          image: combo.image,
+          category,
+          combos: null,
+          videoUrl: null,
+          comboMedia: combo.comboMedia,
+          hasOptions: false,
+          modifierGroups: [],
+        });
+      }
+    }
+    return {
+      id: category.documentId,
+      title: category.name,
+      items: categoryItems,
+    };
+  });
 
   return (
-    <OrderShell showCart={!isExpressRetail}>
+    <OrderShell showCart={!isExpressRetail} tenantSlug={tenantSlug}>
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
       <main className="min-h-[100dvh] w-full max-w-full space-y-8 overflow-x-clip bg-[#141416] p-4 sm:p-6">
         <div className="sticky top-4 z-30 w-full max-w-full">
@@ -116,9 +138,11 @@ export default function ClassicMenuView({
         <header className="space-y-2 border-b border-white/[0.08] pb-6 text-[#f4f3f1]">
           {isExpressRetail ? (
             <div className="flex flex-col gap-2">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-[#9b9ba4]">
-                Komanda · {tenantSlug}
-              </h2>
+              {tenantSlug ? (
+                <h2 className="text-xs font-medium uppercase tracking-widest text-[#9b9ba4]">
+                  @{tenantSlug}
+                </h2>
+              ) : null}
               <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
                 Vidriera Digital y Precios
               </h1>
@@ -133,9 +157,11 @@ export default function ClassicMenuView({
             </div>
           ) : (
             <>
-              <h2 className="text-xs font-medium uppercase tracking-widest text-[#9b9ba4]">
-                Komanda · {tenantSlug}
-              </h2>
+              {tenantSlug ? (
+                <h2 className="text-xs font-medium uppercase tracking-widest text-[#9b9ba4]">
+                  @{tenantSlug}
+                </h2>
+              ) : null}
               <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
                 Nuestro menu
               </h1>

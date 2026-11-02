@@ -129,11 +129,6 @@ export async function fetchTenantReadiness(
       requiredForActivation: true,
     },
     {
-      code: "currency",
-      complete: tenant.defaultCurrency.length === 3,
-      requiredForActivation: true,
-    },
-    {
       code: "published_item",
       complete: Boolean(publishedItem),
       requiredForActivation: true,
@@ -142,11 +137,6 @@ export async function fetchTenantReadiness(
       code: "payment_connected",
       complete: Boolean(paymentIntegration),
       requiredForActivation: true,
-    },
-    {
-      code: "print_agent_connected",
-      complete: false,
-      requiredForActivation: false,
     },
   ];
 

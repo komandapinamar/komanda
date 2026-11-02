@@ -21,14 +21,20 @@ export default async function SelectBusinessPage() {
     .catch(() => ({}) as Record<string, boolean>);
 
   return (
-    <main className="min-h-dvh bg-[var(--color-accent-primary)] px-6 py-12 text-[var(--color-accent-tertiary)]">
-      <section className="mx-auto max-w-3xl space-y-6">
-        <header>
-          <p className="text-8xl text-white tracking-tighter font-normal">Komanda Business</p>
-          <h1 className="mt-2 text-3xl font-semibold">Seleccioná un negocio</h1>
-          <p className="mt-2 text-zinc-400">El contexto elegido limita todos los datos y operaciones del panel.</p>
+    <main className="min-h-dvh bg-[#141416] px-4 py-12 text-[#f4f3f1] antialiased sm:px-6">
+      <section className="mx-auto max-w-4xl space-y-8">
+        <header className="space-y-1 border-b border-white/[0.08] pb-6">
+          <p className="komanda-logo font-sans text-2xl font-normal tracking-tighter text-white normal-case">
+            Komanda Business
+          </p>
+          <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+            Seleccioná un negocio
+          </h1>
+          <p className="text-sm text-[#c2c2cc]">
+            El contexto elegido limita todos los datos y operaciones del panel.
+          </p>
         </header>
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {memberships.map((membership) => {
             const defaultPath = membership.tenantPreset === "express_retail" ? "analytics" : "orders";
             const href =
@@ -45,48 +51,53 @@ export default async function SelectBusinessPage() {
                     ? "Onboarding"
                     : "No publicado";
             const statusClass = isListed
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
               : membership.tenantStatus === "onboarding"
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                : "border-zinc-700 bg-zinc-800 text-zinc-400";
+                ? "border-amber-400/30 bg-amber-500/15 text-amber-300"
+                : "border-white/12 bg-white/[0.04] text-[#c2c2cc]";
 
             return (
               <Link
                 key={membership.tenantId}
                 href={href}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 transition hover:border-[var(--color-accent-tertiary)] flex items-center justify-between"
+                className="liquid-prism-ring liquid-glass-card flex items-center justify-between gap-4 rounded-3xl p-6 transition hover:-translate-y-0.5"
               >
                 <div>
-                  <span className="block text-lg font-medium">{membership.tenantName}</span>
-                  <span className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
-                    <span>{membership.tenantSlug}</span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusClass}`}>
+                  <span className="block text-xl font-medium tracking-tight text-[#f4f3f1]">
+                    {membership.tenantName}
+                  </span>
+                  <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[#c2c2cc]">
+                    <span>@{membership.tenantSlug}</span>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${statusClass}`}>
                       {statusLabel}
                     </span>
                   </span>
                   {!isListed && membership.tenantStatus === "active" ? (
-                    <span className="mt-1 block text-xs text-zinc-500">
+                    <span className="mt-1.5 block text-xs text-[#c2c2cc]">
                       No aparece en la página principal.
                     </span>
                   ) : null}
                 </div>
-                <span className="rounded-full bg-[var(--color-accent-tertiary)]/10 border border-[var(--color-accent-tertiary)]/20 px-3 py-1 text-xs font-semibold text-[var(--color-accent-tertiary)]">
+                <span className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1 text-xs font-medium text-[#f4f3f1]">
                   {membership.tenantPreset === "express_retail" ? "Express Retail" : "Gastronomía"}
                 </span>
               </Link>
             );
           })}
           {memberships.length === 0 ? (
-            <p className="rounded-lg border border-zinc-800 p-5 text-zinc-400">No hay membresías activas disponibles.</p>
+            <p className="liquid-glass-card rounded-3xl p-6 text-sm text-[#c2c2cc]">
+              No hay membresías activas disponibles.
+            </p>
           ) : null}
         </div>
 
         <div className="pt-2">
           <Link
             href="/register"
-            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-accent-tertiary)]/30 bg-[var(--color-accent-primary)] p-4 text-sm font-semibold text-[var(--color-accent-tertiary)] transition hover:border-[var(--color-accent-tertiary)] hover:bg-[var(--color-accent-tertiary)]/10"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-6 text-sm font-medium text-[#141416] transition hover:bg-white"
           >
             <span>Registrar un nuevo negocio</span>
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>

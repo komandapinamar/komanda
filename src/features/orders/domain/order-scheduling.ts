@@ -104,10 +104,15 @@ export function validateScheduledPickupTime(
     );
   }
 
+  const timezone = options?.timezone || "America/Argentina/Buenos_Aires";
+  const { weekday, hhmm } = getZonedParts(parsed, timezone);
   const openingHours = options?.openingHours;
-  if (openingHours && hasOpeningHours(openingHours)) {
-    const timezone = options?.timezone || "America/Argentina/Buenos_Aires";
-    const { weekday, hhmm } = getZonedParts(parsed, timezone);
+  if (openingHours !== undefined && openingHours !== null) {
+    if (!hasOpeningHours(openingHours)) {
+      throw new OrderSchedulingError(
+        "El comercio no tiene rangos horarios disponibles para programar pedidos.",
+      );
+    }
     const dayRanges = openingHours[weekday] ?? [];
     const inAnyRange = dayRanges.some(
       (range) => hhmm >= range.open && hhmm <= range.close,
@@ -117,6 +122,10 @@ export function validateScheduledPickupTime(
         "El horario elegido está fuera del horario de atención del comercio.",
       );
     }
+  } else if (hhmm < "09:00" || hhmm > "23:30") {
+    throw new OrderSchedulingError(
+      "El horario elegido está fuera del horario de atención del comercio.",
+    );
   }
 
   return parsed;
@@ -140,11 +149,17 @@ export function generateScheduledDaysAndSlots(options?: {
   const now = options?.now ?? new Date();
   const timezone = options?.timezone || "America/Argentina/Buenos_Aires";
   const openingHours = options?.openingHours;
+  const hasExplicitOpeningHours =
+    openingHours !== undefined && openingHours !== null;
+  if (hasExplicitOpeningHours && !hasOpeningHours(openingHours)) {
+    return [];
+  }
   const hasCustomHours = Boolean(openingHours && hasOpeningHours(openingHours));
-  const maxDays = options?.daysAhead ?? 3;
+  const maxDays = options?.daysAhead ?? 7;
+  const scanDays = Math.max(maxDays, 7);
 
   const startMs = Math.ceil((now.getTime() + 20 * 60 * 1000) / (15 * 60 * 1000)) * (15 * 60 * 1000);
-  const endMs = now.getTime() + maxDays * 24 * 60 * 60 * 1000;
+  const endMs = now.getTime() + scanDays * 24 * 60 * 60 * 1000;
 
   const todayParts = getZonedParts(now, timezone);
   const tomorrowParts = getZonedParts(

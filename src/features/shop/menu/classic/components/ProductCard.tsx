@@ -13,7 +13,13 @@ export default function ProductCard({
 }: ProductCardProps) {
   const [active, setActive] = useState<boolean>(false);
   const TIMEOUT_MS = 200;
+  const comboSlots = (item.comboMedia ?? []).filter(
+    (slot) => Boolean(slot.image) || Boolean(slot.videoUrl),
+  );
+  const hasSplitComboMedia = comboSlots.length > 1;
   const hasImage = Boolean(item.image);
+  const hasVideo = Boolean(item.videoUrl);
+  const hasMedia = hasSplitComboMedia || hasImage || hasVideo;
 
   function activateClass(timeout: number) {
     setActive(true);
@@ -49,6 +55,11 @@ export default function ProductCard({
           <p className="text-base font-medium tracking-tight text-[#f4f3f1] tabular-nums sm:text-lg">
             ${item.price}
           </p>
+          {item.kind === "combo" ? (
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+              Combo
+            </span>
+          ) : null}
           {item.hasOptions ? (
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-[#9b9ba4]">
               Personalizable
@@ -57,18 +68,82 @@ export default function ProductCard({
         </div>
       </div>
 
-      {hasImage ? (
+      {hasMedia ? (
         <aside className="relative z-10 flex flex-none items-center">
           <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-[#202024] ring-1 ring-white/12 sm:size-28">
-            <Image
-              className="size-full object-cover transition duration-300 group-hover:scale-105"
-              src={item.image}
-              alt={item.name}
-              width={128}
-              height={128}
-              loading="lazy"
-              unoptimized
-            />
+            {hasSplitComboMedia ? (
+              <div
+                data-testid="combo-split-thumbnail"
+                className={`grid size-full gap-[1px] bg-white/15 ${
+                  comboSlots.length === 2
+                    ? "grid-cols-2"
+                    : "grid-cols-2 grid-rows-2"
+                }`}
+              >
+                {comboSlots.slice(0, 4).map((slot, idx) => {
+                  const spanFullRow = comboSlots.length === 3 && idx === 2;
+                  return (
+                    <div
+                      key={`${slot.itemId}-${idx}`}
+                      className={`relative size-full overflow-hidden bg-[#141416] ${
+                        spanFullRow ? "col-span-2" : ""
+                      }`}
+                    >
+                      {slot.videoUrl ? (
+                        <video
+                          src={slot.videoUrl}
+                          poster={slot.image ?? undefined}
+                          autoPlay
+                          muted
+                          playsInline
+                          loop
+                          controls={false}
+                          disablePictureInPicture
+                          disableRemotePlayback
+                          controlsList="nodownload nofullscreen noremoteplayback"
+                          preload="metadata"
+                          className="pointer-events-none size-full object-cover select-none"
+                        />
+                      ) : slot.image ? (
+                        <Image
+                          className="size-full object-cover"
+                          src={slot.image}
+                          alt={slot.name}
+                          width={64}
+                          height={64}
+                          loading="lazy"
+                          unoptimized
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : hasImage ? (
+              <Image
+                className="size-full object-cover transition duration-300 group-hover:scale-105"
+                src={item.image}
+                alt={item.name}
+                width={128}
+                height={128}
+                loading="lazy"
+                unoptimized
+              />
+            ) : hasVideo ? (
+              <video
+                src={item.videoUrl!}
+                autoPlay
+                muted
+                playsInline
+                loop
+                controls={false}
+                disablePictureInPicture
+                disableRemotePlayback
+                controlsList="nodownload nofullscreen noremoteplayback"
+                preload="metadata"
+                className="pointer-events-none size-full object-cover select-none"
+              />
+            ) : null}
           </div>
         </aside>
       ) : null}

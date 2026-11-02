@@ -135,12 +135,12 @@ export default function AnalyticsDashboardLive({
   };
 
   return (
-    <div className="font-[family-name:var(--font-instrument-sans)] space-y-8">
+    <div className="font-[family-name:var(--font-instrument-sans)] space-y-6">
       {/* Controls Bar */}
-      <div className="flex flex-col gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="liquid-prism-ring liquid-glass-card flex flex-col gap-4 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
         {/* Date presets */}
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="mr-1 font-semibold text-zinc-400">Período:</span>
+          <span className="mr-1 font-medium text-[#c2c2cc]">Período:</span>
           {(
             [
               { id: "today", label: "Hoy" },
@@ -154,10 +154,10 @@ export default function AnalyticsDashboardLive({
               key={p.id}
               type="button"
               onClick={() => handlePresetChange(p.id)}
-              className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+              className={`rounded-full px-3.5 py-1.5 font-medium transition ${
                 preset === p.id
-                  ? "bg-(--color-accent-tertiary) text-zinc-950 shadow-sm"
-                  : "bg-zinc-800/80 text-zinc-300 hover:bg-zinc-800"
+                  ? "bg-[#f4f3f1] text-[#141416]"
+                  : "border border-white/12 bg-white/[0.04] text-[#d4d4dc] hover:bg-white/[0.1] hover:text-white"
               }`}
             >
               {p.label}
@@ -166,9 +166,9 @@ export default function AnalyticsDashboardLive({
         </div>
 
         {/* Source and refresh */}
-        <div className="flex flex-wrap items-center gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="text-zinc-400">Canal:</span>
+            <span className="text-[#c2c2cc]">Canal:</span>
             <select
               value={source}
               onChange={(e) =>
@@ -176,7 +176,7 @@ export default function AnalyticsDashboardLive({
                   e.target.value as "all" | "mercadopago_webhook" | "admin_direct",
                 )
               }
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-200 outline-none focus:border-(--color-accent-tertiary)"
+              className="rounded-full border border-white/15 bg-[#101013] px-3 py-1.5 text-xs font-medium text-[#f4f3f1] outline-none focus:border-white/35"
             >
               <option value="all">Todos los canales</option>
               <option value="mercadopago_webhook">Mercado Pago (Online)</option>
@@ -187,7 +187,7 @@ export default function AnalyticsDashboardLive({
           <a
             href={`/api/v1/tenants/${tenantId}/analytics/export?from=${encodeURIComponent(data.dateRange.from)}&to=${encodeURIComponent(data.dateRange.to)}`}
             download
-            className="flex items-center gap-1.5 rounded-lg border border-[var(--color-accent-tertiary)]/30 bg-[var(--color-accent-tertiary)]/10 px-3 py-1.5 font-medium text-[var(--color-accent-tertiary)] hover:bg-[var(--color-accent-tertiary)]/20"
+            className="inline-flex h-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-3.5 font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]"
           >
             <span>Exportar CSV</span>
           </a>
@@ -196,7 +196,7 @@ export default function AnalyticsDashboardLive({
             type="button"
             disabled={isPending}
             onClick={() => handlePresetChange(preset)}
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-medium text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
+            className="inline-flex h-8 items-center justify-center rounded-full bg-[#f4f3f1] px-3.5 font-medium text-[#141416] transition hover:bg-white disabled:opacity-50"
           >
             {isPending ? "Actualizando..." : "Refrescar"}
           </button>
@@ -205,29 +205,29 @@ export default function AnalyticsDashboardLive({
 
       {/* Custom Date Picker Inputs (if custom selected) */}
       {preset === "custom" && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-xs">
+        <div className="liquid-glass-card flex flex-wrap items-center gap-3 rounded-3xl p-4 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400">Desde:</span>
+            <span className="text-[#c2c2cc]">Desde:</span>
             <input
               type="date"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-zinc-200"
+              className="rounded-xl border border-white/15 bg-[#101013] px-3 py-1.5 text-[#f4f3f1] outline-none"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400">Hasta:</span>
+            <span className="text-[#c2c2cc]">Hasta:</span>
             <input
               type="date"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-zinc-200"
+              className="rounded-xl border border-white/15 bg-[#101013] px-3 py-1.5 text-[#f4f3f1] outline-none"
             />
           </div>
           <button
             type="button"
             onClick={handleApplyCustomRange}
-            className="rounded bg-(--color-accent-tertiary) px-3 py-1 font-semibold text-zinc-950 hover:bg-amber-300"
+            className="inline-flex h-8 items-center justify-center rounded-full bg-[#f4f3f1] px-4 font-medium text-[#141416] transition hover:bg-white"
           >
             Aplicar Rango
           </button>
@@ -236,7 +236,7 @@ export default function AnalyticsDashboardLive({
 
       {/* Loading overlay indicator */}
       {isPending && (
-        <div className="text-center text-xs text-(--color-accent-tertiary)">
+        <div className="text-center text-xs text-[#c2c2cc]">
           Cargando datos analíticos actualizados...
         </div>
       )}

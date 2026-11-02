@@ -16,16 +16,16 @@ export default function ExpressRetailPanel({ data }: { data: DashboardAnalyticsD
   const posnetTender = tenderBreakdown?.find((t) => t.tender === "posnet");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+    <div className="liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-6">
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
         <div>
-          <h2 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
-            <span>Komanda Kiosk</span>
-            <span className="rounded-full border border-[var(--color-accent-tertiary)]/20 bg-[var(--color-accent-tertiary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-accent-tertiary)]">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1] flex items-center gap-2.5">
+            <span className="komanda-logo font-sans font-normal tracking-tighter text-white normal-case">Komanda Kiosk</span>
+            <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-0.5 text-xs font-medium text-[#f4f3f1]">
               Autoservicio & Caja
             </span>
           </h2>
-          <p className="text-xs text-zinc-400">
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
             Control de caja física y recaudación por medio de pago en el local.
           </p>
         </div>
@@ -33,27 +33,29 @@ export default function ExpressRetailPanel({ data }: { data: DashboardAnalyticsD
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Card 1: Total en Caja Fisica */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
               Total en Caja Hoy
             </span>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                currentCashShift ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-400"
+              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+                currentCashShift
+                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+                  : "border-white/12 bg-white/[0.04] text-[#c2c2cc]"
               }`}
             >
               {currentCashShift ? "Turno Abierto" : "Caja Cerrada"}
             </span>
           </div>
 
-          <p className="mt-3 text-2xl font-bold tracking-tight text-[var(--color-accent-tertiary)] sm:text-3xl">
+          <p className="mt-3 text-2xl font-medium tracking-tight text-[#f4f3f1] tabular-nums sm:text-3xl">
             {currentCashShift
               ? formatCurrency(currentCashShift.expectedCash)
               : formatCurrency(financial.cashLedger?.netCashAmount ?? "0.00")}
           </p>
 
-          <div className="mt-2 text-xs text-zinc-400 space-y-0.5">
+          <div className="mt-2 text-xs text-[#c2c2cc] space-y-0.5">
             {currentCashShift ? (
               <>
                 <p>Apertura: {formatCurrency(currentCashShift.openingBalance)}</p>
@@ -66,41 +68,41 @@ export default function ExpressRetailPanel({ data }: { data: DashboardAnalyticsD
         </div>
 
         {/* Card 2: Efectivo en Mostrador */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
               Cobros en Efectivo
             </span>
-            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+            <span className="rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[11px] text-[#c2c2cc]">
               {cashTender?.ordersCount ?? 0} pedidos
             </span>
           </div>
 
-          <p className="mt-3 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
+          <p className="mt-3 text-2xl font-medium tracking-tight text-[#f4f3f1] tabular-nums sm:text-3xl">
             {formatCurrency(cashTender?.revenue ?? "0.00")}
           </p>
 
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-2 text-xs text-[#c2c2cc]">
             Recaudado en caja física durante el período seleccionado.
           </p>
         </div>
 
         {/* Card 3: Cobros Digitales / Tarjetas */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
               Tarjetas / Digital
             </span>
-            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+            <span className="rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[11px] text-[#c2c2cc]">
               {posnetTender?.ordersCount ?? 0} pedidos
             </span>
           </div>
 
-          <p className="mt-3 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
+          <p className="mt-3 text-2xl font-medium tracking-tight text-[#f4f3f1] tabular-nums sm:text-3xl">
             {formatCurrency(posnetTender?.revenue ?? "0.00")}
           </p>
 
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-2 text-xs text-[#c2c2cc]">
             Cobros automáticos procesados vía terminal electrónica.
           </p>
         </div>

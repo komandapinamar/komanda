@@ -2,14 +2,18 @@ import { PublicTenantService } from "@/features/tenancy/application/public-tenan
 import type {
   Category,
   Combo,
+  ComboItemSummary,
+  ComboMediaSlot,
   MenuItem,
   ProductModifierGroup,
 } from "@/types/types";
 
 type PublicCatalog = Awaited<ReturnType<PublicTenantService["catalog"]>>;
+type PublicCatalogItem = PublicCatalog["categories"][number]["items"][number];
+type PublicCatalogCombo = PublicCatalog["categories"][number]["combos"][number];
 
 function mapModifierGroups(
-  groups: PublicCatalog["categories"][number]["items"][number]["addonGroups"],
+  groups: PublicCatalogItem["addonGroups"],
 ): ProductModifierGroup[] {
   return groups.map((group) => ({
     id: group.id,
@@ -27,7 +31,7 @@ function mapModifierGroups(
 }
 
 function mapItem(
-  item: PublicCatalog["categories"][number]["items"][number],
+  item: PublicCatalogItem,
   category: Category,
 ): MenuItem {
   const modifierGroups = mapModifierGroups(item.addonGroups);
@@ -47,19 +51,121 @@ function mapItem(
   };
 }
 
-function mapCombo(
-  combo: PublicCatalog["categories"][number]["combos"][number],
-  category: Category,
-): Combo {
+function resolveComboDetails(
+  combo: PublicCatalogCombo,
+  catalogItemsById: Map<string, PublicCatalogItem>,
+  mappedItemsById: Map<string, MenuItem>,
+) {
+  const sortedLines = [...(combo.items ?? [])].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+  );
+  const componentSummaries: ComboItemSummary[] = [];
+  const componentMenuItems: MenuItem[] = [];
+  const comboMedia: ComboMediaSlot[] = [];
+  let fallbackImage = "";
+  let fallbackVideoUrl: string | null = null;
+
+  for (const line of sortedLines) {
+    const rawLine = line as {
+      itemId: string;
+      quantity: number;
+      itemName?: string | null;
+      imageUrl?: string | null;
+    };
+    const catalogItem = catalogItemsById.get(rawLine.itemId);
+    const mappedItem = mappedItemsById.get(rawLine.itemId);
+    const resolvedName = rawLine.itemName ?? catalogItem?.name ?? null;
+    if (resolvedName) {
+      componentSummaries.push({
+        itemId: rawLine.itemId,
+        name: resolvedName,
+        quantity: rawLine.quantity,
+      });
+    }
+    if (mappedItem) {
+      componentMenuItems.push(mappedItem);
+    }
+    const slotImage = rawLine.imageUrl ?? catalogItem?.imageUrl ?? null;
+    const slotVideo = catalogItem?.videoUrl ?? null;
+    if (slotImage || slotVideo) {
+      comboMedia.push({
+        itemId: rawLine.itemId,
+        name: resolvedName ?? "Producto",
+        quantity: rawLine.quantity,
+        image: slotImage,
+        videoUrl: slotVideo,
+      });
+    }
+    if (!fallbackImage && slotImage) {
+      fallbackImage = slotImage;
+    }
+    if (!fallbackVideoUrl && slotVideo) {
+      fallbackVideoUrl = slotVideo;
+    }
+  }
+
+  const includedText = componentSummaries
+    .map((entry) =>
+      entry.quantity > 1 ? `${entry.quantity} × ${entry.name}` : entry.name,
+    )
+    .join(", ");
+
+  const cleanDescription = combo.description?.trim() || "";
+  const description =
+    cleanDescription && includedText
+      ? `${cleanDescription} · Incluye: ${includedText}`
+      : includedText
+        ? `Incluye: ${includedText}`
+        : cleanDescription || null;
+
   return {
+    description,
+    image: combo.imageUrl ?? fallbackImage,
+    videoUrl: fallbackVideoUrl,
+    componentSummaries,
+    componentMenuItems,
+    comboMedia,
+  };
+}
+
+function mapCombo(
+  combo: PublicCatalogCombo,
+  category: Category,
+  catalogItemsById: Map<string, PublicCatalogItem>,
+  mappedItemsById: Map<string, MenuItem>,
+): { combo: Combo; menuItem: MenuItem } {
+  const details = resolveComboDetails(combo, catalogItemsById, mappedItemsById);
+
+  const mappedCombo: Combo = {
     documentId: combo.id,
     name: combo.name,
     price: Number(combo.price),
-    description: combo.description,
-    image: combo.imageUrl ?? "",
+    description: details.description,
+    image: details.image,
     category,
-    menu_items: null,
+    menu_items:
+      details.componentMenuItems.length > 0 ? details.componentMenuItems : null,
+    items: details.componentSummaries,
+    comboMedia: details.comboMedia,
   };
+
+  const comboMenuItem: MenuItem = {
+    documentId: combo.id,
+    kind: "combo",
+    name: combo.name,
+    price: Number(combo.price),
+    basePrice: Number(combo.price),
+    description: details.description,
+    image: details.image,
+    category,
+    combos: null,
+    videoUrl: details.videoUrl,
+    comboMedia: details.comboMedia,
+    hasOptions: false,
+    modifierGroups: [],
+  };
+
+  return { combo: mappedCombo, menuItem: comboMenuItem };
 }
 
 export async function getPublicCatalog(tenantSlug: string) {
@@ -71,7 +177,14 @@ export async function getPublicTenantsDirectory() {
 }
 
 export function transformCatalogToCategories(catalog: PublicCatalog): Category[] {
-  return catalog.categories.map((source) => {
+  const catalogItemsById = new Map<string, PublicCatalogItem>();
+  for (const source of catalog.categories) {
+    for (const item of source.items) {
+      catalogItemsById.set(item.id, item);
+    }
+  }
+
+  const categoriesPass1 = catalog.categories.map((source) => {
     const category: Category = {
       documentId: source.id,
       name: source.name,
@@ -79,10 +192,27 @@ export function transformCatalogToCategories(catalog: PublicCatalog): Category[]
       combos: null,
     };
     const items = source.items.map((item) => mapItem(item, category));
-    const combos = source.combos.map((combo) => mapCombo(combo, category));
+    return { source, category, items };
+  });
+
+  const mappedItemsById = new Map<string, MenuItem>();
+  for (const entry of categoriesPass1) {
+    for (const item of entry.items) {
+      mappedItemsById.set(item.documentId, item);
+    }
+  }
+
+  return categoriesPass1.map(({ source, category, items }) => {
+    const mappedCombos = (source.combos ?? []).map((combo) =>
+      mapCombo(combo, category, catalogItemsById, mappedItemsById),
+    );
+    const combos = mappedCombos.map((entry) => entry.combo);
+    const comboMenuItems = mappedCombos.map((entry) => entry.menuItem);
+    const allMenuItems = [...items, ...comboMenuItems];
+
     return {
       ...category,
-      menu_items: items.length > 0 ? items : null,
+      menu_items: allMenuItems.length > 0 ? allMenuItems : null,
       combos: combos.length > 0 ? combos : null,
     };
   });

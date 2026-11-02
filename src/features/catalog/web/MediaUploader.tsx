@@ -96,13 +96,13 @@ export function MediaUploader({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-zinc-200">{label}</span>
+        <span className="text-xs font-medium text-[#c2c2cc]">{label}</span>
         {value.assetId ? (
           <button
             type="button"
             disabled={disabled || busy}
             onClick={() => onChange({ assetId: null, publicUrl: null })}
-            className="text-xs font-semibold text-[var(--color-accent-tertiary)] hover:opacity-80 disabled:opacity-40"
+            className="text-xs font-medium text-[#f4f3f1] underline underline-offset-4 transition hover:opacity-80 disabled:opacity-40"
           >
             Quitar
           </button>
@@ -113,14 +113,14 @@ export function MediaUploader({
           <img
             src={value.publicUrl}
             alt="Vista previa"
-            className="h-32 w-full rounded-lg object-cover"
+            className="h-32 w-full rounded-2xl border border-white/12 object-cover"
           />
         ) : (
           <video
             src={value.publicUrl}
             controls
             muted
-            className="h-32 w-full rounded-lg object-cover"
+            className="h-32 w-full rounded-2xl border border-white/12 object-cover"
           />
         )
       ) : (
@@ -128,7 +128,7 @@ export function MediaUploader({
           type="button"
           disabled={disabled || busy}
           onClick={() => inputRef.current?.click()}
-          className="flex h-24 w-full items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-950 text-sm text-zinc-400 transition hover:border-[var(--color-accent-tertiary)] hover:text-[var(--color-accent-tertiary)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-24 w-full items-center justify-center rounded-2xl border border-dashed border-white/20 bg-[#101013]/90 text-xs font-medium text-[#c2c2cc] transition hover:border-white/40 hover:text-[#f4f3f1] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy
             ? "Subiendo..."
@@ -146,13 +146,13 @@ export function MediaUploader({
           if (file) void upload(file);
         }}
       />
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-[#9b9ba4]">
         {kind === "image"
           ? "JPG, PNG o WebP. Máximo 10 MB."
           : "MP4 o WebM. Máximo 50 MB."}
       </p>
       {error ? (
-        <p className="text-xs text-[var(--color-accent-tertiary)]">{error}</p>
+        <p className="text-xs text-amber-300">{error}</p>
       ) : null}
     </div>
   );

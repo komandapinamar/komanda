@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import MenuViewToolbar from "../../MenuViewToolbar";
 import type { Category, MenuItem } from "@/types/types";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
+import { buildPublicDirectoryUrl } from "@/features/tenancy/utils/storefront-url";
 import ReelFeedContainer from "./ReelFeedContainer";
 import ReelItem from "./ReelItem";
 import ReelsCategoryNav from "./ReelsCategoryNav";
@@ -36,6 +37,11 @@ export default function ReelsMenuView({
   const [selectedItemForModifiers, setSelectedItemForModifiers] =
     useState<MenuItem | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [directoryUrl, setDirectoryUrl] = useState("/");
+
+  useEffect(() => {
+    setDirectoryUrl(buildPublicDirectoryUrl({ tenantSlug }));
+  }, [tenantSlug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -78,12 +84,38 @@ export default function ReelsMenuView({
     };
   }, []);
 
+  const feedItems = useMemo(() => {
+    const result = [...items];
+    for (const category of categories) {
+      for (const combo of category.combos ?? []) {
+        if (!result.some((entry) => entry.documentId === combo.documentId)) {
+          result.push({
+            documentId: combo.documentId,
+            kind: "combo",
+            name: combo.name,
+            price: combo.price,
+            basePrice: combo.price,
+            description: combo.description,
+            image: combo.image,
+            category,
+            combos: null,
+            videoUrl: null,
+            comboMedia: combo.comboMedia,
+            hasOptions: false,
+            modifierGroups: [],
+          });
+        }
+      }
+    }
+    return result;
+  }, [categories, items]);
+
   const initialCategoryId = useMemo(() => {
     if (categories.length > 0) {
       return categories[0].documentId;
     }
-    return items[0]?.category?.documentId ?? null;
-  }, [categories, items]);
+    return feedItems[0]?.category?.documentId ?? null;
+  }, [categories, feedItems]);
 
   const {
     activeCategoryId,
@@ -152,8 +184,8 @@ export default function ReelsMenuView({
 
       <ReelFeedContainer>
         {/* Reels vertical feed */}
-        {items.length > 0 ? (
-          items.map((item, index) => {
+        {feedItems.length > 0 ? (
+          feedItems.map((item, index) => {
             const categoryId = item.category?.documentId;
             return (
               <ReelItem
@@ -194,6 +226,17 @@ export default function ReelsMenuView({
 
       {/* Persistent top UI layer: strictly aligned with ReelFeedContainer */}
       <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center overflow-hidden">
+        {/* Top-left Komanda logo outside the centered reel frame on desktop */}
+        <a
+          href={directoryUrl}
+          data-testid="reels-komanda-home-link"
+          aria-label="Volver al menú principal de Komanda"
+          title="Volver al menú principal de Komanda"
+          className="komanda-logo pointer-events-auto fixed top-5 left-6 z-50 hidden font-sans text-2xl font-normal tracking-tighter text-white normal-case transition hover:opacity-80 md:inline-block"
+        >
+          Komanda
+        </a>
+
         <div className="relative h-full w-full min-w-0 overflow-hidden md:h-[92vh] md:max-w-md md:rounded-[36px]">
           {/* Scrim gradient top for nav readability */}
           <div

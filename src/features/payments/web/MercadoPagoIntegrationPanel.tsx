@@ -102,48 +102,48 @@ export function MercadoPagoIntegrationPanel({
   }
 
   return (
-    <section className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+    <section className="space-y-5 rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
       {message ? (
         <p
           role="status"
-          className={`rounded-md border p-3 text-sm ${
+          className={`rounded-2xl border px-4 py-3 text-xs ${
             message.tone === "error"
-              ? "border-amber-700 bg-amber-950/40 text-amber-100"
-              : "border-emerald-800 bg-emerald-950/40 text-emerald-100"
+              ? "border-amber-400/30 bg-amber-500/10 text-amber-200"
+              : "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
           }`}
         >
           {message.text}
         </p>
       ) : null}
-      <div className="grid gap-3 text-sm sm:grid-cols-2">
+      <div className="grid gap-3 text-xs sm:grid-cols-2">
         <div>
-          <p className="text-zinc-400">Estado</p>
-          <p className="mt-1 font-medium">{status.status}</p>
+          <p className="text-[#c2c2cc]">Estado</p>
+          <p className="mt-1 text-sm font-medium text-[#f4f3f1]">{status.status}</p>
         </div>
         <div>
-          <p className="text-zinc-400">Cuenta vendedora</p>
-          <p className="mt-1 font-medium">{status.sellerAccountHint ?? "Sin conexión"}</p>
+          <p className="text-[#c2c2cc]">Cuenta vendedora</p>
+          <p className="mt-1 text-sm font-medium text-[#f4f3f1]">{status.sellerAccountHint ?? "Sin conexión"}</p>
         </div>
         <div>
-          <p className="text-zinc-400">Última verificación</p>
-          <p className="mt-1 font-medium">
+          <p className="text-[#c2c2cc]">Última verificación</p>
+          <p className="mt-1 text-sm font-medium text-[#f4f3f1]">
             {status.lastVerifiedAt
               ? new Date(status.lastVerifiedAt).toLocaleString()
               : "Pendiente"}
           </p>
         </div>
         <div>
-          <p className="text-zinc-400">Vencimiento</p>
-          <p className="mt-1 font-medium">
+          <p className="text-[#c2c2cc]">Vencimiento</p>
+          <p className="mt-1 text-sm font-medium text-[#f4f3f1]">
             {status.expiresAt ? new Date(status.expiresAt).toLocaleString() : "No disponible"}
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2.5">
         <button
           type="button"
           onClick={connect}
-          className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
+          className="inline-flex h-9 items-center justify-center rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white"
         >
           Conectar por OAuth
         </button>
@@ -151,7 +151,7 @@ export function MercadoPagoIntegrationPanel({
           type="button"
           onClick={revoke}
           disabled={status.status !== "active"}
-          className="rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
         >
           Revocar
         </button>

@@ -38,7 +38,7 @@ export default function AdminLoginForm() {
       className="flex w-full flex-col gap-4 rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-6 shadow-sm"
     >
       <div className="space-y-1 mb-8">
-        <h1 className="text-4xl font-normal text-[var(--color-accent-tertiary)] tracking-tighter justify-center flex">Komanda Business</h1>
+        <h1 className="komanda-logo flex justify-center font-sans text-4xl font-normal tracking-tighter text-white normal-case">Komanda Business</h1>
         <h1 className="text-2xl font-thin text-[var(--color-accent-tertiary)] justify-center flex">Login</h1>
       </div>
 

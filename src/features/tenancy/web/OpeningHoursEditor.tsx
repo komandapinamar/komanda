@@ -8,7 +8,7 @@ import {
 } from "@/features/tenancy/domain/opening-hours";
 
 const inputClass =
-  "rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/20";
+  "rounded-xl border border-white/15 bg-[#141416] px-2.5 py-1.5 text-sm text-[#f4f3f1] outline-none transition focus:border-white/35 focus:ring-2 focus:ring-white/15";
 
 const DEFAULT_RANGE: OpeningHoursRange = { open: "09:00", close: "18:00" };
 
@@ -69,7 +69,7 @@ export function OpeningHoursEditor({
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-zinc-400">
+        <p className="text-xs text-[#c2c2cc]">
           Se publican en la página principal de Komanda. Si un día no tiene
           horarios, se muestra como cerrado.
         </p>
@@ -77,24 +77,24 @@ export function OpeningHoursEditor({
           <button
             type="button"
             onClick={copyMondayToWeek}
-            className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+            className="rounded-full border border-white/15 bg-white/[0.05] px-3 py-1 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]"
           >
             Copiar lunes a todos los días
           </button>
         ) : null}
       </div>
 
-      <div className="divide-y divide-zinc-800/80 rounded-md border border-zinc-800">
+      <div className="divide-y divide-white/[0.08] overflow-hidden rounded-2xl border border-white/12 bg-[#101013]/90">
         {WEEKDAYS.map((day) => {
           const ranges = value[day.key] ?? [];
           return (
-            <div key={day.key} className="grid gap-2 px-3 py-3 sm:grid-cols-[7rem_1fr]">
-              <span className="pt-1.5 text-sm font-medium text-zinc-200">
+            <div key={day.key} className="grid gap-2 px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
+              <span className="pt-1.5 text-sm font-medium text-[#f4f3f1]">
                 {day.label}
               </span>
               <div className="grid gap-2">
                 {ranges.length === 0 ? (
-                  <p className="py-1.5 text-sm text-zinc-500">Cerrado</p>
+                  <p className="py-1.5 text-sm text-[#9b9ba4]">Cerrado</p>
                 ) : (
                   ranges.map((range, index) => (
                     <div key={index} className="flex flex-wrap items-center gap-2">
@@ -108,7 +108,7 @@ export function OpeningHoursEditor({
                         }
                         className={inputClass}
                       />
-                      <span className="text-xs text-zinc-500">a</span>
+                      <span className="text-xs text-[#c2c2cc]">a</span>
                       <input
                         type="time"
                         required
@@ -122,7 +122,7 @@ export function OpeningHoursEditor({
                       <button
                         type="button"
                         onClick={() => removeRange(day.key, index)}
-                        className="text-xs font-medium text-zinc-500 underline transition hover:text-zinc-200"
+                        className="text-xs font-medium text-[#c2c2cc] underline underline-offset-4 transition hover:text-[#f4f3f1]"
                       >
                         Quitar
                       </button>
@@ -133,7 +133,7 @@ export function OpeningHoursEditor({
                   <button
                     type="button"
                     onClick={() => addRange(day.key)}
-                    className="text-xs font-medium text-zinc-400 underline transition hover:text-white"
+                    className="text-xs font-medium text-[#d4d4dc] underline underline-offset-4 transition hover:text-white"
                   >
                     Agregar horario
                   </button>

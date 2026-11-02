@@ -169,6 +169,8 @@ export class CreateCashOrderService {
       const now = this.now();
       const scheduledDate = validateScheduledPickupTime(request.scheduledFor, {
         now,
+        openingHours: tenant.openingHours,
+        timezone: tenant.timezone,
       });
       const paymentExpiresAt = scheduledDate
         ? new Date(

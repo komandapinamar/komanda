@@ -2,14 +2,22 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 
-const GLYPHS = " .:-=+*#%@";
+// 4x4 Bayer ordered dithering matrix from atlasum.net
+const BAYER_4X4 = [
+  0, 8, 2, 10,
+  12, 4, 14, 6,
+  3, 11, 1, 9,
+  15, 7, 13, 5,
+] as const;
+
+const TWO_PI = Math.PI * 2;
 
 /**
- * Renders the background logo video as a continuously animated ASCII canvas
- * tuned to the Dabbit graphite & warm-stone palette.
+ * Renders the procedural Warp + 4x4 Bayer-dithered dot matrix animation
+ * from atlasum.net (pure dots, no ASCII symbols), tuned to the graphite & warm-stone palette.
  */
 export function AsciiVideoOverlay({
-  videoRef,
+  videoRef: _videoRef,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
 }) {
@@ -17,26 +25,22 @@ export function AsciiVideoOverlay({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (!canvas || !video) return;
+    if (!canvas) return;
 
     const context = canvas.getContext("2d");
-    const sample = document.createElement("canvas");
-    const pixels = sample.getContext("2d", { willReadFrequently: true });
-    if (!context || !pixels) return;
+    if (!context) return;
 
-    const posterImage = new window.Image();
-    posterImage.decoding = "async";
-    posterImage.src = "/videos/directory-bg-poster.webp";
+    const motionPreference = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
 
     let width = 0;
     let height = 0;
     let columns = 0;
     let rows = 0;
-    let cellSize = 11;
+    let cellSize = 5;
     let frame = 0;
     let lastPaint = -Infinity;
-    let failed = false;
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
@@ -47,107 +51,113 @@ export function AsciiVideoOverlay({
       canvas.height = Math.round(height * ratio);
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-      cellSize = width < 768 ? 9 : 11;
-      columns = Math.max(1, Math.min(180, Math.floor(width / cellSize)));
-      rows = Math.max(1, Math.min(110, Math.floor(height / cellSize)));
-      sample.width = columns;
-      sample.height = rows;
-
-      context.font = `500 ${Math.round(cellSize)}px "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
+      cellSize = width < 768 ? 5 : 6;
+      columns = Math.max(1, Math.floor(width / cellSize));
+      rows = Math.max(1, Math.floor(height / cellSize));
       lastPaint = -Infinity;
     };
 
     const paint = (time: number) => {
       frame = 0;
-      if (failed || document.hidden) return;
-      frame = window.requestAnimationFrame(paint);
+      if (document.hidden) return;
+      if (!motionPreference.matches) {
+        frame = window.requestAnimationFrame(paint);
+      }
 
-      if (time - lastPaint < 1000 / 24) return;
+      if (time - lastPaint < 1000 / 40) return;
       lastPaint = time;
 
       if (!width || !height) return;
 
-      const hasVideoFrame =
-        video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0;
-      const hasPosterFrame =
-        posterImage.complete &&
-        posterImage.naturalWidth > 0 &&
-        posterImage.naturalHeight > 0;
+      // Fast, fluid warp time progression
+      const t = time * 0.00055;
 
-      if (!hasVideoFrame && !hasPosterFrame) return;
+      context.fillStyle = "#141416";
+      context.fillRect(0, 0, width, height);
 
-      const sourceWidth = hasVideoFrame
-        ? video.videoWidth
-        : posterImage.naturalWidth;
-      const sourceHeight = hasVideoFrame
-        ? video.videoHeight
-        : posterImage.naturalHeight;
-      const sourceElement = hasVideoFrame ? video : posterImage;
+      const cellWidth = width / columns;
+      const cellHeight = height / rows;
+      const dotRadius = Math.max(1.15, Math.min(cellWidth, cellHeight) * 0.34);
+      const halfCols = columns * 0.5;
+      const halfRows = rows * 0.5;
+      const uvScale = cellSize * 0.0032;
 
-      const scale = Math.max(width / sourceWidth, height / sourceHeight);
-      const cropWidth = width / scale;
-      const cropHeight = height / scale;
+      for (let y = 0; y < rows; y++) {
+        const cy = (y + 0.5) * cellHeight;
+        const ny = (y - halfRows) / Math.max(1, halfRows);
+        const bayerRow = (y & 3) * 4;
+        const isAmbientRow = (y & 3) === 0;
+        const baseUy = (y - halfRows) * uvScale;
 
-      try {
-        pixels.drawImage(
-          sourceElement,
-          (sourceWidth - cropWidth) / 2,
-          (sourceHeight - cropHeight) / 2,
-          cropWidth,
-          cropHeight,
-          0,
-          0,
-          columns,
-          rows,
-        );
-        const data = pixels.getImageData(0, 0, columns, rows).data;
+        for (let x = 0; x < columns; x++) {
+          const cx = (x + 0.5) * cellWidth;
+          const nx = (x - halfCols) / Math.max(1, halfCols);
 
-        context.fillStyle = "#141416";
-        context.fillRect(0, 0, width, height);
-
-        const cellWidth = width / columns;
-        const cellHeight = height / rows;
-
-        for (let y = 0; y < rows; y++) {
-          const cy = (y + 0.5) * cellHeight;
-          for (let x = 0; x < columns; x++) {
-            const offset = (y * columns + x) * 4;
-            const r = data[offset] ?? 0;
-            const g = data[offset + 1] ?? 0;
-            const b = data[offset + 2] ?? 0;
-
-            const luminance = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
-            if (luminance < 0.015) continue;
-
-            const boosted = Math.min(1, Math.pow(luminance, 0.55) * 1.2);
-            const glyphIndex = Math.min(
-              GLYPHS.length - 1,
-              Math.max(1, Math.floor(boosted * GLYPHS.length)),
-            );
-            const glyph = GLYPHS[glyphIndex];
-            if (!glyph || glyph === " ") continue;
-
-            const alpha = Math.min(0.68, 0.14 + boosted * 0.55);
-            const cr = Math.min(244, Math.round(r * 0.9 + 110));
-            const cg = Math.min(243, Math.round(g * 0.9 + 108));
-            const cb = Math.min(241, Math.round(b * 0.9 + 115));
-
-            context.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${alpha})`;
-            context.fillText(glyph, (x + 0.5) * cellWidth, cy);
+          // Elliptical radial mask matching atlasum.net hero mask
+          const radialDist = Math.sqrt(nx * nx * 0.85 + ny * ny * 0.95);
+          if (radialDist >= 1.05) {
+            if (isAmbientRow && (x & 3) === 0) {
+              context.fillStyle = "rgba(244, 243, 241, 0.05)";
+              context.beginPath();
+              context.arc(cx, cy, 0.85, 0, TWO_PI);
+              context.fill();
+            }
+            continue;
           }
+
+          const rawMask =
+            radialDist <= 0.36
+              ? 1
+              : Math.max(0, 1 - (radialDist - 0.36) / 0.69);
+          const vignette = rawMask * rawMask * (3 - 2 * rawMask);
+
+          // Procedural warp field from atlasum.net Dithering shader (shape = "warp")
+          let ux = (x - halfCols) * uvScale;
+          let uy = baseUy;
+          for (let i = 1; i < 6; i++) {
+            const nextX = ux + (0.6 / i) * Math.cos(i * 2.5 * uy + t);
+            const nextY = uy + (0.6 / i) * Math.cos(i * 1.5 * ux + t);
+            ux = nextX;
+            uy = nextY;
+          }
+
+          const rawWave =
+            0.15 / Math.max(0.001, Math.abs(Math.sin(t - uy - ux)));
+          const clampedWave = Math.max(
+            0,
+            Math.min(1, (rawWave - 0.02) / 0.98),
+          );
+          const shape = clampedWave * clampedWave * (3 - 2 * clampedWave);
+
+          // 4x4 Bayer ordered dithering threshold
+          const bayer = (BAYER_4X4[bayerRow + (x & 3)] ?? 0) / 16 - 0.5;
+          const dithered = shape + bayer;
+
+          if (dithered < 0.5) {
+            if (isAmbientRow && (x & 3) === 0) {
+              context.fillStyle = "rgba(244, 243, 241, 0.06)";
+              context.beginPath();
+              context.arc(cx, cy, 0.85, 0, TWO_PI);
+              context.fill();
+            }
+            continue;
+          }
+
+          const alpha = Math.min(0.62, (0.22 + shape * 0.44) * vignette);
+          if (alpha < 0.04) continue;
+
+          context.fillStyle = `rgba(244, 243, 241, ${alpha})`;
+          context.beginPath();
+          context.arc(cx, cy, dotRadius, 0, TWO_PI);
+          context.fill();
         }
-      } catch {
-        failed = true;
-        window.cancelAnimationFrame(frame);
       }
     };
 
     const sync = () => {
       window.cancelAnimationFrame(frame);
       frame = 0;
-      if (!document.hidden && !failed) {
+      if (!document.hidden) {
         frame = window.requestAnimationFrame(paint);
       }
     };
@@ -163,7 +173,7 @@ export function AsciiVideoOverlay({
       observer.disconnect();
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [videoRef]);
+  }, []);
 
   return (
     <canvas

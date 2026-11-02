@@ -102,7 +102,7 @@ export default function BusinessRegistrationWizard({
       <div className="text-center mb-8 space-y-2">
         <Link
           href="/"
-          className="inline-block text-2xl font-bold tracking-tight text-[var(--color-accent-tertiary)] hover:opacity-80 transition-opacity"
+          className="komanda-logo inline-block font-sans text-3xl font-normal tracking-tighter text-white normal-case hover:opacity-80 transition-opacity"
         >
           Komanda
         </Link>

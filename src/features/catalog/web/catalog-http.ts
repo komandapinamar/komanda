@@ -61,6 +61,8 @@ export function catalogErrorResponse(error: unknown, correlationId: string) {
     let message = "Item version conflict.";
     if (detail.includes("catalog_items_tenant_name_active_uidx")) {
       message = "Duplicate item name.";
+    } else if (detail.includes("catalog_combos_tenant_name_active_uidx")) {
+      message = "Duplicate combo name.";
     } else if (detail.includes("catalog_items_tenant_barcode_uidx")) {
       message = "Duplicate barcode.";
     } else if (detail.includes("catalog_categories_tenant_name_active_uidx")) {

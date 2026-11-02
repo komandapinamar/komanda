@@ -37,53 +37,91 @@ export class CartRepository {
     private readonly tenantId: string,
   ) {}
 
-  async loadSelection(kind: "item" | "combo", id: string) {
+  async loadSelection(
+    kind: "item" | "combo",
+    id: string,
+  ): Promise<CartSelectionCatalog | null> {
     if (kind === "combo") {
-      const [row] = await this.transaction
-        .select({ resource: catalogCombos, media: mediaAssets })
-        .from(catalogCombos)
-        .leftJoin(
-          mediaAssets,
-          and(
-            eq(mediaAssets.tenantId, catalogCombos.tenantId),
-            eq(mediaAssets.id, catalogCombos.imageAssetId),
-          ),
-        )
-        .where(
-          and(eq(catalogCombos.tenantId, this.tenantId), eq(catalogCombos.id, id)),
-        )
-        .limit(1);
-      if (!row) return null;
-      const components = await this.transaction
-        .select({ status: catalogItems.status })
-        .from(comboItems)
-        .innerJoin(
-          catalogItems,
-          and(
-            eq(catalogItems.tenantId, comboItems.tenantId),
-            eq(catalogItems.id, comboItems.itemId),
-          ),
-        )
-        .where(
-          and(eq(comboItems.tenantId, this.tenantId), eq(comboItems.comboId, id)),
-        );
-      return {
-        kind,
-        id: row.resource.id,
-        name: row.resource.name,
-        itemType: "unit",
-        status:
-          components.length > 0 && components.every(({ status }) => status === "active")
-            ? row.resource.status
-            : ("unavailable" as const),
+      return (
+        (await this.loadComboSelection(id)) ?? (await this.loadItemSelection(id))
+      );
+    }
+    return (
+      (await this.loadItemSelection(id)) ?? (await this.loadComboSelection(id))
+    );
+  }
+
+  private async loadComboSelection(
+    id: string,
+  ): Promise<CartSelectionCatalog | null> {
+    const [row] = await this.transaction
+      .select({ resource: catalogCombos, media: mediaAssets })
+      .from(catalogCombos)
+      .leftJoin(
+        mediaAssets,
+        and(
+          eq(mediaAssets.tenantId, catalogCombos.tenantId),
+          eq(mediaAssets.id, catalogCombos.imageAssetId),
+        ),
+      )
+      .where(
+        and(eq(catalogCombos.tenantId, this.tenantId), eq(catalogCombos.id, id)),
+      )
+      .limit(1);
+    if (!row) return null;
+    const components = await this.transaction
+      .select({
+        status: catalogItems.status,
+        imageUrl: mediaAssets.publicUrl,
+        mediaStatus: mediaAssets.status,
+      })
+      .from(comboItems)
+      .innerJoin(
+        catalogItems,
+        and(
+          eq(catalogItems.tenantId, comboItems.tenantId),
+          eq(catalogItems.id, comboItems.itemId),
+        ),
+      )
+      .leftJoin(
+        mediaAssets,
+        and(
+          eq(mediaAssets.tenantId, catalogItems.tenantId),
+          eq(mediaAssets.id, catalogItems.imageAssetId),
+        ),
+      )
+      .where(
+        and(eq(comboItems.tenantId, this.tenantId), eq(comboItems.comboId, id)),
+      )
+      .orderBy(asc(comboItems.sortOrder));
+    const fallbackComponentImage =
+      components.find(
+        (comp) => comp.mediaStatus === "ready" && Boolean(comp.imageUrl),
+      )?.imageUrl ?? null;
+    return {
+      kind: "combo",
+      id: row.resource.id,
+      name: row.resource.name,
+      itemType: "unit",
+      status:
+        components.length > 0 &&
+        components.every(({ status }) => status === "active")
+          ? row.resource.status
+          : ("unavailable" as const),
       price: row.resource.price,
       currency: row.resource.currency,
-      imageUrl: row.media?.status === "ready" ? row.media.publicUrl : null,
-      categoryId: null,
+      imageUrl:
+        row.media?.status === "ready"
+          ? row.media.publicUrl
+          : fallbackComponentImage,
+      categoryId: row.resource.categoryId ?? null,
       addonGroups: [],
-      } satisfies CartSelectionCatalog;
-    }
+    } satisfies CartSelectionCatalog;
+  }
 
+  private async loadItemSelection(
+    id: string,
+  ): Promise<CartSelectionCatalog | null> {
     const [row] = await this.transaction
       .select({ resource: catalogItems, media: mediaAssets })
       .from(catalogItems)
@@ -134,7 +172,7 @@ export class CartRepository {
         : [],
     ]);
     return {
-      kind,
+      kind: "item",
       id: row.resource.id,
       name: row.resource.name,
       itemType: row.resource.itemType ?? "unit",

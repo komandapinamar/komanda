@@ -90,137 +90,152 @@ export function MemberManager({
   }
 
   const inputClass =
-    "rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-(--color-accent-tertiary) focus:outline-none";
+    "rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30 focus:ring-2 focus:ring-white/15";
 
   return (
     <div className="space-y-6">
       {error ? (
-        <p role="alert" className="rounded-md border border-red-700 bg-red-950/60 p-3 text-sm text-red-200">
+        <p role="alert" className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3.5 text-xs text-red-200">
           {error}
         </p>
       ) : null}
 
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Miembros de tu equipo.
-      </h1>
-
-      <form onSubmit={addMember} className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Email</label>
-          <input
-            required
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="usuario@ejemplo.com"
-            className={inputClass}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">
-            Contraseña inicial
-          </label>
-          <div className="relative flex items-center">
-            <input
-              required
-              type={showPassword ? "text" : "password"}
-              minLength={8}
-              maxLength={128}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              className={`${inputClass} pr-16`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-2 text-xs text-zinc-400 hover:text-zinc-200"
-            >
-              {showPassword ? "Ocultar" : "Mostrar"}
-            </button>
-          </div>
-          <p className="text-xs text-zinc-500">
-            Se usa solo si el email todavía no existe en Komanda. Si la persona ya
-            tiene una cuenta, conserva su contraseña y no se modifica ninguna
-            cuenta existente.
+      <section className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+        <div>
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+            Agregar miembro
+          </h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            Se usa la contraseña inicial solo si el email todavía no existe en Komanda.
           </p>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Rol</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as "admin" | "employee")}
-            className={inputClass}
-          >
-            <option value="admin">Admin</option>
-            <option value="employee">Employee</option>
-          </select>
+        <form onSubmit={addMember} className="grid gap-4 sm:grid-cols-3 sm:items-end">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[#c2c2cc]">Email</label>
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@ejemplo.com"
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[#c2c2cc]">
+              Contraseña inicial
+            </label>
+            <div className="relative flex items-center">
+              <input
+                required
+                type={showPassword ? "text" : "password"}
+                minLength={8}
+                maxLength={128}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                className={`${inputClass} w-full pr-16`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 text-xs font-medium text-[#c2c2cc] hover:text-[#f4f3f1]"
+              >
+                {showPassword ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-end gap-2.5">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <label className="text-xs font-medium text-[#c2c2cc]">Rol</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as "admin" | "employee")}
+                className={inputClass}
+              >
+                <option value="admin">Admin</option>
+                <option value="employee">Employee</option>
+              </select>
+            </div>
+
+            <button className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-xs font-medium text-[#141416] transition hover:bg-white">
+              Agregar miembro
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-4">
+        <div>
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+            Miembros activos
+          </h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            Administrá el rol de cada integrante o revocá su acceso al local.
+          </p>
         </div>
 
-        <button className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition">
-          Agregar miembro
-        </button>
-      </form>
-
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-900/60 text-left text-zinc-400">
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Rol</th>
-              <th className="px-4 py-3 font-medium text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800/60">
-            {members.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-zinc-500">
-                  No hay miembros registrados aún.
-                </td>
+        <div className="overflow-x-auto rounded-2xl border border-white/12 bg-[#101013]/90">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/[0.08] bg-white/[0.03] text-left text-xs uppercase tracking-wider text-[#c2c2cc]">
+                <th className="px-5 py-3.5 font-medium">Email</th>
+                <th className="px-5 py-3.5 font-medium">Rol</th>
+                <th className="px-5 py-3.5 font-medium text-right">Acciones</th>
               </tr>
-            ) : (
-              members.map((member) => (
-                <tr key={member.id} className="hover:bg-zinc-900/30 transition">
-                  <td className="px-4 py-3 font-medium text-zinc-200">{member.email}</td>
-                  <td className="px-4 py-3">
-                    {member.role === "owner" ? (
-                      <span className="rounded bg-(--color-accent-tertiary)/10 px-2.5 py-1 text-xs font-semibold text-(--color-accent-tertiary)">
-                        Owner
-                      </span>
-                    ) : (
-                      <select
-                        value={member.role}
-                        onChange={(e) =>
-                          changeRole(member.id, e.target.value as "owner" | "admin" | "employee")
-                        }
-                        className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-zinc-200"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="employee">Employee</option>
-                      </select>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {member.role !== "owner" ? (
-                      <button
-                        type="button"
-                        onClick={() => deleteMember(member.id)}
-                        className="text-sm font-medium text-red-400 hover:text-red-300 transition"
-                      >
-                        Eliminar
-                      </button>
-                    ) : (
-                      <span className="text-zinc-600">—</span>
-                    )}
+            </thead>
+            <tbody className="divide-y divide-white/[0.08]">
+              {members.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-5 py-8 text-center text-xs text-[#c2c2cc]">
+                    No hay miembros registrados aún.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                members.map((member) => (
+                  <tr key={member.id} className="transition hover:bg-white/[0.03]">
+                    <td className="px-5 py-3.5 font-medium text-[#f4f3f1]">{member.email}</td>
+                    <td className="px-5 py-3.5">
+                      {member.role === "owner" ? (
+                        <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs font-medium text-[#f4f3f1]">
+                          Owner
+                        </span>
+                      ) : (
+                        <select
+                          value={member.role}
+                          onChange={(e) =>
+                            changeRole(member.id, e.target.value as "owner" | "admin" | "employee")
+                          }
+                          className="rounded-full border border-white/15 bg-[#141416] px-3 py-1 text-xs font-medium text-[#f4f3f1] outline-none"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="employee">Employee</option>
+                        </select>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {member.role !== "owner" ? (
+                        <button
+                          type="button"
+                          onClick={() => deleteMember(member.id)}
+                          className="rounded-full border border-red-400/30 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-300 transition hover:bg-red-500/20"
+                        >
+                          Eliminar
+                        </button>
+                      ) : (
+                        <span className="text-[#9b9ba4]">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

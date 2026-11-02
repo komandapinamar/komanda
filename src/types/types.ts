@@ -5,6 +5,20 @@ export type Category = {
   combos: Combo[] | null;
 };
 
+export type ComboItemSummary = {
+  itemId: string;
+  name: string;
+  quantity: number;
+};
+
+export type ComboMediaSlot = {
+  itemId: string;
+  name: string;
+  quantity: number;
+  image: string | null;
+  videoUrl: string | null;
+};
+
 export type Combo = {
   documentId: string;
   name: string;
@@ -13,6 +27,8 @@ export type Combo = {
   image: string;
   category: Category | null;
   menu_items: MenuItem[] | null;
+  items?: ComboItemSummary[];
+  comboMedia?: ComboMediaSlot[];
 };
 
 export type ProductModifierOption = {
@@ -33,6 +49,7 @@ export type ProductModifierGroup = {
 
 export type MenuItem = {
   documentId: string;
+  kind?: "item" | "combo";
   name: string;
   price: number;
   basePrice?: number;
@@ -41,6 +58,7 @@ export type MenuItem = {
   category: Category | null;
   combos: Combo[] | null;
   videoUrl?: string | null;
+  comboMedia?: ComboMediaSlot[];
   hasOptions?: boolean;
   modifierGroups?: ProductModifierGroup[] | null;
   selectedOptionIds?: string[];
@@ -56,6 +74,7 @@ export type CartLine = {
 
 export type CartSnapshotLine = {
   documentId: string;
+  kind?: "item" | "combo";
   quantity: number;
   name: string;
   unitPrice: number;
@@ -69,6 +88,7 @@ export type CartSyncStatus = "idle" | "syncing" | "ready" | "error";
 export type OfficialCartLine = {
   id?: string;
   documentId: string;
+  kind?: "item" | "combo";
   quantity: number;
   name: string;
   unitPrice: number;
@@ -90,6 +110,8 @@ export type AppliedDiscountInfo = {
   tenderRestriction?: string;
 };
 
+import type { OpeningHours } from "@/features/tenancy/domain/opening-hours";
+
 export type OfficialCart = {
   id: string;
   currency: string;
@@ -101,6 +123,8 @@ export type OfficialCart = {
   version?: number;
   updatedAt?: string;
   expiresAt?: string;
+  openingHours?: OpeningHours;
+  timezone?: string;
 };
 
 export type CustomerInfo = {

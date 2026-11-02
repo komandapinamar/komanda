@@ -20,12 +20,61 @@ export default function CartItem({ cartLine }: { cartLine: CartLine }) {
   const selectedOptions = item.selectedOptions ?? [];
   const baseUnitPrice = getCartLineBaseUnitPrice(item);
   const lineSubtotal = getCartLineSubtotal(cartLine);
+  const comboSlots = (item.comboMedia ?? []).filter(
+    (slot) => Boolean(slot.image) || Boolean(slot.videoUrl),
+  );
 
   return (
     <>
       <div className="flex items-start justify-between gap-3.5">
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#202024] ring-1 ring-white/12">
-          {item.videoUrl && failedVideo !== item.videoUrl ? (
+          {comboSlots.length > 1 ? (
+            <div
+              className={`grid h-full w-full gap-[1px] bg-white/15 ${
+                comboSlots.length === 2
+                  ? "grid-cols-2"
+                  : "grid-cols-2 grid-rows-2"
+              }`}
+            >
+              {comboSlots.slice(0, 4).map((slot, idx) => {
+                const spanFullRow = comboSlots.length === 3 && idx === 2;
+                return (
+                  <div
+                    key={`${slot.itemId}-${idx}`}
+                    className={`relative h-full w-full overflow-hidden bg-[#141416] ${
+                      spanFullRow ? "col-span-2" : ""
+                    }`}
+                  >
+                    {slot.videoUrl ? (
+                      <video
+                        src={slot.videoUrl}
+                        poster={slot.image ?? undefined}
+                        autoPlay
+                        muted
+                        playsInline
+                        loop
+                        controls={false}
+                        disablePictureInPicture
+                        disableRemotePlayback
+                        controlsList="nodownload nofullscreen noremoteplayback"
+                        preload="metadata"
+                        className="pointer-events-none h-full w-full object-cover select-none"
+                      />
+                    ) : slot.image ? (
+                      <Image
+                        src={slot.image}
+                        alt={slot.name}
+                        fill
+                        unoptimized
+                        sizes="40px"
+                        className="object-cover"
+                      />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : item.videoUrl && failedVideo !== item.videoUrl ? (
             <video
               src={item.videoUrl}
               poster={

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KOMANDA",
+  title: "Komanda",
   description: "Your ticketing home",
 };
 

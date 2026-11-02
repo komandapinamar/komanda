@@ -105,26 +105,111 @@ function ProductDetailModal({
         </button>
 
         {/* Large Expanded Photo / Video Stage */}
-        {item.image ? (
-          <div className="relative flex max-h-[54dvh] min-h-64 w-full items-center justify-center overflow-hidden bg-[#101013]">
-            <Image
-              src={item.image}
-              alt=""
-              aria-hidden="true"
-              fill
-              unoptimized
-              className="pointer-events-none scale-110 object-cover opacity-35 blur-2xl"
-            />
-            <Image
-              src={item.image}
-              alt={item.name}
-              width={720}
-              height={540}
-              unoptimized
-              className="relative z-10 max-h-[54dvh] w-full object-contain"
-            />
-          </div>
-        ) : null}
+        {(() => {
+          const comboSlots = (item.comboMedia ?? []).filter(
+            (slot) => Boolean(slot.image) || Boolean(slot.videoUrl),
+          );
+          if (comboSlots.length > 1) {
+            const slots = comboSlots.slice(0, 4);
+            return (
+              <div
+                data-testid="combo-detail-split-stage"
+                className={`relative grid min-h-64 max-h-[54dvh] w-full gap-[1.5px] overflow-hidden bg-white/15 ${
+                  slots.length === 2
+                    ? "grid-cols-2"
+                    : "grid-cols-2 grid-rows-2"
+                }`}
+              >
+                {slots.map((slot, idx) => {
+                  const spanFullRow = slots.length === 3 && idx === 2;
+                  return (
+                    <div
+                      key={`${slot.itemId}-${idx}`}
+                      className={`relative min-h-48 w-full overflow-hidden bg-[#101013] ${
+                        spanFullRow ? "col-span-2" : ""
+                      }`}
+                    >
+                      {slot.videoUrl ? (
+                        <video
+                          src={slot.videoUrl}
+                          poster={slot.image ?? undefined}
+                          autoPlay
+                          muted
+                          playsInline
+                          loop
+                          controls={false}
+                          disablePictureInPicture
+                          disableRemotePlayback
+                          controlsList="nodownload nofullscreen noremoteplayback"
+                          preload="metadata"
+                          className="pointer-events-none h-full w-full object-cover select-none"
+                        />
+                      ) : slot.image ? (
+                        <Image
+                          src={slot.image}
+                          alt={slot.name}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      ) : null}
+                      <div className="pointer-events-none absolute bottom-2.5 left-2.5 z-10 rounded-full border border-white/15 bg-black/60 px-2.5 py-0.5 text-[11px] font-medium text-[#f4f3f1] backdrop-blur-md">
+                        {slot.quantity > 1 ? `${slot.quantity} × ` : ""}
+                        {slot.name}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          if (item.videoUrl) {
+            return (
+              <div className="relative flex max-h-[54dvh] min-h-64 w-full items-center justify-center overflow-hidden bg-[#101013]">
+                <video
+                  src={item.videoUrl}
+                  poster={item.image || undefined}
+                  autoPlay
+                  muted
+                  playsInline
+                  loop
+                  controls={false}
+                  disablePictureInPicture
+                  disableRemotePlayback
+                  controlsList="nodownload nofullscreen noremoteplayback"
+                  preload="metadata"
+                  className="pointer-events-none relative z-10 max-h-[54dvh] w-full object-contain select-none"
+                />
+              </div>
+            );
+          }
+
+          if (item.image) {
+            return (
+              <div className="relative flex max-h-[54dvh] min-h-64 w-full items-center justify-center overflow-hidden bg-[#101013]">
+                <Image
+                  src={item.image}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  unoptimized
+                  className="pointer-events-none scale-110 object-cover opacity-35 blur-2xl"
+                />
+                <Image
+                  src={item.image}
+                  alt={item.name}
+                  width={720}
+                  height={540}
+                  unoptimized
+                  className="relative z-10 max-h-[54dvh] w-full object-contain"
+                />
+              </div>
+            );
+          }
+
+          return null;
+        })()}
 
         {/* Product Details & Action */}
         <div className="space-y-4 p-6">

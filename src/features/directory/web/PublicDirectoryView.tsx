@@ -20,6 +20,8 @@ type Props = {
   tenants: DirectoryTenantItem[];
 };
 
+const BACKGROUND_VIDEO_PLAYBACK_RATE = 1.15;
+
 export function PublicDirectoryView({ tenants }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const headerSlotRef = useRef<HTMLDivElement>(null);
@@ -82,6 +84,13 @@ export function PublicDirectoryView({ tenants }: Props) {
     );
     video.defaultMuted = true;
     video.muted = true;
+    video.defaultPlaybackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+    video.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+
+    const applySlowPlaybackRate = () => {
+      video.defaultPlaybackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+      video.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+    };
 
     const play = () => {
       if (
@@ -90,6 +99,7 @@ export function PublicDirectoryView({ tenants }: Props) {
         autoplayBlocked.current
       )
         return;
+      applySlowPlaybackRate();
       video.play().catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "NotAllowedError") {
           autoplayBlocked.current = true;
@@ -217,8 +227,8 @@ export function PublicDirectoryView({ tenants }: Props) {
 
   return (
     <div className="relative flex min-h-svh flex-col justify-between overflow-x-clip bg-[#141416] text-[#f4f3f1] antialiased">
-      {/* Background Video & Live ASCII Layer */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[100svh] overflow-hidden bg-cover bg-center bg-[url('/videos/directory-bg-poster.webp')]">
+      {/* Background Video & Live Dot Matrix Layer */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[100svh] overflow-hidden bg-[#141416] bg-cover bg-center">
         <video
           ref={videoRef}
           autoPlay
@@ -228,10 +238,18 @@ export function PublicDirectoryView({ tenants }: Props) {
           webkit-playsinline="true"
           preload="auto"
           poster="/videos/directory-bg-poster.webp"
+          onLoadedMetadata={(e) => {
+            e.currentTarget.defaultPlaybackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+            e.currentTarget.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+          }}
+          onPlay={(e) => {
+            e.currentTarget.defaultPlaybackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+            e.currentTarget.playbackRate = BACKGROUND_VIDEO_PLAYBACK_RATE;
+          }}
           onPlaying={() => setVideoPlaying(true)}
           onPause={() => setVideoPlaying(false)}
           onError={() => setVideoPlaying(false)}
-          className={`h-full w-full object-cover ${videoPlaying ? "opacity-100" : "opacity-0"}`}
+          className={`h-full w-full object-cover opacity-0 ${videoPlaying ? "data-[playing=true]:opacity-0" : ""}`}
         >
           <source src="/videos/directory-bg.mp4" type="video/mp4" />
           <source src="/videos/directory-bg.webm" type="video/webm" />
@@ -258,8 +276,8 @@ export function PublicDirectoryView({ tenants }: Props) {
               >
                 <div className="flex items-center gap-2.5 pl-1">
                   <Link
-                    className={`font-medium tracking-tight text-[#f4f3f1] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:opacity-80 ${
-                      isScrolled ? "text-sm" : "text-lg"
+                    className={`komanda-logo font-sans font-normal tracking-tighter text-white normal-case transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:opacity-80 ${
+                      isScrolled ? "text-base" : "text-2xl"
                     }`}
                     href="/"
                   >
@@ -469,10 +487,6 @@ export function PublicDirectoryView({ tenants }: Props) {
                               </div>
                             </div>
 
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#101013] px-3 py-1 text-xs font-medium text-[#e4e4ec]">
-                              <span className="size-1.5 rounded-full bg-emerald-400" />
-                              Online
-                            </span>
                           </div>
 
                           {/* Divided Info Panel (Dabbit Widget Style, High Contrast) */}
@@ -597,13 +611,13 @@ export function PublicDirectoryView({ tenants }: Props) {
         {/* High-Contrast Dabbit Footer */}
         <footer className="mt-auto flex w-full flex-col items-start justify-between gap-4 border-t border-white/[0.1] bg-[#141416]/95 px-5 py-6 text-xs text-[#c2c2cc] backdrop-blur-xl sm:flex-row sm:items-center sm:px-8 lg:px-10">
           <div className="flex items-center gap-2.5">
-            <span className="font-medium text-[#f4f3f1]">Komanda</span>
+            <span className="komanda-logo font-sans text-sm font-normal tracking-tighter text-white normal-case">Komanda</span>
             <span>·</span>
             <span>Plataforma gastronómica y retail</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
-              className="font-medium text-[#d4d4dc] transition hover:text-white"
+              className="komanda-logo font-sans text-sm font-normal tracking-tighter text-white normal-case transition hover:opacity-80"
               href="/login"
             >
               Komanda Business

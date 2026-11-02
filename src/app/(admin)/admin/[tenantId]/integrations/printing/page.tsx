@@ -53,13 +53,15 @@ export default async function TenantPrintingIntegrationPage({
   if (!location) notFound();
 
   return (
-    <main className="mx-auto max-w-4xl space-y-8 px-6 py-10">
-      <header>
-        <p className="text-sm uppercase text-(--color-accent-tertiary)">
-          Integraciones
+    <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+      <header className="space-y-1 border-b border-white/[0.08] pb-6">
+        <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
+          Integraciones · @{authority.membership.tenantSlug}
         </p>
-        <h1 className="mt-2 text-3xl font-semibold">Impresión</h1>
-        <p className="mt-2 text-zinc-400">
+        <h1 className="text-3xl font-medium tracking-tight text-[#f4f3f1]">
+          Agente de impresión térmica
+        </h1>
+        <p className="text-sm text-[#c2c2cc]">
           Cada agente queda limitado al tenant y sede derivados de su token.
         </p>
       </header>

@@ -601,18 +601,14 @@ export class PaymentSessionService {
           );
         }
 
-        let scheduledDate: Date | null = null;
-        try {
-          scheduledDate = validateScheduledPickupTime(
-            input.request.scheduledFor,
-            { now: this.now() },
-          );
-        } catch (error) {
-          if (error instanceof OrderSchedulingError) {
-            throw new PaymentSessionConflictError(error.message);
-          }
-          throw error;
-        }
+        const scheduledDate = validateScheduledPickupTime(
+          input.request.scheduledFor,
+          {
+            now: this.now(),
+            openingHours: input.tenant.openingHours,
+            timezone: input.tenant.timezone,
+          },
+        );
 
         let attempt;
         try {

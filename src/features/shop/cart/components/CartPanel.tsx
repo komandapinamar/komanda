@@ -49,7 +49,7 @@ export default function CartPanel() {
     >
       {/* Physical Ticket Header */}
       <div className="mx-5 border-b-2 border-dashed border-white/15 pb-4 pt-7 text-center">
-        <p className="font-sans text-2xl font-medium tracking-tight text-[#f4f3f1]">
+        <p className="komanda-logo font-sans text-2xl font-normal tracking-tighter text-white normal-case">
           Komanda
         </p>
         {tenantSlug ? (

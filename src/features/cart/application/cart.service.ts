@@ -40,6 +40,22 @@ export class CartDiscountIneligibleError extends Error {
 }
 export { CartRevalidationError } from "@/features/cart/domain/cart.rules";
 
+function withStoreSchedule<T extends Record<string, unknown>>(
+  cart: T,
+  tenant: PublicTenant,
+): T {
+  if (tenant.openingHours === undefined && tenant.timezone === undefined) {
+    return cart;
+  }
+  return {
+    ...cart,
+    ...(tenant.openingHours !== undefined
+      ? { openingHours: tenant.openingHours }
+      : {}),
+    ...(tenant.timezone !== undefined ? { timezone: tenant.timezone } : {}),
+  };
+}
+
 function publicContext(tenant: PublicTenant) {
   return createVerifiedTenantContext({
     tenantId: tenant.id,
@@ -80,7 +96,7 @@ export class CartService {
         const replay = claim.body as { cartId?: string };
         const cart = replay.cartId ? await repository.find(replay.cartId) : null;
         if (!cart) throw new CartNotFoundError("Cart not found.");
-        return cart;
+        return withStoreSchedule(cart, tenant);
       }
 
       const lines = [];
@@ -97,7 +113,7 @@ export class CartService {
         const lineTotalCents = validated.unitPriceCents * selection.quantity;
         subtotalCents += lineTotalCents;
         lines.push({
-          kind: selection.kind,
+          kind: catalog.kind,
           resourceId: selection.resourceId,
           itemType: validated.itemType,
           quantity: selection.quantity,
@@ -171,7 +187,7 @@ export class CartService {
       });
       if (!cart) throw new Error("Failed to create cart.");
       await idempotency.complete(claim.recordId, 201, { cartId: cart.id });
-      return cart;
+      return withStoreSchedule(cart, tenant);
     });
   }
 
@@ -199,10 +215,13 @@ export class CartService {
 
         if (!discount) {
           cart = await repository.removeDiscount(cartId, cart.subtotal);
-          return {
-            ...cart!,
-            invalidatedDiscountReason: "DISCOUNT_NOT_FOUND",
-          };
+          return withStoreSchedule(
+            {
+              ...cart!,
+              invalidatedDiscountReason: "DISCOUNT_NOT_FOUND",
+            },
+            tenant,
+          );
         }
 
         const calcResult = calculateDiscountAmounts({
@@ -213,10 +232,13 @@ export class CartService {
 
         if (!calcResult.isEligible) {
           cart = await repository.removeDiscount(cartId, cart.subtotal);
-          return {
-            ...cart!,
-            invalidatedDiscountReason: calcResult.ineligibilityReason,
-          };
+          return withStoreSchedule(
+            {
+              ...cart!,
+              invalidatedDiscountReason: calcResult.ineligibilityReason,
+            },
+            tenant,
+          );
         }
 
         if (
@@ -241,7 +263,7 @@ export class CartService {
         }
       }
 
-      return cart;
+      return withStoreSchedule(cart!, tenant);
     });
   }
 
@@ -340,7 +362,7 @@ export class CartService {
         throw new Error("Failed to apply discount to cart.");
       }
 
-      return updated;
+      return withStoreSchedule(updated, tenant);
     });
   }
 
@@ -359,7 +381,7 @@ export class CartService {
         throw new Error("Failed to remove discount from cart.");
       }
 
-      return updated;
+      return withStoreSchedule(updated, tenant);
     });
   }
 }

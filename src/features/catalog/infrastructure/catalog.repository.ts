@@ -398,6 +398,19 @@ export class CatalogRepository {
     return combo ?? null;
   }
 
+  async findComboItems(comboId: string) {
+    return this.transaction
+      .select()
+      .from(comboItems)
+      .where(
+        and(
+          eq(comboItems.tenantId, this.tenantId),
+          eq(comboItems.comboId, comboId),
+        ),
+      )
+      .orderBy(asc(comboItems.sortOrder));
+  }
+
   async updateCombo(
     id: string,
     version: number,

@@ -39,6 +39,16 @@ body {
   position: relative;
 }
 
+/* Canonical unalterable Komanda brand mark */
+.komanda-logo {
+  font-family: var(--font-instrument-sans), sans-serif;
+  font-feature-settings: normal;
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+  text-transform: none;
+}
+
 /* Never show native browser multimedia controls or overlays on any video */
 video::-webkit-media-controls,
 video::-webkit-media-controls-enclosure,

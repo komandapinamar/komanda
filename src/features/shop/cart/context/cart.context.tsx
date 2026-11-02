@@ -99,11 +99,13 @@ function cartLinesToSnapshots(cartLines: CartLine[]): CartSnapshotLine[] {
   for (const cartLine of cartLines) {
     const basePrice = getCartLineBaseUnitPrice(cartLine.item);
     const optionIds = cartLine.item.selectedOptionIds ?? [];
+    const kind = cartLine.item.kind ?? "item";
     if (optionIds.length > 0 && cartLine.quantity > 1) {
       // Send 1 unit with the selected add-ons so the backend does not multiply add-ons by quantity,
       // and send the remaining (quantity - 1) units as base items.
       snapshots.push({
         documentId: cartLine.item.documentId,
+        kind,
         quantity: 1,
         name: cartLine.item.name,
         unitPrice: basePrice,
@@ -113,6 +115,7 @@ function cartLinesToSnapshots(cartLines: CartLine[]): CartSnapshotLine[] {
       });
       snapshots.push({
         documentId: cartLine.item.documentId,
+        kind,
         quantity: cartLine.quantity - 1,
         name: cartLine.item.name,
         unitPrice: basePrice,
@@ -122,6 +125,7 @@ function cartLinesToSnapshots(cartLines: CartLine[]): CartSnapshotLine[] {
     } else {
       snapshots.push({
         documentId: cartLine.item.documentId,
+        kind,
         quantity: cartLine.quantity,
         name: cartLine.item.name,
         unitPrice: basePrice,
@@ -144,12 +148,14 @@ function officialCartToLines(cart: OfficialCart): CartLine[] {
       optionsDelta > 0 && line.unitPrice > optionsDelta
         ? line.unitPrice - optionsDelta
         : line.unitPrice;
+    const kind = line.kind ?? "item";
 
     return {
       lineId:
         line.id ??
         cartLineId({
           documentId: line.documentId,
+          kind,
           name: line.name,
           price: line.unitPrice,
           basePrice,
@@ -162,6 +168,7 @@ function officialCartToLines(cart: OfficialCart): CartLine[] {
       quantity: line.quantity,
       item: {
         documentId: line.documentId,
+        kind,
         name: line.name,
         price: line.unitPrice,
         basePrice,
@@ -288,7 +295,11 @@ export function CartProvider({
 
       return currentItems.map((cartLine) =>
         (cartLine.lineId ?? cartLineId(cartLine.item)) === targetLineId
-          ? { ...cartLine, quantity: cartLine.quantity + 1 }
+          ? {
+              ...cartLine,
+              item: { ...cartLine.item, ...item },
+              quantity: cartLine.quantity + 1,
+            }
           : cartLine,
       );
     });
@@ -472,15 +483,21 @@ export function CartProvider({
 
   const applyOfficialCart = useCallback((cart: OfficialCart) => {
     setItems((currentItems) =>
-      officialCartToLines(cart).map((line) => ({
-        ...line,
-        item: {
-          ...line.item,
-          videoUrl: currentItems.find(
-            ({ item }) => item.documentId === line.item.documentId,
-          )?.item.videoUrl,
-        },
-      })),
+      officialCartToLines(cart).map((line) => {
+        const existing = currentItems.find(
+          ({ item }) => item.documentId === line.item.documentId,
+        )?.item;
+        return {
+          ...line,
+          item: {
+            ...line.item,
+            kind: line.item.kind ?? existing?.kind,
+            image: line.item.image || existing?.image || "",
+            videoUrl: existing?.videoUrl ?? line.item.videoUrl,
+            comboMedia: existing?.comboMedia ?? line.item.comboMedia,
+          },
+        };
+      }),
     );
     setCartId(cart.id);
     setDiscountTotal(cart.discountTotal ?? 0);

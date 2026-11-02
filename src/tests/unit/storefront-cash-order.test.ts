@@ -694,6 +694,45 @@ describe("Story 1.1: Storefront Cash Orders Endpoint & Persistence", () => {
       expect(body.code).toBe("ORDER_CONFLICT");
     });
 
+    it("returns HTTP 422 INVALID_SCHEDULED_TIME when scheduledFor is outside store openingHours", async () => {
+      vi.spyOn(PublicTenantService.prototype, "resolve").mockResolvedValue({
+        ...standardPublicTenant,
+        openingHours: {
+          monday: [{ open: "12:00", close: "16:00" }],
+        },
+        timezone: "America/Argentina/Buenos_Aires",
+      });
+
+      const outOfHoursIso = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      outOfHoursIso.setUTCHours(23, 0, 0, 0); // 20:00 ART -> outside 12:00..16:00
+
+      const request = new Request(
+        "https://komanda.app/api/v1/storefronts/burger-joint/carts/cart-1/cash-orders",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": "11111111-1111-4111-8111-111111111999",
+          },
+          body: JSON.stringify({
+            customer: { name: "Cliente Fuera de Rango" },
+            scheduledFor: outOfHoursIso.toISOString(),
+          }),
+        },
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({
+          tenantSlug: "burger-joint",
+          cartId: standardCart.id,
+        }),
+      });
+
+      expect(response.status).toBe(422);
+      const body = await response.json();
+      expect(body.code).toBe("INVALID_SCHEDULED_TIME");
+    });
+
     it("returns HTTP 404 non-disclosing not found when cart does not exist", async () => {
       vi.spyOn(PublicTenantService.prototype, "resolve").mockResolvedValue(standardPublicTenant);
       mockCartFind.mockResolvedValueOnce(null);

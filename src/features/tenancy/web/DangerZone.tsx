@@ -60,10 +60,10 @@ export function DangerZone({
   };
 
   return (
-    <div className="rounded-xl border border-red-500/30 bg-red-950/10 p-6 space-y-4">
+    <div className="liquid-glass-card rounded-3xl border-red-400/25 p-6 sm:p-7 space-y-4">
       <div>
-        <h3 className="text-base font-semibold text-red-400">Zona de peligro</h3>
-        <p className="mt-1 text-sm text-zinc-400">
+        <h3 className="text-lg font-medium tracking-tight text-red-300">Zona de peligro</h3>
+        <p className="mt-1 text-xs text-[#c2c2cc]">
           Eliminar este negocio borrará permanentemente sus productos, pedidos, configuraciones e historial.
           Esta acción no se puede deshacer.
         </p>
@@ -76,7 +76,7 @@ export function DangerZone({
           setConfirmationInput("");
           setError(null);
         }}
-        className="rounded-md border border-red-500/50 bg-red-600/20 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-600/30 hover:border-red-500"
+        className="inline-flex h-9 items-center justify-center rounded-full border border-red-400/40 bg-red-500/15 px-4 text-xs font-medium text-red-200 transition hover:bg-red-500/25"
       >
         Eliminar negocio
       </button>
@@ -85,43 +85,43 @@ export function DangerZone({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl space-y-5">
+          <div className="liquid-glass-card w-full max-w-md rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5">
             <div>
-              <h4 className="text-lg font-bold text-red-400">¿Estás completamente seguro?</h4>
-              <p className="mt-2 text-sm text-zinc-300 leading-relaxed">
-                Estás a punto de borrar <strong className="text-white">{tenantName}</strong> ({tenantSlug}).
+              <h4 className="text-lg font-medium tracking-tight text-red-300">¿Estás completamente seguro?</h4>
+              <p className="mt-2 text-xs text-[#d4d4dc] leading-relaxed">
+                Estás a punto de borrar <strong className="text-[#f4f3f1]">{tenantName}</strong> ({tenantSlug}).
                 Se eliminarán de forma definitiva todos los datos asociados, incluyendo catálogo, comandas, turnos de caja y accesos de operadores.
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-zinc-400">
-                Escribí <span className="font-mono text-zinc-200 select-all">{tenantSlug}</span> para confirmar:
+              <label className="block text-xs font-medium text-[#c2c2cc]">
+                Escribí <span className="font-mono text-[#f4f3f1] select-all">{tenantSlug}</span> para confirmar:
               </label>
               <input
                 type="text"
                 value={confirmationInput}
                 onChange={(e) => setConfirmationInput(e.target.value)}
                 placeholder={tenantSlug}
-                className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-red-500 focus:outline-none"
+                className="w-full rounded-2xl border border-white/15 bg-[#101013] px-3.5 py-2.5 text-sm text-[#f4f3f1] focus:border-red-400 focus:outline-none"
                 autoFocus
               />
             </div>
 
             {error ? (
-              <p className="text-xs text-red-400 bg-red-500/10 p-2.5 rounded border border-red-500/20">
+              <p className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-xs text-red-300">
                 {error}
               </p>
             ) : null}
 
-            <div className="flex gap-3 justify-end pt-2">
+            <div className="flex gap-2.5 justify-end pt-2">
               <button
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setIsOpen(false)}
-                className="rounded-md border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12] disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -129,7 +129,7 @@ export function DangerZone({
                 type="button"
                 disabled={!isConfirmed || isDeleting}
                 onClick={handleDelete}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 items-center justify-center rounded-full bg-red-500 px-4 text-xs font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isDeleting ? "Eliminando..." : "Sí, eliminar definitivamente"}
               </button>

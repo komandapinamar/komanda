@@ -330,7 +330,7 @@ export function PublicOrderStatus({
 
   return (
     <main className="mx-auto max-w-xl p-6 sm:p-8 text-center text-[var(--color-accent-secondary)]">
-      <h1 className="text-4xl font-bold tracking-tight">Komanda</h1>
+      <h1 className="komanda-logo font-sans text-3xl font-normal tracking-tighter text-white normal-case">Komanda</h1>
       <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>
 
       {order ? (

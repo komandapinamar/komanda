@@ -110,18 +110,18 @@ export function TenantSettingsPanel({
   }
 
   const inputClass =
-    "rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/20";
+    "rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30 focus:ring-2 focus:ring-white/15";
 
   return (
     <form onSubmit={save} className="grid gap-5">
       {message ? (
-        <p role="status" className="rounded-md border border-zinc-800 bg-zinc-900 p-3 text-sm">
+        <p role="status" className="rounded-2xl border border-white/12 bg-[#101013]/90 px-4 py-3 text-sm text-[#f4f3f1]">
           {message}
         </p>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
-          <span className="text-zinc-400">Nombre</span>
+          <span className="text-xs font-medium text-[#c2c2cc]">Nombre</span>
           <input
             name="contactName"
             defaultValue={settings.contactName ?? ""}
@@ -129,7 +129,7 @@ export function TenantSettingsPanel({
           />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-zinc-400">Email operativo</span>
+          <span className="text-xs font-medium text-[#c2c2cc]">Email operativo</span>
           <input
             name="contactEmail"
             type="email"
@@ -138,7 +138,7 @@ export function TenantSettingsPanel({
           />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-zinc-400">Teléfono</span>
+          <span className="text-xs font-medium text-[#c2c2cc]">Teléfono</span>
           <input
             name="contactPhone"
             defaultValue={settings.contactPhone ?? ""}
@@ -146,7 +146,7 @@ export function TenantSettingsPanel({
           />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="text-zinc-400">Zona horaria</span>
+          <span className="text-xs font-medium text-[#c2c2cc]">Zona horaria</span>
           <input
             required
             name="timezone"
@@ -155,79 +155,74 @@ export function TenantSettingsPanel({
           />
         </label>
       </div>
-      <div className="grid gap-2 border-t border-white/[0.08] pt-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="block text-sm font-medium text-zinc-200">
-            Perfil operativo del negocio
-          </span>
-          <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-0.5 text-xs font-medium text-[#f4f3f1]">
-            Moneda: {settings.currency}
-          </span>
-        </div>
-        <span className="block text-sm text-zinc-400">
+      <div className="grid gap-1.5 border-t border-white/[0.08] pt-5">
+        <span className="block text-sm font-medium text-[#f4f3f1]">
+          Perfil operativo del negocio
+        </span>
+        <span className="block text-sm text-[#d4d4dc]">
           {presetLabels[settings.preset ?? "gastronomy"]}
         </span>
-        <span className="block text-xs text-zinc-500">
+        <span className="block text-xs text-[#c2c2cc]">
           El perfil se define al registrar el negocio y no puede modificarse.
         </span>
       </div>
       <section id="ubicacion-sede" className="scroll-mt-24 grid gap-3 border-t border-white/[0.08] pt-5">
         <div>
-          <h2 className="text-sm font-medium text-zinc-200">Ubicación del local primario</h2>
-          <p className="text-xs text-zinc-400">La ubicación exacta se publica en el directorio.</p>
+          <h2 className="text-sm font-medium text-[#f4f3f1]">Ubicación del local primario</h2>
+          <p className="text-xs text-[#c2c2cc]">La ubicación exacta se publica en el directorio.</p>
         </div>
         <LocationPicker initialValue={location} onConfirm={setLocation} />
       </section>
 
       <section id="horarios-apertura" className="scroll-mt-24 grid gap-3 border-t border-white/[0.08] pt-5">
         <div>
-          <h2 className="text-sm font-medium text-zinc-200">Horarios de apertura</h2>
-          <p className="text-xs text-zinc-400">
-            Se muestran en la página principal junto al teléfono del negocio.
+          <h2 className="text-sm font-medium text-[#f4f3f1]">Horarios de apertura</h2>
+          <p className="text-xs text-[#c2c2cc]">
+            Se muestran en la página principal junto al teléfono del negocio y regulan los retiros programados.
           </p>
         </div>
         <OpeningHoursEditor value={openingHours} onChange={setOpeningHours} />
       </section>
 
       {!isExpressRetail ? (
-        <div className="grid gap-3 border-t border-zinc-800/80 pt-5">
+        <div className="grid gap-3 border-t border-white/[0.08] pt-5">
           <div>
-            <span className="block text-sm font-medium text-zinc-200">
+            <span className="block text-sm font-medium text-[#f4f3f1]">
               Tema del menú digital (QR)
             </span>
-            <span className="block text-xs text-zinc-400">
+            <span className="block text-xs text-[#c2c2cc]">
               Elegí la presentación visual que verán tus clientes al escanear la carta.
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 p-3.5 transition hover:border-zinc-500">
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/12 bg-[#101013]/90 p-4 transition hover:border-white/25">
               <input
                 type="radio"
                 name="menuTheme"
                 value="classic"
                 checked={menuTheme === "classic"}
-                className="mt-0.5 accent-[var(--color-accent-tertiary)]"
+                className="mt-0.5 accent-[#f4f3f1]"
                 onChange={() => setMenuTheme("classic")}
               />
               <div>
-                <span className="block text-sm font-medium text-zinc-100">Clásico</span>
-                <span className="mt-0.5 block text-xs text-zinc-400">
+                <span className="block text-sm font-medium text-[#f4f3f1]">Clásico</span>
+                <span className="mt-0.5 block text-xs text-[#c2c2cc]">
                   Grilla tradicional con categorías, descripciones y tarjetas de platos.
                 </span>
               </div>
             </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-700 p-3.5 transition hover:border-zinc-500">
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/12 bg-[#101013]/90 p-4 transition hover:border-white/25">
               <input
                 type="radio"
                 name="menuTheme"
                 value="reels"
                 checked={menuTheme === "reels"}
-                className="mt-0.5 accent-[var(--color-accent-tertiary)]"
+                className="mt-0.5 accent-[#f4f3f1]"
                 onChange={() => setMenuTheme("reels")}
               />
               <div>
-                <span className="block text-sm font-medium text-zinc-100">Reels</span>
-                <span className="mt-0.5 block text-xs text-zinc-400">
+                <span className="block text-sm font-medium text-[#f4f3f1]">Reels</span>
+                <span className="mt-0.5 block text-xs text-[#c2c2cc]">
                   Experiencia vertical inmersiva a pantalla completa con videos y fotos dinámicas.
                 </span>
               </div>
@@ -237,12 +232,12 @@ export function TenantSettingsPanel({
       ) : null}
 
       {isExpressRetail ? (
-        <div className="grid gap-2 border-t border-zinc-800/80 pt-5">
-          <label className="grid gap-1">
-            <span className="text-sm font-medium text-zinc-200">
+        <div className="grid gap-2 border-t border-white/[0.08] pt-5">
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium text-[#f4f3f1]">
               WhatsApp para avisos de pedidos en efectivo
             </span>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-[#c2c2cc]">
               Ingresá tu celular argentino (por ejemplo, +54 9 11 2345-6789). Al guardar, aceptás recibir avisos de pedidos pendientes de pago por WhatsApp. Dejá el campo vacío y guardá para desactivar los avisos.
             </span>
             <input
@@ -255,17 +250,18 @@ export function TenantSettingsPanel({
           </label>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-zinc-800/80 pt-5 text-sm text-zinc-400">
-        <label className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/[0.08] pt-5 text-sm text-[#d4d4dc]">
+        <label className="flex items-center gap-2.5">
           <input
             name="printingEnabled"
             type="checkbox"
             defaultChecked={settings.printingEnabled}
+            className="accent-[#f4f3f1]"
           />
           <span>Habilitar impresión por Komanda Desktop</span>
         </label>
       </div>
-      <button className="w-fit rounded-md bg-[var(--color-accent-secondary)] px-5 py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors">
+      <button className="inline-flex h-10 w-fit items-center justify-center rounded-full bg-[#f4f3f1] px-6 text-sm font-medium text-[#141416] transition hover:bg-white">
         Guardar configuración
       </button>
     </form>

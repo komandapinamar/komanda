@@ -110,43 +110,51 @@ export function AdminDirectOrderForm({
     }
   };
 
+  const inputClass =
+    "w-full rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30 focus:ring-2 focus:ring-white/15";
+
   return (
     <div className="space-y-6">
       {error ? (
-        <div className="rounded-sm border border-red-700 bg-red-900/20 p-4 text-sm text-red-400">
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-xs text-red-300">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-sm border border-zinc-800 bg-zinc-900 p-6">
-        <h2 className="mb-4 text-xl font-semibold">Productos</h2>
+      <section className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+        <div className="border-b border-white/[0.08] pb-4">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">Productos</h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            Agregá las cantidades de cada producto activo del catálogo.
+          </p>
+        </div>
         {activeItems.length === 0 ? (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[#c2c2cc]">
             No hay productos activos en el catálogo.
           </p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {initialCategories.map((category) => {
               const catItems = activeItems.filter(
                 (item) => item.categoryId === category.id,
               );
               if (catItems.length === 0) return null;
               return (
-                <div key={category.id}>
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-(--color-accent-tertiary)">
+                <div key={category.id} className="space-y-2.5">
+                  <h3 className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
                     {category.name}
                   </h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                     {catItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3"
+                        className="flex items-center justify-between rounded-2xl border border-white/12 bg-[#101013]/90 px-4 py-3"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
+                          <p className="truncate text-sm font-medium text-[#f4f3f1]">
                             {item.name}
                           </p>
-                          <p className="text-xs text-zinc-400">
+                          <p className="text-xs text-[#c2c2cc] tabular-nums">
                             ${item.price}
                           </p>
                         </div>
@@ -160,11 +168,11 @@ export function AdminDirectOrderForm({
                                 (quantities[item.id] ?? 0) - 1,
                               )
                             }
-                            className="flex h-8 w-8 items-center justify-center rounded-sm border border-zinc-600 text-sm disabled:opacity-30"
+                            className="flex size-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-sm text-[#f4f3f1] transition hover:bg-white/[0.12] disabled:opacity-30"
                           >
                             -
                           </button>
-                          <span className="w-6 text-center text-sm font-semibold tabular-nums">
+                          <span className="w-6 text-center text-sm font-medium text-[#f4f3f1] tabular-nums">
                             {quantities[item.id] ?? 0}
                           </span>
                           <button
@@ -176,7 +184,7 @@ export function AdminDirectOrderForm({
                                 (quantities[item.id] ?? 0) + 1,
                               )
                             }
-                            className="flex h-8 w-8 items-center justify-center rounded-sm border border-zinc-600 text-sm disabled:opacity-30"
+                            className="flex size-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-sm text-[#f4f3f1] transition hover:bg-white/[0.12] disabled:opacity-30"
                           >
                             +
                           </button>
@@ -191,13 +199,18 @@ export function AdminDirectOrderForm({
         )}
       </section>
 
-      <section className="rounded-sm border border-zinc-800 bg-zinc-900 p-6">
-        <h2 className="mb-4 text-xl font-semibold">Datos del cliente</h2>
+      <section className="liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+        <div className="border-b border-white/[0.08] pb-4">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">Datos del cliente</h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            Información de identificación, cupón opcional y notas para cocina.
+          </p>
+        </div>
         <div className="space-y-4">
           <div>
             <label
               htmlFor="customerName"
-              className="mb-1 block text-sm font-medium"
+              className="mb-1.5 block text-xs font-medium text-[#c2c2cc]"
             >
               Nombre del cliente (opcional, por defecto: NN)
             </label>
@@ -207,13 +220,13 @@ export function AdminDirectOrderForm({
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Ej: Juan Pérez o NN"
-              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-(--color-accent-tertiary) focus:outline-none"
+              className={inputClass}
             />
           </div>
           <div>
             <label
               htmlFor="discountCode"
-              className="mb-1 block text-sm font-medium"
+              className="mb-1.5 block text-xs font-medium text-[#c2c2cc]"
             >
               Código de descuento (opcional)
             </label>
@@ -223,13 +236,13 @@ export function AdminDirectOrderForm({
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
               placeholder="Ej: PROMO10"
-              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm uppercase focus:border-(--color-accent-tertiary) focus:outline-none"
+              className={`${inputClass} uppercase`}
             />
           </div>
           <div>
             <label
               htmlFor="notes"
-              className="mb-1 block text-sm font-medium"
+              className="mb-1.5 block text-xs font-medium text-[#c2c2cc]"
             >
               Notas del pedido
             </label>
@@ -239,14 +252,14 @@ export function AdminDirectOrderForm({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ej: sin sal, bien cocido..."
               rows={3}
-              className="w-full rounded-sm border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm focus:border-(--color-accent-tertiary) focus:outline-none"
+              className={inputClass}
             />
           </div>
         </div>
       </section>
 
-      <div className="flex items-center justify-between rounded-sm border border-zinc-800 bg-zinc-900 p-4">
-        <p className="text-sm text-zinc-400">
+      <div className="liquid-glass-card flex items-center justify-between rounded-3xl px-6 py-4">
+        <p className="text-xs font-medium text-[#c2c2cc]">
           {selectedCount > 0
             ? `${selectedCount} producto${selectedCount !== 1 ? "s" : ""} seleccionado${selectedCount !== 1 ? "s" : ""}`
             : "Ningún producto seleccionado"}
@@ -255,7 +268,7 @@ export function AdminDirectOrderForm({
           type="button"
           disabled={submitting || selectedCount === 0}
           onClick={handleSubmit}
-          className="rounded-sm bg-(--color-accent-tertiary) px-6 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-full bg-[#f4f3f1] px-6 text-sm font-medium text-[#141416] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {submitting ? "Creando pedido..." : "Crear pedido directo"}
         </button>

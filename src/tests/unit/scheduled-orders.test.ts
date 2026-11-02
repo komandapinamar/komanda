@@ -66,6 +66,53 @@ describe("Programar Pedidos (Scheduled Pickup Orders)", () => {
         timezone: "America/Argentina/Buenos_Aires",
       }),
     ).toThrow(OrderSchedulingError);
+
+    // Closed weekday (Friday has no ranges configured)
+    expect(() =>
+      validateScheduledPickupTime("2026-10-30T16:30:00.000Z", {
+        now: fixedNow,
+        openingHours,
+        timezone: "America/Argentina/Buenos_Aires",
+      }),
+    ).toThrow(OrderSchedulingError);
+
+    // Empty openingHours object (store has no ranges configured at all)
+    expect(() =>
+      validateScheduledPickupTime("2026-10-29T16:30:00.000Z", {
+        now: fixedNow,
+        openingHours: {},
+        timezone: "America/Argentina/Buenos_Aires",
+      }),
+    ).toThrow(OrderSchedulingError);
+  });
+
+  it("filters generated pickup slots strictly to store openingHours", () => {
+    const openingHours = {
+      thursday: [{ open: "13:00", close: "14:00" }],
+    };
+    const groups = generateScheduledDaysAndSlots({
+      now: fixedNow,
+      openingHours,
+      timezone: "America/Argentina/Buenos_Aires",
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.label).toBe("Hoy");
+    expect(groups[0]?.slots.map((s) => s.label)).toEqual([
+      "13:00",
+      "13:15",
+      "13:30",
+      "13:45",
+      "14:00",
+    ]);
+
+    expect(
+      generateScheduledDaysAndSlots({
+        now: fixedNow,
+        openingHours: {},
+        timezone: "America/Argentina/Buenos_Aires",
+      }),
+    ).toEqual([]);
   });
 
   it("generates grouped 15-minute pickup slots for Hoy and Mañana", () => {

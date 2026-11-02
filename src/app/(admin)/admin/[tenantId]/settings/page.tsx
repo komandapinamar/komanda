@@ -22,20 +22,16 @@ import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 const readinessLabels: Record<string, string> = {
   public_slug: "Identificador público",
   primary_location: "Ubicacion de la sede",
-  currency: "Moneda operativa",
   published_item: "Al menos un producto publicado",
   payment_connected: "Mercado Pago",
-  print_agent_connected: "Agente de impresión conectado",
 };
 
 const readinessHints: Record<string, string> = {
   public_slug: "Identificador único de la tienda en la URL pública.",
   primary_location:
     "Confirmá la dirección y coordenadas en el mapa del local.",
-  currency: "Moneda en la que se expresan los precios del catálogo.",
   published_item: "Creá y publicá al menos un producto activo en el catálogo.",
   payment_connected: "Vinculá tu cuenta de Mercado Pago para cobros online.",
-  print_agent_connected: "Conectá Komanda Desktop para imprimir comandas.",
 };
 
 function readinessActionForCheck(
@@ -54,11 +50,6 @@ function readinessActionForCheck(
         href: "#ubicacion-sede",
         label: complete ? "Editar ubicación" : "Confirmar ubicación",
       };
-    case "currency":
-      return {
-        href: "#datos-generales",
-        label: complete ? "Ver moneda" : "Configurar moneda",
-      };
     case "published_item":
       return {
         href: `/admin/${tenantId}/catalog`,
@@ -68,11 +59,6 @@ function readinessActionForCheck(
       return {
         href: "#mercado-pago",
         label: complete ? "Gestionar cuenta" : "Conectar Mercado Pago",
-      };
-    case "print_agent_connected":
-      return {
-        href: `/admin/${tenantId}/integrations/printing`,
-        label: complete ? "Gestionar impresora" : "Vincular impresora",
       };
     default:
       return {
@@ -340,8 +326,7 @@ export default async function TenantSettingsPage({
             Datos operativos, ubicación y horarios
           </h2>
           <p className="mt-0.5 text-xs text-[#c2c2cc]">
-            Información de contacto, moneda (`{settings.currency}`), mapa de la
-            sede y horarios de apertura.
+            Información de contacto, mapa de la sede y horarios de apertura.
           </p>
         </div>
         <SettingsShell initialSettings={settings} />
