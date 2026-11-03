@@ -200,7 +200,7 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
     });
   });
 
-  describe("ClassicMenuView (Express Retail Vidriera vs Gastronomy)", () => {
+  describe("ClassicMenuView (Express Vidriera vs Gastronomy)", () => {
     it("renders Vidriera header and disables adding products when preset is express_retail", () => {
       const markup = renderToStaticMarkup(
         React.createElement(ClassicMenuView, {
@@ -366,7 +366,7 @@ describe("Story 7.1: Storefront Web Express en Modo Vidriera y Verificador de Pr
     });
   });
 
-  describe("API Protection (Payment Sessions Rejection for Express Retail)", () => {
+  describe("API Protection (Payment Sessions Rejection for Express)", () => {
     it("PaymentSessionService.create throws OrderingNotSupportedError when tenant is express_retail", async () => {
       const mockPublicTenants = {
         resolve: vi.fn().mockResolvedValue({

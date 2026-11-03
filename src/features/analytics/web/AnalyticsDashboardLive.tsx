@@ -243,7 +243,7 @@ export default function AnalyticsDashboardLive({
       {/* KPI Cards */}
       <KpiCards data={data} />
 
-      {/* Komanda Espresso Retail & Cash Shifts Panel (Express Retail Only) */}
+      {/* Komanda Espresso Retail & Cash Shifts Panel (Express Only) */}
       {tenantPreset === "express_retail" && <ExpressRetailPanel data={data} />}
 
       {/* Revenue and Dwell Charts */}

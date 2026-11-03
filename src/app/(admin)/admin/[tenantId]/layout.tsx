@@ -35,10 +35,6 @@ export default async function TenantAdminLayout({
                 <span className="sm:hidden">Kda</span>
                 <span className="hidden sm:inline">Komanda Business</span>
               </p>
-              <Chip variant="caption" color="neutral" className="hidden gap-1.5 sm:inline-flex">
-                <StatusDot color="green" />
-                <span>@{authority.membership.tenantSlug}</span>
-              </Chip>
             </div>
             <AdminNavShell
               tenantId={tenantId}

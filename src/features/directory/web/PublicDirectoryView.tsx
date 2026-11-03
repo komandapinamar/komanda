@@ -553,7 +553,6 @@ export function PublicDirectoryView({ tenants }: Props) {
                             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#f4f3f1] px-5 text-sm font-medium text-[#141416] transition duration-200 ease-out hover:bg-white active:scale-[0.98]"
                           >
                             <span>Ver carta y pedir</span>
-                            <span aria-hidden="true">→</span>
                           </a>
                         </div>
                       </article>

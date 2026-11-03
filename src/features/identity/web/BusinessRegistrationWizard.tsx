@@ -126,11 +126,8 @@ export default function BusinessRegistrationWizard({
             href="/"
             className="komanda-logo inline-block font-sans text-2xl font-normal tracking-tighter text-white normal-case transition-opacity hover:opacity-80"
           >
-            Komanda
+            Komanda Business
           </Link>
-          <Chip variant="caption" color="blue">
-            Alta de comercio
-          </Chip>
         </div>
         <h1 className="text-title-1-semibold text-text-primary sm:text-display-4-semibold">
           Creá tu nuevo negocio
@@ -138,13 +135,6 @@ export default function BusinessRegistrationWizard({
         <p className="mx-auto max-w-lg text-body-regular text-text-secondary">
           Configurá tu punto de venta en minutos. Elegí el modelo operativo que mejor se adapte a tu comercio.
         </p>
-        {authenticatedEmail ? (
-          <div className="pt-1">
-            <Chip variant="subtle" color="cyan">
-              Vas a usar la cuenta {authenticatedEmail}
-            </Chip>
-          </div>
-        ) : null}
       </div>
 
       <div className="rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-8">
@@ -165,8 +155,6 @@ export default function BusinessRegistrationWizard({
                 className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-body-2-medium transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${
                   isCurrent
                     ? "bg-background-primary-default text-text-primary shadow-2xs"
-                    : isDone
-                      ? "text-accent-400 hover:bg-background-primary-hover"
                       : "text-text-secondary hover:text-text-primary"
                 }`}
               >
@@ -174,8 +162,6 @@ export default function BusinessRegistrationWizard({
                   className={`flex size-5 shrink-0 items-center justify-center rounded-full text-caption-2-semibold ${
                     isCurrent
                       ? "bg-accent-500 text-white"
-                      : isDone
-                        ? "bg-status-lime-background text-status-lime-text"
                         : "bg-background-tertiary-default text-text-secondary"
                   }`}
                 >
@@ -249,14 +235,9 @@ export default function BusinessRegistrationWizard({
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <Chip variant="caption" color="blue">Menú Digital QR</Chip>
-                    <Chip variant="caption" color="neutral">Gestión de Pedidos</Chip>
-                    <Chip variant="caption" color="lime">Pagos Online</Chip>
-                  </div>
                 </div>
 
-                {/* Option 2: Express Retail */}
+                {/* Option 2: Express */}
                 <div
                   role="radio"
                   aria-checked={preset === "express_retail"}
@@ -298,11 +279,6 @@ export default function BusinessRegistrationWizard({
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <Chip variant="caption" color="purple">Komanda Kiosk</Chip>
-                    <Chip variant="caption" color="neutral">Códigos de Barra</Chip>
-                    <Chip variant="caption" color="cyan">Control de Stock</Chip>
-                  </div>
                 </div>
               </div>
 
@@ -333,7 +309,7 @@ export default function BusinessRegistrationWizard({
                     <span className="text-caption-1-regular text-text-tertiary">Autogenerado</span>
                   </div>
                   <div className="flex items-center rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 focus-within:border-accent-500">
-                    <span className="select-none text-body-2-medium text-text-tertiary">ka.ar/</span>
+                    <span className="select-none text-body-2-medium text-text-tertiary">kda.ar/</span>
                     <input
                       id="slug"
                       type="text"

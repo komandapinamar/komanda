@@ -105,7 +105,6 @@ export default async function TenantOrdersPage({
           className="bg-button-primary button-press-motion inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-2lg px-3.5 text-body-medium text-text-white shadow-xs"
         >
           <span>Crear pedido directo</span>
-          <span aria-hidden="true">→</span>
         </Link>
       </header>
 

@@ -30,12 +30,9 @@ export default async function SelectBusinessPage() {
         <header className="flex flex-col justify-between gap-4 border-b border-separator-border pb-6 sm:flex-row sm:items-end">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <p className="komanda-logo font-sans text-2xl font-normal tracking-tighter text-white normal-case">
+              <p className="komanda-logo font-sans text-4xl font-normal tracking-tighter text-white normal-case">
                 Komanda Business
               </p>
-              <Chip variant="caption" color="blue">
-                Espacios de trabajo
-              </Chip>
             </div>
             <h1 className="text-title-1-semibold text-text-primary">
               Seleccioná un negocio
@@ -104,12 +101,7 @@ export default async function SelectBusinessPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <Chip
-                    variant="subtle"
-                    color={membership.tenantPreset === "express_retail" ? "purple" : "cyan"}
-                  >
-                    {membership.tenantPreset === "express_retail" ? "Express Retail" : "Gastronomía"}
-                  </Chip>
+                  {membership.tenantPreset === "express_retail" ? "Express" : "Gastronomía"}
                   <RiArrowRightSLine
                     className="size-5 text-foreground-icon-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-foreground-icon-primary"
                     aria-hidden
