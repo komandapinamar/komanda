@@ -6,7 +6,12 @@ import type {
   CustomerInfo,
   OrderStatus,
 } from "@/types/types";
-import { nextOrderStatus, orderStage, type OrderStage } from "./order-workflow";
+import {
+  aggregateKitchenProducts,
+  nextOrderStatus,
+  orderStage,
+  type OrderStage,
+} from "./order-workflow";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
@@ -103,6 +108,7 @@ type AdminOrdersLiveProps = {
   initialOrders: AdminDashboardOrder[];
   tenantId: string;
   onOrdersChange?: (orders: AdminDashboardOrder[]) => void;
+  initialKitchenMode?: boolean;
 };
 
 type TenantOrderLineResponse = {
@@ -364,12 +370,20 @@ export default function AdminOrdersLive({
   initialOrders,
   tenantId,
   onOrdersChange,
+  initialKitchenMode = false,
 }: AdminOrdersLiveProps) {
   const [orders, setOrders] = useState(initialOrders);
   const [stageFilter, setStageFilter] = useState<"all" | Exclude<OrderStage, "finished">>("all");
+  const [kitchenMode, setKitchenMode] = useState<boolean>(initialKitchenMode);
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const activeOrders = orders.filter((order) => orderStage(order) !== "finished");
   const visibleOrders = activeOrders.filter((order) => stageFilter === "all" || orderStage(order) === stageFilter);
+  const kitchenOrders = activeOrders.filter((order) => orderStage(order) === "kitchen");
+  const kitchenProductTotals = aggregateKitchenProducts(activeOrders);
+  const totalKitchenUnits = kitchenProductTotals.reduce(
+    (acc, item) => acc + item.totalQuantity,
+    0,
+  );
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [transitioningOrderId, setTransitioningOrderId] = useState<string | null>(
@@ -535,35 +549,249 @@ export default function AdminOrdersLive({
         </div>
       </div>
 
-      <nav aria-label="Etapas del pedido" className="mt-5 inline-flex flex-wrap gap-1 rounded-2lg bg-background-full p-1 text-body-2-medium">
-        {([
-          ["all", "Todos"],
-          ["payment", "1. Pago"],
-          ["kitchen", "2. Cocina"],
-          ["delivery", "3. Entrega"],
-        ] as const).map(([stage, label]) => (
-          <button
-            key={stage}
-            type="button"
-            aria-pressed={stageFilter === stage}
-            onClick={() => setStageFilter(stage)}
-            className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
-              stageFilter === stage
-                ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
-                : "text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})
-          </button>
-        ))}
-      </nav>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        {!kitchenMode ? (
+          <nav aria-label="Etapas del pedido" className="inline-flex flex-wrap gap-1 rounded-2lg bg-background-full p-1 text-body-2-medium">
+            {([
+              ["all", "Todos"],
+              ["payment", "1. Pago"],
+              ["kitchen", "2. Cocina"],
+              ["delivery", "3. Entrega"],
+            ] as const).map(([stage, label]) => (
+              <button
+                key={stage}
+                type="button"
+                aria-pressed={stageFilter === stage}
+                onClick={() => setStageFilter(stage)}
+                className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
+                  stageFilter === stage
+                    ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})
+              </button>
+            ))}
+          </nav>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#c2c2cc]">
+            <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 font-medium text-emerald-300">
+              Modo cocina activo · Sin precios
+            </span>
+            <span>
+              {totalKitchenUnits} {totalKitchenUnits === 1 ? "unidad" : "unidades"} en {kitchenOrders.length} {kitchenOrders.length === 1 ? "ticket" : "tickets"}
+            </span>
+          </div>
+        )}
+
+        <button
+          type="button"
+          aria-pressed={kitchenMode}
+          data-testid="toggle-kitchen-mode"
+          onClick={() => setKitchenMode((prev) => !prev)}
+          className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-semibold transition ${
+            kitchenMode
+              ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-200"
+              : "border-white/15 bg-white/[0.05] text-[#f4f3f1] hover:bg-white/[0.1]"
+          }`}
+        >
+          <span>{kitchenMode ? "Salir de Modo cocina" : "Modo cocina"}</span>
+        </button>
+      </div>
       {transitionError ? (
         <p role="alert" className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-3.5 text-xs text-red-300">
           {transitionError}
         </p>
       ) : null}
 
-      {visibleOrders.length === 0 ? (
+      {kitchenMode ? (
+        <div
+          data-testid="kitchen-mode-split-view"
+          className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2"
+        >
+          {/* Mitad 1: Total de productos (no por ticket) */}
+          <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5 sm:p-6">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-[#f4f3f1]">
+                  Total de productos
+                </h3>
+                <p className="mt-0.5 text-xs text-[#c2c2cc]">
+                  Suma total a preparar en cocina (sin separar por ticket)
+                </p>
+              </div>
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 font-mono text-xs font-bold text-emerald-300 tabular-nums">
+                {totalKitchenUnits} un.
+              </span>
+            </div>
+
+            {kitchenProductTotals.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-base font-medium text-[#f4f3f1]">
+                  No hay productos en preparación.
+                </p>
+                <p className="mt-1 text-xs text-[#c2c2cc]">
+                  Los productos de pedidos pagados aparecerán sumados acá.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-white/[0.08]">
+                {kitchenProductTotals.map((product) => (
+                  <div key={product.key} className="py-3.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex min-w-12 items-center justify-center rounded-xl bg-[#f4f3f1] px-3 py-1.5 font-mono text-lg font-extrabold text-[#141416] tabular-nums">
+                          {product.totalQuantity}x
+                        </span>
+                        <div>
+                          <p className="text-base font-semibold text-[#f4f3f1]">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-[#c2c2cc]">
+                            En {product.orderCount}{" "}
+                            {product.orderCount === 1 ? "ticket" : "tickets"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {product.options.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5 pl-14">
+                        {product.options.map((opt) => (
+                          <span
+                            key={opt.name}
+                            className="rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-[#d4d4dc]"
+                          >
+                            + {opt.quantity}x {opt.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {product.notes.length > 0 ? (
+                      <div className="mt-2 space-y-1 pl-14">
+                        {product.notes.map((note, idx) => (
+                          <p
+                            key={idx}
+                            className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200"
+                          >
+                            Nota {note}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Mitad 2: Tickets en cocina */}
+          <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5 sm:p-6">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-[#f4f3f1]">
+                  Tickets en cocina
+                </h3>
+                <p className="mt-0.5 text-xs text-[#c2c2cc]">
+                  Detalle de productos por comanda para armado
+                </p>
+              </div>
+              <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 font-mono text-xs font-semibold text-[#f4f3f1] tabular-nums">
+                {kitchenOrders.length}{" "}
+                {kitchenOrders.length === 1 ? "ticket" : "tickets"}
+              </span>
+            </div>
+
+            {kitchenOrders.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-base font-medium text-[#f4f3f1]">
+                  No hay tickets pendientes en cocina.
+                </p>
+                <p className="mt-1 text-xs text-[#c2c2cc]">
+                  Cuando ingrese un pedido pagado aparecerá en esta columna.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4">
+                {kitchenOrders.map((order) => (
+                  <article
+                    key={order.id}
+                    className="rounded-2xl border border-white/12 bg-[#141416]/90 p-4 sm:p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#f4f3f1] px-3 py-1 font-mono text-xs font-bold text-[#141416]">
+                            Compra #{order.purchaseNumber}
+                          </span>
+                          <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-300">
+                            {statusLabel(order.status)}
+                          </span>
+                          {order.scheduledFor ? (
+                            <span className="rounded-full border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-xs font-medium text-sky-300">
+                              Programado: {formatDate(order.scheduledFor)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <h4 className="mt-2 text-base font-semibold text-[#f4f3f1]">
+                          {order.customer?.name || "Sin nombre"}
+                        </h4>
+                        <p className="text-xs text-[#c2c2cc]">
+                          Aprobado: {formatDate(order.approvedAt ?? order.createdAt)}
+                        </p>
+                      </div>
+
+                      <TenantTransitionButton
+                        order={order}
+                        disabled={transitioningOrderId === order.id}
+                        onTransition={transitionTenantOrder}
+                      />
+                    </div>
+
+                    {order.notes ? (
+                      <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-xs">
+                        <p className="font-semibold text-amber-200">Nota del pedido</p>
+                        <p className="mt-0.5 text-amber-100">{order.notes}</p>
+                      </div>
+                    ) : null}
+
+                    {order.lines && order.lines.length > 0 ? (
+                      <div className="mt-3 divide-y divide-white/[0.08] rounded-xl border border-white/10 bg-[#101013] p-3.5">
+                        {order.lines.map((line) => (
+                          <div key={line.id} className="py-2 first:pt-0 last:pb-0">
+                            <p className="text-sm font-semibold text-[#f4f3f1]">
+                              <span className="font-mono font-bold tabular-nums">
+                                {line.quantity}x
+                              </span>{" "}
+                              {line.name}
+                            </p>
+                            {line.note ? (
+                              <p className="mt-0.5 text-xs text-amber-200">
+                                Nota: {line.note}
+                              </p>
+                            ) : null}
+                            {line.options.length > 0 ? (
+                              <div className="mt-1 space-y-0.5 pl-3">
+                                {line.options.map((opt, optIdx) => (
+                                  <p key={optIdx} className="text-xs text-[#c2c2cc]">
+                                    + {opt.quantity > 1 ? `${opt.quantity}x ` : ""}
+                                    {opt.name}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : visibleOrders.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-white/12 bg-[#101013]/90 py-12 text-center">
           <p className="text-base font-medium text-[#f4f3f1]">
             No hay pedidos {stageFilter === "all" ? "en proceso" : "en esta etapa"}.
