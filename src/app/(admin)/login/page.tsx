@@ -16,11 +16,9 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="bg-[var(--color-accent-primary)]">
-      <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-md items-center justify-center px-6 py-12 bg-[var(--color-accent-primary)]">
-
-      <AdminLoginForm />
-
+    <main className="bg-background-full">
+      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-md items-center justify-center px-4 py-12 sm:px-6">
+        <AdminLoginForm />
       </div>
     </main>
   );

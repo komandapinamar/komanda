@@ -33,14 +33,22 @@ const CONFLICT_DETAILS: Record<string, string> = {
     "Publicá la categoría antes de publicar este producto.",
   "Item media must be ready.":
     "Esperá a que termine de procesarse la imagen o el video antes de publicar el producto.",
+  "Combo requires active items and quantities.":
+    "Todos los productos incluidos en el combo deben estar publicados antes de publicar el combo.",
   "Item version conflict.":
     "El producto cambió desde que abriste la página. Recargá la página y volvé a intentar.",
+  "Combo version conflict.":
+    "El combo cambió desde que abriste la página. Recargá la página y volvé a intentar.",
   "Duplicate item name.":
     "Ya existe un producto activo con este nombre en este negocio.",
+  "Duplicate combo name.":
+    "Ya existe un combo activo con este nombre en este negocio.",
   "Duplicate barcode.":
     "Ya existe un producto con este código de barras en este negocio.",
   "Duplicate category name.":
     "Ya existe una categoría activa con este nombre.",
+  "Archive or move active items and combos before archiving the category.":
+    "Archivá o mové los productos y combos antes de eliminar la categoría.",
 };
 
 async function parseProblem(response: Response): Promise<CatalogRequestError> {

@@ -158,6 +158,22 @@ export class CatalogRepository {
     return item ?? null;
   }
 
+  async findWeightedItemByPlu(pluCode: string) {
+    const [item] = await this.transaction
+      .select()
+      .from(catalogItems)
+      .where(
+        and(
+          eq(catalogItems.tenantId, this.tenantId),
+          eq(catalogItems.itemType, "weighted"),
+          eq(catalogItems.barcode, pluCode),
+          sql`${catalogItems.archivedAt} is null`,
+        ),
+      )
+      .limit(1);
+    return item ?? null;
+  }
+
   async findItems(ids: string[]) {
     if (ids.length === 0) return [];
     return this.transaction
@@ -380,6 +396,19 @@ export class CatalogRepository {
       )
       .limit(1);
     return combo ?? null;
+  }
+
+  async findComboItems(comboId: string) {
+    return this.transaction
+      .select()
+      .from(comboItems)
+      .where(
+        and(
+          eq(comboItems.tenantId, this.tenantId),
+          eq(comboItems.comboId, comboId),
+        ),
+      )
+      .orderBy(asc(comboItems.sortOrder));
   }
 
   async updateCombo(

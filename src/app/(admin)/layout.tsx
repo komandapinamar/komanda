@@ -23,16 +23,21 @@ export default async function AdminLayout({
       ? await coreSessionService().resolve(token).then(() => true).catch(() => false)
       : false;
 
-  return <>
-    {children}
-    {isAdminLoggedIn ? (
-        <footer className="bg-[var(--color-accent-primary)] text-[var(--color-accent-secondary)] underline p-2 text-center">
+  return (
+    <div className="dark bui-admin flex min-h-dvh flex-col bg-background-full text-text-primary antialiased">
+      <div className="flex-1">{children}</div>
+      {isAdminLoggedIn ? (
+        <footer className="border-t border-separator-border bg-background-secondary-default px-4 py-3 text-center">
           <form action={logoutAdmin} className="inline">
-            <button type="submit" className="hover:opacity-80 transition-opacity duration-200">
+            <button
+              type="submit"
+              className="cursor-pointer rounded-lg px-3 py-1 text-body-2-medium text-text-secondary transition-colors hover:bg-background-primary-hover hover:text-text-primary"
+            >
               Cerrar sesion
             </button>
           </form>
         </footer>
-    ) : null}
-  </>;
+      ) : null}
+    </div>
+  );
 }

@@ -13,6 +13,7 @@ import {
   assertArchivableCategory,
   assertPublishableCombo,
   assertPublishableItem,
+  CatalogRuleViolationError,
   catalogItemInputSchema,
   catalogItemPatchSchema,
   categoryInputSchema,
@@ -20,6 +21,7 @@ import {
   comboInputSchema,
   comboPatchSchema,
   normalizeCatalogName,
+  normalizePluCode,
 } from "@/features/catalog/domain/catalog.rules";
 import { CatalogRepository } from "@/features/catalog/infrastructure/catalog.repository";
 import { searchProjectionSyncService } from "@/features/search/application/search-sync.service";
@@ -217,8 +219,25 @@ export class CatalogService {
         }
       }
       const { addonGroupIds, ...values } = input;
+      const isWeighted = values.itemType === "weighted";
+      const normalizedBarcode = isWeighted
+        ? normalizePluCode(values.barcode ?? "")
+        : values.barcode;
+      if (isWeighted && !/^(?!00000)\d{5}$/.test(normalizedBarcode ?? "")) {
+        throw new CatalogRuleViolationError(
+          "Weighted items require a valid 5-digit non-zero PLU code.",
+        );
+      }
       const createdItem = await repository.createItem(
-        { ...values, normalizedName: normalizeCatalogName(input.name) },
+        {
+          ...values,
+          barcode: normalizedBarcode,
+          trackStock: isWeighted ? false : values.trackStock,
+          stockQuantity: isWeighted ? 0 : values.stockQuantity,
+          isGeneric: isWeighted ? false : values.isGeneric,
+          genericIcon: isWeighted ? null : values.genericIcon,
+          normalizedName: normalizeCatalogName(input.name),
+        },
         [...new Set(addonGroupIds)],
       );
       await recordMutation(transaction, context, {
@@ -291,11 +310,34 @@ export class CatalogService {
           });
         }
       }
+      const effectiveItemType = input.itemType ?? current.itemType;
+      const isWeighted = effectiveItemType === "weighted";
+      const rawBarcode =
+        input.barcode === undefined ? current.barcode : input.barcode;
+      const normalizedBarcode = isWeighted
+        ? normalizePluCode(rawBarcode ?? "")
+        : rawBarcode;
+      if (isWeighted && !/^(?!00000)\d{5}$/.test(normalizedBarcode ?? "")) {
+        throw new CatalogRuleViolationError(
+          "Weighted items require a valid 5-digit non-zero PLU code.",
+        );
+      }
       const updatedItem = await repository.updateItem(
         itemId,
         version,
         {
           ...input,
+          ...(input.barcode !== undefined || input.itemType !== undefined
+            ? { barcode: normalizedBarcode }
+            : {}),
+          ...(isWeighted
+            ? {
+                trackStock: false,
+                stockQuantity: 0,
+                isGeneric: false,
+                genericIcon: null,
+              }
+            : {}),
           ...(input.name
             ? { normalizedName: normalizeCatalogName(input.name) }
             : {}),
@@ -426,8 +468,20 @@ export class CatalogService {
     return withTenantTransaction(context, async (transaction) => {
       const repository = new CatalogRepository(transaction, context.tenantId);
       await requireCatalogManagement(repository);
-      if (!(await repository.findCombo(comboId))) {
+      const current = await repository.findCombo(comboId);
+      if (!current) {
         throw new CatalogNotFoundError("Combo not found.");
+      }
+      const category = await repository.findCategory(
+        input.categoryId ?? current.categoryId,
+      );
+      const imageAssetId =
+        input.imageAssetId === undefined
+          ? current.imageAssetId
+          : input.imageAssetId;
+      const media = await repository.findMedia(imageAssetId);
+      if (!category || (imageAssetId && !media)) {
+        throw new CatalogNotFoundError("Combo relationship not found.");
       }
       const values = {
         ...input,
@@ -435,13 +489,35 @@ export class CatalogService {
           ? { normalizedName: normalizeCatalogName(input.name) }
           : {}),
       };
+      let foundItems: Awaited<ReturnType<CatalogRepository["findItems"]>> = [];
       if (items) {
-        const found = await repository.findItems(
+        foundItems = await repository.findItems(
           items.map(({ itemId }) => itemId),
         );
-        if (found.length !== new Set(items.map(({ itemId }) => itemId)).size) {
+        if (
+          foundItems.length !== new Set(items.map(({ itemId }) => itemId)).size
+        ) {
           throw new CatalogNotFoundError("Combo item not found.");
         }
+      }
+      if ((input.status ?? current.status) === "active") {
+        const effectiveLines =
+          items ?? (await repository.findComboItems(comboId));
+        const effectiveCatalogItems = items
+          ? foundItems
+          : await repository.findItems(
+              effectiveLines.map(({ itemId }) => itemId),
+            );
+        assertPublishableCombo({
+          categoryStatus: category.status,
+          mediaStatus: media?.status,
+          items: effectiveLines.map((line) => ({
+            status:
+              effectiveCatalogItems.find(({ id }) => id === line.itemId)
+                ?.status ?? "archived",
+            quantity: line.quantity,
+          })),
+        });
       }
       const combo = await repository.updateCombo(
         comboId,

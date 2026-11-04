@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import MenuViewToolbar from "../../MenuViewToolbar";
 import type { Category, MenuItem } from "@/types/types";
 import MenuAnalyticsTracker from "@/features/shop/analytics/MenuAnalyticsTracker";
+import { buildPublicDirectoryUrl } from "@/features/tenancy/utils/storefront-url";
 import ReelFeedContainer from "./ReelFeedContainer";
 import ReelItem from "./ReelItem";
 import ReelsCategoryNav from "./ReelsCategoryNav";
@@ -36,6 +37,11 @@ export default function ReelsMenuView({
   const [selectedItemForModifiers, setSelectedItemForModifiers] =
     useState<MenuItem | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [directoryUrl, setDirectoryUrl] = useState("/");
+
+  useEffect(() => {
+    setDirectoryUrl(buildPublicDirectoryUrl({ tenantSlug }));
+  }, [tenantSlug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -47,13 +53,24 @@ export default function ReelsMenuView({
 
     const scrollTimer = setTimeout(() => {
       try {
-        const safeId = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(targetItemId) : targetItemId;
+        const safeId =
+          typeof CSS !== "undefined" && CSS.escape
+            ? CSS.escape(targetItemId)
+            : targetItemId;
         const el = document.querySelector(`[data-item-id="${safeId}"]`);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
-          el.classList.add("ring-4", "ring-[var(--color-accent-secondary)]", "transition-all", "duration-500");
+          el.classList.add(
+            "ring-2",
+            "ring-[var(--color-accent-secondary)]",
+            "transition-all",
+            "duration-500",
+          );
           highlightTimer = setTimeout(() => {
-            el.classList.remove("ring-4", "ring-[var(--color-accent-secondary)]");
+            el.classList.remove(
+              "ring-2",
+              "ring-[var(--color-accent-secondary)]",
+            );
           }, 2500);
         }
       } catch {
@@ -67,12 +84,38 @@ export default function ReelsMenuView({
     };
   }, []);
 
+  const feedItems = useMemo(() => {
+    const result = [...items];
+    for (const category of categories) {
+      for (const combo of category.combos ?? []) {
+        if (!result.some((entry) => entry.documentId === combo.documentId)) {
+          result.push({
+            documentId: combo.documentId,
+            kind: "combo",
+            name: combo.name,
+            price: combo.price,
+            basePrice: combo.price,
+            description: combo.description,
+            image: combo.image,
+            category,
+            combos: null,
+            videoUrl: null,
+            comboMedia: combo.comboMedia,
+            hasOptions: false,
+            modifierGroups: [],
+          });
+        }
+      }
+    }
+    return result;
+  }, [categories, items]);
+
   const initialCategoryId = useMemo(() => {
     if (categories.length > 0) {
       return categories[0].documentId;
     }
-    return items[0]?.category?.documentId ?? null;
-  }, [categories, items]);
+    return feedItems[0]?.category?.documentId ?? null;
+  }, [categories, feedItems]);
 
   const {
     activeCategoryId,
@@ -91,15 +134,21 @@ export default function ReelsMenuView({
         addItem?.(item);
       }
     },
-    [addItem]
+    [addItem],
   );
 
   const handleConfirmModifiers = useCallback(
     (configuredItem: MenuItem) => {
       addItem?.(configuredItem);
-      setSelectedItemForModifiers(null);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => {
+          setSelectedItemForModifiers(null);
+        }, 240);
+      } else {
+        setSelectedItemForModifiers(null);
+      }
     },
-    [addItem]
+    [addItem],
   );
 
   const handleCloseModifiers = useCallback(() => {
@@ -114,17 +163,29 @@ export default function ReelsMenuView({
     setIsCartOpen(false);
   }, []);
 
+  const scrollFeedByStep = useCallback((direction: -1 | 1) => {
+    if (typeof document === "undefined") return;
+    const container = document.querySelector(
+      '[data-testid="reel-feed-container"]',
+    ) as HTMLElement | null;
+    if (!container) return;
+    container.scrollBy({
+      top: direction * container.clientHeight,
+      behavior: "smooth",
+    });
+  }, []);
+
   return (
     <div
       data-testid="reels-menu-view"
-      className="relative w-full h-[100dvh] bg-black text-white overflow-hidden"
+      className="fixed inset-0 w-full max-w-[100vw] overflow-hidden bg-[#141416] text-[#f4f3f1]"
     >
       {tenantSlug ? <MenuAnalyticsTracker tenantSlug={tenantSlug} /> : null}
 
       <ReelFeedContainer>
         {/* Reels vertical feed */}
-        {items.length > 0 ? (
-          items.map((item, index) => {
+        {feedItems.length > 0 ? (
+          feedItems.map((item, index) => {
             const categoryId = item.category?.documentId;
             return (
               <ReelItem
@@ -148,33 +209,46 @@ export default function ReelsMenuView({
         ) : (
           <div
             data-testid="reels-empty-state"
-            className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3 min-h-[100dvh]"
+            className="flex h-full min-h-[100dvh] flex-1 flex-col items-center justify-center space-y-3 p-6 text-center md:min-h-full"
           >
-            <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-2xl">
-              🍽️
+            <div className="liquid-glass-pill flex size-14 items-center justify-center rounded-full text-xl">
+              ✦
             </div>
-            <h2 className="text-xl font-bold text-white">Menú en preparación</h2>
-            <p className="text-sm text-neutral-400 max-w-xs">
+            <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
+              Menú en preparación
+            </h2>
+            <p className="max-w-xs text-sm text-[#c2c2cc]">
               Pronto podrás ver y pedir todos los platos de nuestra carta aquí.
             </p>
           </div>
         )}
       </ReelFeedContainer>
 
-      {/* Persistent top UI layer: never scrolls away with the feed */}
-      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-        <div className="relative w-full h-full md:max-w-md md:h-[92vh] md:overflow-hidden md:rounded-[40px]">
+      {/* Persistent top UI layer: strictly aligned with ReelFeedContainer */}
+      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center overflow-hidden">
+        {/* Top-left Komanda logo outside the centered reel frame on desktop */}
+        <a
+          href={directoryUrl}
+          data-testid="reels-komanda-home-link"
+          aria-label="Volver al menú principal de Komanda"
+          title="Volver al menú principal de Komanda"
+          className="komanda-logo pointer-events-auto fixed top-5 left-6 z-50 hidden font-sans text-2xl font-normal tracking-tighter text-white normal-case transition hover:opacity-80 md:inline-block"
+        >
+          Komanda
+        </a>
+
+        <div className="relative h-full w-full min-w-0 overflow-hidden md:h-[92vh] md:max-w-md md:rounded-[36px]">
           {/* Scrim gradient top for nav readability */}
           <div
             data-testid="reel-scrim-top"
-            className="absolute top-0 left-0 right-0 h-[140px] pointer-events-none z-20"
+            className="pointer-events-none absolute top-0 left-0 right-0 z-20 h-[130px]"
             style={{
               background:
-                "linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
+                "linear-gradient(to bottom, rgba(20,20,22,0.88) 0%, rgba(20,20,22,0.35) 60%, transparent 100%)",
             }}
           />
 
-          <div className="absolute top-4 left-4 right-4 z-40">
+          <div className="absolute top-3 left-3 right-3 z-40 min-w-0 max-w-full">
             <MenuViewToolbar mode="reels">
               <ReelsCategoryNav
                 categories={categories}
@@ -185,11 +259,55 @@ export default function ReelsMenuView({
           </div>
 
           {!orderingAvailable ? (
-            <div className="absolute top-20 left-4 right-4 z-30 rounded-md bg-amber-500/90 px-3 py-1.5 text-center text-xs font-bold text-black shadow">
+            <div className="liquid-glass-pill absolute top-16 left-3 right-3 z-30 rounded-full px-4 py-2 text-center text-xs font-medium text-amber-200">
               Pedidos online no disponibles temporalmente.
             </div>
           ) : null}
         </div>
+
+        {/* Desktop PC Navigation Controls positioned absolutely outside the centered md:max-w-md frame */}
+        {items.length > 1 ? (
+          <div className="pointer-events-auto absolute left-[calc(50%+15.25rem)] top-1/2 hidden -translate-y-1/2 flex-col gap-2.5 md:flex">
+            <button
+              type="button"
+              onClick={() => scrollFeedByStep(-1)}
+              aria-label="Plato anterior"
+              title="Plato anterior"
+              className="liquid-glass-pill flex size-11 items-center justify-center rounded-full text-[#f4f3f1] transition duration-200 hover:scale-105 hover:border-white/30 active:scale-95 cursor-pointer"
+            >
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollFeedByStep(1)}
+              aria-label="Siguiente plato"
+              title="Siguiente plato"
+              className="liquid-glass-pill flex size-11 items-center justify-center rounded-full text-[#f4f3f1] transition duration-200 hover:scale-105 hover:border-white/30 active:scale-95 cursor-pointer"
+            >
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* Floating contextual checkout bar */}
@@ -237,11 +355,10 @@ export default function ReelsMenuView({
 
         {/* Drawer content */}
         <div
-          className={`relative z-10 w-full max-w-md mx-auto h-[85dvh] p-2 flex flex-col overflow-hidden transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform ${
+          className={`relative z-10 mx-auto flex h-[85dvh] w-full max-w-md flex-col overflow-hidden p-2 transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform ${
             isCartOpen ? "translate-y-0" : "translate-y-full"
           }`}
         >
-
           <div className="min-h-0 flex-1">
             {cartContext ? <CartPanel /> : null}
           </div>

@@ -24,6 +24,7 @@ export async function GET(request: Request, route: RouteContext) {
           fulfillmentStatus: tenantOrders.fulfillmentStatus,
           paymentStatus: tenantOrders.paymentStatus,
           tender: tenantOrders.tender,
+          scheduledFor: tenantOrders.scheduledFor,
           paymentExpiresAt: tenantOrders.paymentExpiresAt,
         })
         .from(tenantOrders)
@@ -40,6 +41,9 @@ export async function GET(request: Request, route: RouteContext) {
       fulfillmentStatus: order.fulfillmentStatus,
       paymentStatus: order.paymentStatus ?? null,
       tender: order.tender ?? null,
+      scheduledFor: order.scheduledFor
+        ? new Date(order.scheduledFor).toISOString()
+        : null,
       paymentExpiresAt: order.paymentExpiresAt
         ? new Date(order.paymentExpiresAt).toISOString()
         : null,

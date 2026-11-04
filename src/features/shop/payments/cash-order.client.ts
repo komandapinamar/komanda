@@ -10,6 +10,7 @@ export type CreateCashOrderPayload = {
     whatsappReadyOptIn?: boolean;
   };
   notes?: string;
+  scheduledFor?: string | null;
   cartVersion?: number;
   idempotencyKey?: string;
 };
@@ -34,6 +35,7 @@ export async function createCashOrder(
           ...(payload.customer.whatsappReadyOptIn === true ? { whatsappReadyOptIn: true } : {}),
         },
         notes: payload.notes?.trim() || undefined,
+        ...(payload.scheduledFor ? { scheduledFor: payload.scheduledFor } : {}),
         cartVersion: payload.cartVersion,
       }),
     },

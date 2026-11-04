@@ -6,6 +6,7 @@ import {
   restoreCartBackup,
   useOptionalCart,
 } from "@/features/shop/cart/context/cart.context";
+import { formatScheduledForDisplay } from "@/features/orders/domain/order-scheduling";
 
 export type PublicOrderStatusData = {
   purchaseNumber: string;
@@ -13,6 +14,7 @@ export type PublicOrderStatusData = {
   pickupPin?: string | null;
   paymentStatus?: string | null;
   tender?: string | null;
+  scheduledFor?: string | null;
   paymentExpiresAt?: string | null;
 };
 
@@ -328,7 +330,7 @@ export function PublicOrderStatus({
 
   return (
     <main className="mx-auto max-w-xl p-6 sm:p-8 text-center text-[var(--color-accent-secondary)]">
-      <h1 className="text-4xl font-bold tracking-tight">Komanda</h1>
+      <h1 className="komanda-logo font-sans text-3xl font-normal tracking-tighter text-white normal-case">Komanda</h1>
       <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>
 
       {order ? (
@@ -349,6 +351,17 @@ export function PublicOrderStatus({
             role="status"
           >
             <p className="text-xl font-bold">{statusLabel}</p>
+            {order?.scheduledFor ? (
+              <p
+                data-testid="public-order-scheduled-for"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-medium text-[#f4f3f1]"
+              >
+                <span>✦ Retiro programado:</span>
+                <span className="font-semibold">
+                  {formatScheduledForDisplay(order.scheduledFor)} hs
+                </span>
+              </p>
+            ) : null}
             {isReady ? (
               <p className="mt-1 text-sm text-emerald-300">
                 Acercate al mostrador con tu número de compra para retirar.

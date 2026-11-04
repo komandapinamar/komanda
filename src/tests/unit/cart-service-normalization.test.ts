@@ -105,4 +105,47 @@ describe("cart.service normalization", () => {
       },
     ]);
   });
+
+  it("normalizes combo cart lines and builds combo snapshots with kind='combo'", () => {
+    const dbComboLine = {
+      id: "line-combo-1",
+      cartId: "cart-uuid-1",
+      itemId: null,
+      comboId: "combo-uuid-999",
+      quantity: 2,
+      nameSnapshot: "Combo Doble Smash",
+      unitPriceSnapshot: "15000.00",
+      lineTotal: "30000.00",
+      imageUrlSnapshot: "https://cdn.example.com/combo.png",
+      note: null,
+    };
+
+    const normalized = normalizeCartLine(dbComboLine);
+    expect(normalized.documentId).toBe("combo-uuid-999");
+    expect(normalized.kind).toBe("combo");
+    expect(normalized.name).toBe("Combo Doble Smash");
+    expect(normalized.unitPrice).toBe(15000);
+    expect(normalized.lineTotal).toBe(30000);
+
+    expect(
+      buildCartSnapshot([
+        {
+          documentId: "combo-uuid-999",
+          kind: "combo",
+          quantity: 2,
+          name: "Combo Doble Smash",
+          unitPrice: 15000,
+          image: "https://cdn.example.com/combo.png",
+        },
+      ]),
+    ).toEqual([
+      {
+        kind: "combo",
+        resourceId: "combo-uuid-999",
+        quantity: 2,
+        optionIds: [],
+        confirmedUnitPrice: "15000.00",
+      },
+    ]);
+  });
 });

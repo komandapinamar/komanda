@@ -97,8 +97,8 @@ export function LocationPicker({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-2">
-        <label htmlFor="location-search" className="text-sm font-medium text-zinc-200">Buscar dirección</label>
+      <div className="grid gap-1.5">
+        <label htmlFor="location-search" className="text-body-medium text-text-primary">Buscar dirección</label>
         <input
           id="location-search"
           value={query}
@@ -109,31 +109,39 @@ export function LocationPicker({
             setSearchError(null);
           }}
           placeholder="Escribí una dirección o comercio"
-          className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+          className="rounded-2lg border border-border-button-default bg-background-tertiary-default px-3.5 py-2 text-body-regular text-text-primary placeholder:text-text-tertiary"
           aria-describedby="location-help"
         />
         {results.length > 0 ? (
-          <ul className="grid gap-1 rounded-md border border-zinc-700 bg-zinc-950 p-1" role="listbox">
+          <ul className="grid gap-1 rounded-2lg border border-border-button-default bg-background-primary-default p-1.5 shadow-dropdown" role="listbox">
             {results.map((result) => (
               <li key={`${result.lat}:${result.lng}`}>
-                <button type="button" className="w-full rounded px-2 py-2 text-left text-sm hover:bg-zinc-800" onClick={() => selectResult(result)}>
+                <button type="button" className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-body-2-regular text-text-primary transition hover:bg-background-primary-hover" onClick={() => selectResult(result)}>
                   {result.formattedAddress}
                 </button>
               </li>
             ))}
           </ul>
         ) : null}
-        {searchError ? <p role="alert" className="text-sm text-amber-300">{searchError} Podés mover el pin manualmente.</p> : null}
+        {searchError ? <p role="alert" className="text-body-2-medium text-status-yellow-text">{searchError} Podés mover el pin manualmente.</p> : null}
       </div>
-      <div className="h-64 overflow-hidden rounded-lg border border-zinc-700" aria-label="Mapa para confirmar ubicación">
+      <div className="h-64 overflow-hidden rounded-2xl border border-border-button-default" aria-label="Mapa para confirmar ubicación">
         <LocationMap position={position} editable onMove={moveMarker} />
       </div>
-      <p id="location-help" className="text-xs text-zinc-400">
+      <p id="location-help" className="text-caption-1-regular text-text-secondary">
         Arrastrá el pin o hacé clic en el mapa. La ubicación exacta se publicará en el directorio y podés cambiarla desde Settings.
       </p>
-      <p className="text-xs text-zinc-300">{address || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}</p>
-      {error ? <p role="alert" className="text-sm text-red-400">{error}</p> : null}
-      <button type="button" onClick={confirm} className="w-fit rounded-md bg-(--color-accent-secondary) px-4 py-2 text-sm font-semibold text-black">
+      <p className="text-caption-1-medium text-text-primary">{address || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}</p>
+      {error ? <p role="alert" className="text-body-2-medium text-status-rose-text">{error}</p> : null}
+      <button
+        type="button"
+        onClick={confirm}
+        className={`inline-flex h-9 w-fit cursor-pointer items-center justify-center rounded-2lg px-3.5 text-body-medium transition ${
+          hasConfirmed
+            ? "bg-status-lime-background text-status-lime-text border border-emerald-500/30"
+            : "bg-background-primary-default text-text-primary border border-border-button-default hover:bg-background-primary-hover"
+        }`}
+      >
         {hasConfirmed ? "Ubicación confirmada" : "Confirmar ubicación pública"}
       </button>
     </div>

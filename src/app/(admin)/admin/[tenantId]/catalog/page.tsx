@@ -46,7 +46,18 @@ export default async function CatalogPage({
   const isReadOnly = !canWriteCatalog(authority.membership.role);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <header className="space-y-1 border-b border-separator-border pb-5">
+        <p className="text-caption-1-semibold uppercase tracking-wider text-text-secondary">
+          Administración · @{authority.membership.tenantSlug}
+        </p>
+        <h1 className="text-title-1-semibold text-text-primary">
+          Catálogo del negocio
+        </h1>
+        <p className="text-body-regular text-text-secondary">
+          Organizá categorías, productos, precios, adicionales y combos publicados.
+        </p>
+      </header>
       <CatalogShell
         tenantId={tenantId}
         initialCategories={categories}

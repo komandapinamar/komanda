@@ -283,6 +283,14 @@ describe("Story 2.5: transition-order reason capture without cash movements", ()
     const context = { tenantId, correlationId: "corr-1", source: "administrative",
       actor: { kind: "user", userId: "u1", role: "ADMIN", membershipId: "m1" } } as unknown as TenantContext;
 
+    mockTx.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+
     await new TransitionOrderService().transition({ context, orderId, expectedVersion: 1, body: { fulfillmentStatus: "ready" } });
     expect(appendOutboxEvent).toHaveBeenCalledWith(mockTx, context,
       expect.objectContaining({ eventType: "order.whatsapp_ready", payload: { orderId } }));

@@ -26,7 +26,7 @@ export default function FloatingCartBar({
       e.stopPropagation();
       onOpenCart?.();
     },
-    [onOpenCart]
+    [onOpenCart],
   );
 
   return (
@@ -39,47 +39,57 @@ export default function FloatingCartBar({
         itemCount === 1 ? "producto" : "productos"
       }, total $${formattedSubtotal}`}
       onClick={isVisible ? handleClick : undefined}
-      className={`fixed bottom-4 left-4 right-4 max-w-md mx-auto z-35 flex items-center justify-between px-5 py-3.5 bg-[#ff4d2d] text-white rounded-full shadow-[0_12px_36px_rgba(255,77,45,0.45)] cursor-pointer select-none transition-all duration-300 ease-out active:scale-[0.98] ${
+      className={`group liquid-prism-ring liquid-glass-pill fixed left-3.5 right-3.5 z-40 mx-auto flex w-[calc(100vw-1.75rem)] max-w-[calc(100vw-1.75rem)] items-center justify-between rounded-full p-1.5 pl-4 text-[#f4f3f1] select-none cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/25 active:scale-[0.98] sm:w-full sm:max-w-[26rem] md:!bottom-[calc(4vh+1rem)] ${
         isVisible
-          ? "translate-y-0 opacity-100 pointer-events-auto"
-          : "translate-y-32 opacity-0 pointer-events-none invisible"
+          ? "translate-y-0 scale-100 opacity-100 pointer-events-auto"
+          : "translate-y-32 scale-95 opacity-0 pointer-events-none invisible"
       }`}
       style={{
-        backgroundColor: "#ff4d2d",
+        position: "fixed",
         borderRadius: "9999px",
         bottom: `calc(${chromeOffset}px + env(safe-area-inset-bottom, 0px) + 1rem)`,
       }}
     >
-      {/* Left: Cart badge & item count */}
-      <div className="flex items-center gap-3">
+      {/* Left: Dabbit-style status indicator + count + refined label */}
+      <div className="flex min-w-0 items-center gap-2.5">
         <div
           data-testid="floating-cart-count"
-          className="w-7 h-7 rounded-full bg-black/25 flex items-center justify-center font-extrabold text-xs"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-xs font-medium tabular-nums text-[#f4f3f1]"
         >
           {itemCount}
         </div>
-        <span
-          data-testid="floating-cart-label"
-          className="font-bold text-sm tracking-tight"
-        >
-          {itemCount === 1 ? "1 producto en pedido" : `${itemCount} productos en pedido`}
-        </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full bg-[#ff4d2d]"
+          />
+          <span
+            data-testid="floating-cart-label"
+            className="truncate text-sm font-medium tracking-tight text-[#f4f3f1]"
+          >
+            {itemCount === 1
+              ? "1 producto en pedido"
+              : `${itemCount} productos en pedido`}
+          </span>
+        </div>
       </div>
 
-      {/* Right: Subtotal & arrow */}
-      <div className="flex items-center gap-2">
+      {/* Right: Warm Alabaster Pill CTA with Subtotal & Arrow */}
+      <div className="flex shrink-0 items-center gap-2 rounded-full bg-[#f4f3f1] px-4 py-2 text-[#141416] shadow-sm transition duration-200 group-hover:bg-white">
         <span
           data-testid="floating-cart-subtotal"
-          className="font-extrabold text-base tracking-tight"
+          className="text-sm font-semibold tracking-tight tabular-nums text-[#141416]"
         >
           ${formattedSubtotal}
         </span>
+        <span className="text-xs text-[#141416]/40">·</span>
+        <span className="text-xs font-medium text-[#141416]">Ver pedido</span>
         <svg
-          className="w-5 h-5 text-white/90"
+          className="size-3.5 text-[#141416] transition-transform duration-200 group-hover:translate-x-0.5"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.5"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"

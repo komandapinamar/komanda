@@ -29,7 +29,7 @@ export function TenantActivationPanel({
   return (
     <div className="space-y-3">
       {message ? (
-        <p role="status" className="rounded-md border border-zinc-800 bg-zinc-900 p-3 text-sm">
+        <p role="status" className="rounded-2lg border border-border-button-default bg-background-primary-default px-4 py-2.5 text-body-2-medium text-text-primary">
           {message}
         </p>
       ) : null}
@@ -37,7 +37,7 @@ export function TenantActivationPanel({
         type="button"
         disabled={!ready || activated}
         onClick={activate}
-        className="rounded-md bg-(--color-accent-tertiary) px-5 py-3 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+        className="bg-button-primary button-press-motion inline-flex h-9 items-center justify-center rounded-2lg px-4 text-body-medium text-text-white shadow-xs disabled:cursor-not-allowed disabled:opacity-45"
       >
         {activated ? "Ventas activadas" : "Activar ventas"}
       </button>

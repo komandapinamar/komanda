@@ -6,7 +6,12 @@ import type {
   CustomerInfo,
   OrderStatus,
 } from "@/types/types";
-import { nextOrderStatus, orderStage, type OrderStage } from "./order-workflow";
+import {
+  aggregateKitchenProducts,
+  nextOrderStatus,
+  orderStage,
+  type OrderStage,
+} from "./order-workflow";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
@@ -65,14 +70,14 @@ function connectionLabel(state: ConnectionState) {
 
 function connectionBadgeClassName(state: ConnectionState) {
   if (state === "live") {
-    return "border-emerald-600/40 bg-emerald-600/10 text-emerald-700";
+    return "border-emerald-400/30 bg-emerald-500/15 text-emerald-300";
   }
 
   if (state === "reconnecting") {
-    return "border-amber-600/40 bg-amber-600/10 text-amber-700";
+    return "border-amber-400/30 bg-amber-500/15 text-amber-300";
   }
 
-  return "border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-secondary)]/10 text-[var(--color-accent-secondary)]";
+  return "border-white/12 bg-white/[0.04] text-[#c2c2cc]";
 }
 
 function TenantTransitionButton({
@@ -92,7 +97,7 @@ function TenantTransitionButton({
       type="button"
       disabled={disabled}
       onClick={() => onTransition(order)}
-      className="w-full rounded-sm bg-[var(--color-accent-secondary)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-60 lg:w-auto"
+      className="inline-flex h-10 w-full items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-xs font-medium text-[#141416] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
     >
       {disabled ? "Actualizando..." : label}
     </button>
@@ -103,6 +108,7 @@ type AdminOrdersLiveProps = {
   initialOrders: AdminDashboardOrder[];
   tenantId: string;
   onOrdersChange?: (orders: AdminDashboardOrder[]) => void;
+  initialKitchenMode?: boolean;
 };
 
 type TenantOrderLineResponse = {
@@ -134,6 +140,7 @@ type TenantOrderResponse = {
   currency: string;
   tender?: "cash" | "posnet" | null;
   pickupPin?: string | null;
+  scheduledFor?: string | null;
   paymentExpiresAt?: string | null;
   approvedAt: string | null;
   deliveredAt: string | null;
@@ -184,6 +191,7 @@ function toDashboardOrder(order: TenantOrderResponse): AdminDashboardOrder {
     currency: order.currency,
     tender: order.tender ?? null,
     pickupPin: order.pickupPin ?? null,
+    scheduledFor: order.scheduledFor ?? null,
     paymentExpiresAt: order.paymentExpiresAt ?? null,
     approvedAt: order.approvedAt,
     deliveredAt: order.deliveredAt,
@@ -265,16 +273,16 @@ function CollectCashDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
-        <h3 className="text-lg font-bold">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+      <div className="liquid-glass-card w-full max-w-md rounded-3xl p-6 sm:p-7 shadow-2xl">
+        <h3 className="text-lg font-medium tracking-tight text-[#f4f3f1]">
           Cobrar en efectivo — Compra #{order.purchaseNumber}
         </h3>
-        <p className="mt-3 rounded-sm border border-amber-500/40 bg-amber-500/10 p-3 text-center">
-          <span className="block text-xs uppercase tracking-widest text-amber-500">
+        <p className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-center">
+          <span className="block text-[11px] font-medium uppercase tracking-widest text-amber-300">
             Total a cobrar en efectivo
           </span>
-          <span className="mt-1 block font-mono text-2xl font-black text-amber-400">
+          <span className="mt-1 block font-mono text-2xl font-bold text-amber-200">
             ${order.total} {order.currency}
           </span>
         </p>
@@ -286,10 +294,10 @@ function CollectCashDialog({
               setAuthMethod("pickup_pin");
               setError(null);
             }}
-            className={`rounded-sm border px-3 py-2 text-sm font-semibold ${
+            className={`rounded-full border px-3.5 py-2 text-xs font-medium transition ${
               authMethod === "pickup_pin"
-                ? "border-amber-500 bg-amber-500/15 text-amber-300"
-                : "border-[var(--color-accent-secondary)]/40 opacity-75"
+                ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
+                : "border-white/12 bg-white/[0.04] text-[#c2c2cc]"
             }`}
           >
             PIN del pedido
@@ -300,10 +308,10 @@ function CollectCashDialog({
               setAuthMethod("account_auth");
               setError(null);
             }}
-            className={`rounded-sm border px-3 py-2 text-sm font-semibold ${
+            className={`rounded-full border px-3.5 py-2 text-xs font-medium transition ${
               authMethod === "account_auth"
-                ? "border-amber-500 bg-amber-500/15 text-amber-300"
-                : "border-[var(--color-accent-secondary)]/40 opacity-75"
+                ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
+                : "border-white/12 bg-white/[0.04] text-[#c2c2cc]"
             }`}
           >
             Confirmar con mi cuenta
@@ -320,27 +328,27 @@ function CollectCashDialog({
             }}
             inputMode="numeric"
             placeholder="PIN de 4 dígitos"
-            className="mt-4 w-full rounded-sm border border-[var(--color-accent-secondary)]/50 bg-transparent px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] outline-none"
+            className="mt-4 w-full rounded-2xl border border-white/15 bg-[#101013] px-3.5 py-2.5 text-center font-mono text-2xl tracking-[0.4em] text-[#f4f3f1] outline-none focus:border-white/35"
           />
         ) : (
-          <p className="mt-4 rounded-sm border border-[var(--color-accent-secondary)]/20 p-3 text-sm opacity-80">
+          <p className="mt-4 rounded-2xl border border-white/12 bg-[#101013]/90 p-3.5 text-xs text-[#c2c2cc]">
             Se autorizará el cobro con tu cuenta de usuario de Komanda
             actualmente autenticada.
           </p>
         )}
 
         {error ? (
-          <p className="mt-3 rounded-sm border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
+          <p className="mt-3 rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-xs text-red-300">
             {error}
           </p>
         ) : null}
 
-        <div className="mt-5 flex gap-2">
+        <div className="mt-5 flex gap-2.5">
           <button
             type="button"
             onClick={confirm}
             disabled={!canConfirm}
-            className="flex-1 rounded-sm bg-amber-500 px-4 py-3 font-bold text-zinc-950 disabled:opacity-50"
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white disabled:opacity-40"
           >
             {isSubmitting ? "Procesando..." : "Marcar como pagado"}
           </button>
@@ -348,7 +356,7 @@ function CollectCashDialog({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="rounded-sm border border-[var(--color-accent-secondary)]/40 px-4 py-3 disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12] disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -362,12 +370,20 @@ export default function AdminOrdersLive({
   initialOrders,
   tenantId,
   onOrdersChange,
+  initialKitchenMode = false,
 }: AdminOrdersLiveProps) {
   const [orders, setOrders] = useState(initialOrders);
   const [stageFilter, setStageFilter] = useState<"all" | Exclude<OrderStage, "finished">>("all");
+  const [kitchenMode, setKitchenMode] = useState<boolean>(initialKitchenMode);
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const activeOrders = orders.filter((order) => orderStage(order) !== "finished");
   const visibleOrders = activeOrders.filter((order) => stageFilter === "all" || orderStage(order) === stageFilter);
+  const kitchenOrders = activeOrders.filter((order) => orderStage(order) === "kitchen");
+  const kitchenProductTotals = aggregateKitchenProducts(activeOrders);
+  const totalKitchenUnits = kitchenProductTotals.reduce(
+    (acc, item) => acc + item.totalQuantity,
+    0,
+  );
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [transitioningOrderId, setTransitioningOrderId] = useState<string | null>(
@@ -508,48 +524,279 @@ export default function AdminOrdersLive({
   };
 
   return (
-    <section className="rounded-sm border border-[var(--color-accent-secondary)] bg-[var(--color-accent-primary)] p-6">
-      <div className="flex flex-col gap-4 border-b border-[var(--color-accent-secondary)]/20 pb-4 lg:flex-row lg:items-center lg:justify-between">
+    <section className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7">
+      <div className="flex flex-col gap-4 border-b border-white/[0.08] pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Activos</h2>
-          <p className="text-sm opacity-75">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">Activos</h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
             {activeOrders.length} pedido{activeOrders.length === 1 ? "" : "s"} esperando entrega.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.15em]">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
           <span
-            className={`rounded-full border px-3 py-1 ${connectionBadgeClassName(connectionState)}`}
+            className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 ${connectionBadgeClassName(connectionState)}`}
           >
+            <span className={`size-2 rounded-full ${connectionState === "live" ? "bg-emerald-400" : "bg-amber-400"}`} />
             Conexion {connectionLabel(connectionState)}
           </span>
 
           {lastUpdatedAt ? (
-            <span className="rounded-full border border-[var(--color-accent-secondary)]/20 px-3 py-1 opacity-75">
+            <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[#c2c2cc]">
               Sync {formatDate(lastUpdatedAt)}
             </span>
           ) : null}
         </div>
       </div>
 
-      <nav aria-label="Etapas del pedido" className="mt-4 flex flex-wrap gap-2">
-        {([
-          ["all", "Todos"],
-          ["payment", "1. Pago"],
-          ["kitchen", "2. Cocina"],
-          ["delivery", "3. Entrega"],
-        ] as const).map(([stage, label]) => (
-          <button key={stage} type="button" aria-pressed={stageFilter === stage} onClick={() => setStageFilter(stage)} className={`rounded-full border px-4 py-2 text-sm font-semibold ${stageFilter === stage ? "border-[var(--color-accent-secondary)] bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)]" : "border-[var(--color-accent-secondary)]/30"}`}>
-            {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})
-          </button>
-        ))}
-      </nav>
-      {transitionError ? <p role="alert" className="mt-4 rounded-sm border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">{transitionError}</p> : null}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        {!kitchenMode ? (
+          <nav aria-label="Etapas del pedido" className="inline-flex flex-wrap gap-1 rounded-2lg bg-background-full p-1 text-body-2-medium">
+            {([
+              ["all", "Todos"],
+              ["payment", "1. Pago"],
+              ["kitchen", "2. Cocina"],
+              ["delivery", "3. Entrega"],
+            ] as const).map(([stage, label]) => (
+              <button
+                key={stage}
+                type="button"
+                aria-pressed={stageFilter === stage}
+                onClick={() => setStageFilter(stage)}
+                className={`cursor-pointer rounded-md px-3 py-1.5 transition ${
+                  stageFilter === stage
+                    ? "bg-segmented-control-selected-background text-text-primary shadow-2xs"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {label} ({activeOrders.filter((order) => stage === "all" || orderStage(order) === stage).length})
+              </button>
+            ))}
+          </nav>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#c2c2cc]">
+            <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 font-medium text-emerald-300">
+              Modo cocina activo · Sin precios
+            </span>
+            <span>
+              {totalKitchenUnits} {totalKitchenUnits === 1 ? "unidad" : "unidades"} en {kitchenOrders.length} {kitchenOrders.length === 1 ? "ticket" : "tickets"}
+            </span>
+          </div>
+        )}
 
-      {visibleOrders.length === 0 ? (
-        <div className="py-10 text-center">
-          <p className="text-lg font-semibold">No hay pedidos {stageFilter === "all" ? "en proceso" : "en esta etapa"}.</p>
-          <p className="mt-2 text-sm opacity-75">
+        <button
+          type="button"
+          aria-pressed={kitchenMode}
+          data-testid="toggle-kitchen-mode"
+          onClick={() => setKitchenMode((prev) => !prev)}
+          className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-semibold transition ${
+            kitchenMode
+              ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-200"
+              : "border-white/15 bg-white/[0.05] text-[#f4f3f1] hover:bg-white/[0.1]"
+          }`}
+        >
+          <span>{kitchenMode ? "Salir de Modo cocina" : "Modo cocina"}</span>
+        </button>
+      </div>
+      {transitionError ? (
+        <p role="alert" className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-3.5 text-xs text-red-300">
+          {transitionError}
+        </p>
+      ) : null}
+
+      {kitchenMode ? (
+        <div
+          data-testid="kitchen-mode-split-view"
+          className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2"
+        >
+          {/* Mitad 1: Total de productos (no por ticket) */}
+          <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5 sm:p-6">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-[#f4f3f1]">
+                  Total de productos
+                </h3>
+                <p className="mt-0.5 text-xs text-[#c2c2cc]">
+                  Suma total a preparar en cocina (sin separar por ticket)
+                </p>
+              </div>
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 font-mono text-xs font-bold text-emerald-300 tabular-nums">
+                {totalKitchenUnits} un.
+              </span>
+            </div>
+
+            {kitchenProductTotals.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-base font-medium text-[#f4f3f1]">
+                  No hay productos en preparación.
+                </p>
+                <p className="mt-1 text-xs text-[#c2c2cc]">
+                  Los productos de pedidos pagados aparecerán sumados acá.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-white/[0.08]">
+                {kitchenProductTotals.map((product) => (
+                  <div key={product.key} className="py-3.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex min-w-12 items-center justify-center rounded-xl bg-[#f4f3f1] px-3 py-1.5 font-mono text-lg font-extrabold text-[#141416] tabular-nums">
+                          {product.totalQuantity}x
+                        </span>
+                        <div>
+                          <p className="text-base font-semibold text-[#f4f3f1]">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-[#c2c2cc]">
+                            En {product.orderCount}{" "}
+                            {product.orderCount === 1 ? "ticket" : "tickets"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {product.options.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5 pl-14">
+                        {product.options.map((opt) => (
+                          <span
+                            key={opt.name}
+                            className="rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-[#d4d4dc]"
+                          >
+                            + {opt.quantity}x {opt.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {product.notes.length > 0 ? (
+                      <div className="mt-2 space-y-1 pl-14">
+                        {product.notes.map((note, idx) => (
+                          <p
+                            key={idx}
+                            className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200"
+                          >
+                            Nota {note}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Mitad 2: Tickets en cocina */}
+          <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5 sm:p-6">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-[#f4f3f1]">
+                  Tickets en cocina
+                </h3>
+                <p className="mt-0.5 text-xs text-[#c2c2cc]">
+                  Detalle de productos por comanda para armado
+                </p>
+              </div>
+              <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 font-mono text-xs font-semibold text-[#f4f3f1] tabular-nums">
+                {kitchenOrders.length}{" "}
+                {kitchenOrders.length === 1 ? "ticket" : "tickets"}
+              </span>
+            </div>
+
+            {kitchenOrders.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-base font-medium text-[#f4f3f1]">
+                  No hay tickets pendientes en cocina.
+                </p>
+                <p className="mt-1 text-xs text-[#c2c2cc]">
+                  Cuando ingrese un pedido pagado aparecerá en esta columna.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4">
+                {kitchenOrders.map((order) => (
+                  <article
+                    key={order.id}
+                    className="rounded-2xl border border-white/12 bg-[#141416]/90 p-4 sm:p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#f4f3f1] px-3 py-1 font-mono text-xs font-bold text-[#141416]">
+                            Compra #{order.purchaseNumber}
+                          </span>
+                          <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-300">
+                            {statusLabel(order.status)}
+                          </span>
+                          {order.scheduledFor ? (
+                            <span className="rounded-full border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-xs font-medium text-sky-300">
+                              Programado: {formatDate(order.scheduledFor)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <h4 className="mt-2 text-base font-semibold text-[#f4f3f1]">
+                          {order.customer?.name || "Sin nombre"}
+                        </h4>
+                        <p className="text-xs text-[#c2c2cc]">
+                          Aprobado: {formatDate(order.approvedAt ?? order.createdAt)}
+                        </p>
+                      </div>
+
+                      <TenantTransitionButton
+                        order={order}
+                        disabled={transitioningOrderId === order.id}
+                        onTransition={transitionTenantOrder}
+                      />
+                    </div>
+
+                    {order.notes ? (
+                      <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-xs">
+                        <p className="font-semibold text-amber-200">Nota del pedido</p>
+                        <p className="mt-0.5 text-amber-100">{order.notes}</p>
+                      </div>
+                    ) : null}
+
+                    {order.lines && order.lines.length > 0 ? (
+                      <div className="mt-3 divide-y divide-white/[0.08] rounded-xl border border-white/10 bg-[#101013] p-3.5">
+                        {order.lines.map((line) => (
+                          <div key={line.id} className="py-2 first:pt-0 last:pb-0">
+                            <p className="text-sm font-semibold text-[#f4f3f1]">
+                              <span className="font-mono font-bold tabular-nums">
+                                {line.quantity}x
+                              </span>{" "}
+                              {line.name}
+                            </p>
+                            {line.note ? (
+                              <p className="mt-0.5 text-xs text-amber-200">
+                                Nota: {line.note}
+                              </p>
+                            ) : null}
+                            {line.options.length > 0 ? (
+                              <div className="mt-1 space-y-0.5 pl-3">
+                                {line.options.map((opt, optIdx) => (
+                                  <p key={optIdx} className="text-xs text-[#c2c2cc]">
+                                    + {opt.quantity > 1 ? `${opt.quantity}x ` : ""}
+                                    {opt.name}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : visibleOrders.length === 0 ? (
+        <div className="mt-6 rounded-2xl border border-white/12 bg-[#101013]/90 py-12 text-center">
+          <p className="text-base font-medium text-[#f4f3f1]">
+            No hay pedidos {stageFilter === "all" ? "en proceso" : "en esta etapa"}.
+          </p>
+          <p className="mt-1 text-xs text-[#c2c2cc]">
             Los pedidos se actualizan en vivo: pago → cocina → entrega.
           </p>
         </div>
@@ -560,75 +807,87 @@ export default function AdminOrdersLive({
             return (
             <article
               key={order.id}
-              className={`rounded-sm border p-5 ${
+              className={`rounded-2xl border p-5 sm:p-6 ${
                 cashPending
-                  ? "border-amber-500 bg-amber-500/5"
-                  : "border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]"
+                  ? "border-amber-400/35 bg-amber-500/[0.06]"
+                  : "border-white/12 bg-[#101013]/90"
               }`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full bg-[var(--color-accent-secondary)] px-3 py-1 text-sm font-bold text-[var(--color-accent-primary)]">
+                <div className="space-y-3.5 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[#f4f3f1] px-3 py-1 text-xs font-medium text-[#141416]">
                       Compra #{order.purchaseNumber}
                     </span>
                     {order.pickupPin ? (
-                      <span className="rounded-full border border-emerald-400 bg-emerald-500/10 px-3 py-1 text-sm font-black text-emerald-400">
+                      <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-300">
                         PIN: #{order.pickupPin}
                       </span>
                     ) : null}
-                    <span className="rounded-full border border-[var(--color-accent-secondary)]/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em]">
+                    <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-xs font-medium text-[#c2c2cc]">
                       {sourceLabel(order.source)}
                     </span>
+                    {order.scheduledFor ? (
+                      <span
+                        data-testid="admin-order-scheduled-badge"
+                        className="rounded-full border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-xs font-medium text-sky-300"
+                      >
+                        Programado: {formatDate(order.scheduledFor)}
+                      </span>
+                    ) : null}
                     {cashPending ? (
-                      <span className="rounded-full border border-amber-500 bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-amber-400">
+                      <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-300">
                         Pendiente de pago - Efectivo
                       </span>
                     ) : null}
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-bold">{order.customer?.name || "Sin nombre"}</h3>
-                    <p className="text-sm opacity-75">Aprobado: {formatDate(order.approvedAt)}</p>
-                    <p className="text-sm opacity-75">Creado: {formatDate(order.createdAt)}</p>
+                    <h3 className="text-lg font-medium tracking-tight text-[#f4f3f1]">
+                      {order.customer?.name || "Sin nombre"}
+                    </h3>
+                    <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#c2c2cc]">
+                      <span>Aprobado: {formatDate(order.approvedAt)}</span>
+                      <span>Creado: {formatDate(order.createdAt)}</span>
+                    </div>
                   </div>
 
-                  <div className="text-sm opacity-85">
-                    <p className="text-base font-extrabold uppercase">
+                  <div className="text-xs text-[#d4d4dc] space-y-0.5">
+                    <p className="text-sm font-medium text-[#f4f3f1]">
                       Estado:{" "}
-                        {orderStage(order) === "payment" ? "Esperando pago" : statusLabel(order.status)}
+                      {orderStage(order) === "payment" ? "Esperando pago" : statusLabel(order.status)}
                     </p>
                     {order.paymentStatus ? (
                       <p>Pago: {order.paymentStatus === "paid" ? "Pagado" : order.paymentStatus === "pending" ? "Pendiente" : order.paymentStatus === "verification_required" ? "Requiere verificación" : order.paymentStatus === "refunded" ? "Reembolsado" : "Fallido"}</p>
                     ) : null}
-                    <p>Pedido interno: {order.id}</p>
+                    <p className="text-[#9b9ba4]">Pedido interno: {order.id}</p>
                   </div>
 
                   {order.notes ? (
-                    <div className="rounded-sm border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)] p-3 text-sm">
-                      <p className="font-semibold">Notas</p>
-                      <p className="mt-1 opacity-80">{order.notes}</p>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 text-xs">
+                      <p className="font-medium text-[#f4f3f1]">Notas</p>
+                      <p className="mt-1 text-[#c2c2cc]">{order.notes}</p>
                     </div>
                   ) : null}
 
                   {order.lines && order.lines.length > 0 ? (
-                    <div className="rounded-sm border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)] p-3 text-sm">
-                      <p className="mb-2 font-semibold">Productos</p>
-                      <div className="space-y-2">
+                    <div className="rounded-2xl border border-white/10 bg-[#141416]/90 p-4 text-xs">
+                      <p className="mb-2.5 font-medium text-[#f4f3f1]">Productos</p>
+                      <div className="divide-y divide-white/[0.08]">
                         {order.lines.map((line) => (
-                          <div key={line.id} className="border-b border-[var(--color-accent-secondary)]/10 pb-2 last:border-0 last:pb-0">
+                          <div key={line.id} className="py-2 first:pt-0 last:pb-0">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <span className="font-medium">
+                                <span className="font-medium text-[#f4f3f1]">
                                   {line.quantity}x {line.name}
                                 </span>
                                 {line.note ? (
-                                  <p className="mt-0.5 text-xs opacity-70">{line.note}</p>
+                                  <p className="mt-0.5 text-xs text-[#c2c2cc]">{line.note}</p>
                                 ) : null}
                                 {line.options.length > 0 ? (
                                   <div className="mt-1 space-y-0.5 pl-3">
                                     {line.options.map((opt, optIdx) => (
-                                      <p key={optIdx} className="text-xs opacity-70">
+                                      <p key={optIdx} className="text-xs text-[#c2c2cc]">
                                         + {opt.name}
                                         {Number(opt.priceDelta) > 0
                                           ? ` (+$${opt.priceDelta})`
@@ -638,27 +897,27 @@ export default function AdminOrdersLive({
                                   </div>
                                 ) : null}
                               </div>
-                              <span className="shrink-0 pl-2 font-mono text-xs">
+                              <span className="shrink-0 pl-2 font-mono text-xs text-[#f4f3f1] tabular-nums">
                                 ${line.lineTotal}
                               </span>
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div className="mt-2 space-y-1 border-t border-[var(--color-accent-secondary)]/20 pt-2 text-xs">
-                        <div className="flex justify-between">
+                      <div className="mt-3 space-y-1 border-t border-white/[0.08] pt-2.5 text-xs">
+                        <div className="flex justify-between text-[#c2c2cc]">
                           <span>Subtotal</span>
-                          <span className="font-mono">${order.subtotal}</span>
+                          <span className="font-mono tabular-nums">${order.subtotal}</span>
                         </div>
                         {Number(order.discountTotal) > 0 ? (
-                          <div className="flex justify-between text-red-400">
+                          <div className="flex justify-between text-emerald-400">
                             <span>Descuento</span>
-                            <span className="font-mono">-${order.discountTotal}</span>
+                            <span className="font-mono tabular-nums">-${order.discountTotal}</span>
                           </div>
                         ) : null}
-                        <div className="flex justify-between font-semibold">
+                        <div className="flex justify-between font-medium text-[#f4f3f1]">
                           <span>Total</span>
-                          <span className="font-mono">
+                          <span className="font-mono tabular-nums">
                             ${order.total} {order.currency}
                           </span>
                         </div>
@@ -673,16 +932,18 @@ export default function AdminOrdersLive({
                       <button
                         type="button"
                         onClick={() => setCollectingOrder(order)}
-                        className="w-full rounded-sm bg-amber-500 px-4 py-3 text-sm font-bold text-zinc-950"
+                        className="inline-flex h-10 w-full items-center justify-center rounded-full bg-amber-400 px-4 text-xs font-medium text-[#141416] transition hover:bg-amber-300"
                       >
                         Marcar como pagado · Efectivo
                       </button>
-                      <p className="text-center text-xs opacity-70">
+                      <p className="text-center text-xs text-[#c2c2cc]">
                         El pedido no se prepara hasta confirmar el cobro.
                       </p>
                     </div>
                   ) : orderStage(order) === "payment" ? (
-                    <p className="text-sm opacity-70">Esperando la confirmación del pago para enviar a cocina.</p>
+                    <p className="text-xs text-[#c2c2cc]">
+                      Esperando la confirmación del pago para enviar a cocina.
+                    </p>
                   ) : (
                     <TenantTransitionButton
                       order={order}

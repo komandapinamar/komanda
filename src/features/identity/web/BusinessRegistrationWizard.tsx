@@ -2,8 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  RiArrowLeftLine,
+  RiArrowRightLine,
+  RiBarcodeBoxLine,
+  RiCheckLine,
+  RiLockPasswordLine,
+  RiMailLine,
+  RiMapPin2Line,
+  RiRestaurant2Line,
+  RiStore2Line,
+} from "@remixicon/react";
 import { LocationPicker } from "@/features/location/web/LocationPicker";
 import type { LocationAddress } from "@/features/location/application/location.schemas";
+import { Button } from "@/components/base/buttons/button";
+import { Chip } from "@/components/base/badges/chip";
+import { Divider } from "@/components/base/divider/divider";
+import { CheckboxGlyph } from "@/components/base/checkbox/checkbox-glyph";
+
 type Preset = "gastronomy" | "express_retail";
 
 function generateSlug(text: string): string {
@@ -88,7 +104,6 @@ export default function BusinessRegistrationWizard({
         throw new Error(data.detail ?? data.title ?? "No se pudo registrar el negocio.");
       }
 
-      // Hard redirect to populate cookies and load dashboard
       window.location.href = data.redirectUrl ?? `/admin/${data.tenantId}`;
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Error inesperado al registrar el negocio.");
@@ -96,173 +111,183 @@ export default function BusinessRegistrationWizard({
     }
   };
 
+  const steps = [
+    { id: 1 as const, label: "Tipo de Negocio", icon: RiStore2Line, enabled: true },
+    { id: 2 as const, label: "Ubicación", icon: RiMapPin2Line, enabled: Boolean(businessName.trim() && slug.trim()) },
+    { id: 3 as const, label: "Datos & Cuenta", icon: RiCheckLine, enabled: Boolean(location) },
+  ];
+
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="mx-auto w-full max-w-2xl">
       {/* Branding Header */}
-      <div className="text-center mb-8 space-y-2">
-        <Link
-          href="/"
-          className="inline-block text-2xl font-bold tracking-tight text-[var(--color-accent-tertiary)] hover:opacity-80 transition-opacity"
-        >
-          Komanda
-        </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-accent-tertiary)] sm:text-4xl">
+      <div className="mb-7 space-y-2 text-center">
+        <div className="flex items-center justify-center gap-2">
+          <Link
+            href="/"
+            className="komanda-logo inline-block font-sans text-2xl font-normal tracking-tighter text-white normal-case transition-opacity hover:opacity-80"
+          >
+            Komanda Business
+          </Link>
+        </div>
+        <h1 className="text-title-1-semibold text-text-primary sm:text-display-4-semibold">
           Creá tu nuevo negocio
         </h1>
-        <p className="text-sm text-[var(--color-accent-tertiary)]/70">
+        <p className="mx-auto max-w-lg text-body-regular text-text-secondary">
           Configurá tu punto de venta en minutos. Elegí el modelo operativo que mejor se adapte a tu comercio.
         </p>
-        {authenticatedEmail && (
-          <p className="text-xs font-medium text-[var(--color-accent-tertiary)]/70">
-            Vas a usar la cuenta {authenticatedEmail}.
-          </p>
-        )}
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-6 sm:p-8 shadow-sm">
-        {/* Step Indicator */}
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-[var(--color-accent-tertiary)]/15 text-xs">
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className={`flex items-center gap-2 font-semibold ${
-              step === 1 ? "text-[var(--color-accent-tertiary)]" : "text-[var(--color-accent-tertiary)]/50 hover:text-[var(--color-accent-tertiary)]"
-            }`}
-          >
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                step === 1
-                  ? "bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)] font-bold"
-                  : "bg-[var(--color-accent-tertiary)]/10 text-[var(--color-accent-tertiary)]/50"
-              }`}
-            >
-              1
-            </span>
-            <span>Tipo de Negocio</span>
-          </button>
-
-          <div className="h-0.5 flex-1 mx-4 bg-[var(--color-accent-tertiary)]/15" />
-
-          <button
-            type="button"
-            onClick={() => {
-              if (businessName.trim() && slug.trim()) setStep(2);
-            }}
-            className={`flex items-center gap-2 font-semibold ${
-              step === 2 ? "text-[var(--color-accent-tertiary)]" : "text-[var(--color-accent-tertiary)]/40"
-            }`}
-          >
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                step === 2
-                  ? "bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)] font-bold"
-                  : "bg-[var(--color-accent-tertiary)]/10 text-[var(--color-accent-tertiary)]/40"
-              }`}
-            >
-              2
-            </span>
-            <span>Ubicación</span>
-          </button>
-
-          <div className="h-0.5 flex-1 mx-4 bg-[var(--color-accent-tertiary)]/15" />
-          <button type="button" onClick={() => location && setStep(3)} className={`flex items-center gap-2 font-semibold ${step === 3 ? "text-[var(--color-accent-tertiary)]" : "text-[var(--color-accent-tertiary)]/40"}`}>
-            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${step === 3 ? "bg-[var(--color-accent-secondary)] text-[var(--color-accent-primary)] font-bold" : "bg-[var(--color-accent-tertiary)]/10 text-[var(--color-accent-tertiary)]/40"}`}>3</span>
-            <span>Datos &amp; Cuenta</span>
-          </button>
+      <div className="rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-8">
+        {/* BoardUI Step Indicator */}
+        <div className="mb-7 grid grid-cols-3 gap-2 rounded-2lg bg-background-full p-1.5">
+          {steps.map((item) => {
+            const isCurrent = step === item.id;
+            const isDone = step > item.id;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                disabled={!item.enabled && !isCurrent}
+                onClick={() => {
+                  if (item.enabled) setStep(item.id);
+                }}
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-body-2-medium transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 ${
+                  isCurrent
+                    ? "bg-background-primary-default text-text-primary shadow-2xs"
+                      : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                <span
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-full text-caption-2-semibold ${
+                    isCurrent
+                      ? "bg-accent-500 text-white"
+                        : "bg-background-tertiary-default text-text-secondary"
+                  }`}
+                >
+                  {isDone ? <Icon className="size-3.5" aria-hidden /> : item.id}
+                </span>
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {errorMessage && (
-          <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+        {errorMessage ? (
+          <div className="mb-6 rounded-2lg border border-red-500/30 bg-status-rose-background p-3.5 text-body-2-medium text-status-rose-text">
             {errorMessage}
           </div>
-        )}
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-[var(--color-accent-tertiary)]">
+                <h2 className="text-headline-semibold text-text-primary">
                   ¿Cuál es el modelo principal de tu local?
                 </h2>
-                <p className="text-xs text-[var(--color-accent-tertiary)]/70 mt-1">
+                <p className="mt-1 text-body-2-regular text-text-secondary">
                   Esto adapta automáticamente los menús, pantallas y aplicaciones cliente.
                 </p>
               </div>
 
-              {/* Vertical Selection Cards */}
-              <div className="grid grid-cols-1 gap-4">
+              {/* BoardUI Checkbox-Card style Preset Selection */}
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 {/* Option 1: Gastronomy */}
                 <div
+                  role="radio"
+                  aria-checked={preset === "gastronomy"}
+                  tabIndex={0}
                   onClick={() => setPreset("gastronomy")}
-                  className={`cursor-pointer rounded-xl border p-5 transition-all ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setPreset("gastronomy");
+                    }
+                  }}
+                  className={`flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 transition ${
                     preset === "gastronomy"
-                      ? "border-[var(--color-accent-tertiary)] bg-[var(--color-accent-tertiary)]/10 ring-1 ring-[var(--color-accent-tertiary)]"
-                      : "border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] hover:border-[var(--color-accent-tertiary)]/40"
+                      ? "border-accent-500 bg-background-primary-default ring-1 ring-accent-500 shadow-xs"
+                      : "border-border-button-default bg-background-full/60 hover:border-border-button-hover hover:bg-background-primary-default/50"
                   }`}
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold text-[var(--color-accent-tertiary)]">
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="flex size-9 items-center justify-center rounded-2lg bg-status-blue-background text-status-blue-text">
+                        <RiRestaurant2Line className="size-5" aria-hidden />
+                      </span>
+                      <CheckboxGlyph
+                        state={{
+                          isSelected: preset === "gastronomy",
+                          isIndeterminate: false,
+                          isFocusVisible: false,
+                          isDisabled: false,
+                          isHovered: false,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-body-semibold text-text-primary">
                         Gastronomía (Komanda POS)
                       </span>
-                    </div>
-                    <p className="text-xs text-[var(--color-accent-tertiary)]/70 leading-relaxed">
-                      Restaurantes, cafeterías y locales de comida con menú digital QR y gestión de pedidos.
-                    </p>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-tertiary)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)]">
-                        Menú Digital QR
-                      </span>
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-tertiary)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)]">
-                        Gestión de Pedidos
-                      </span>
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-tertiary)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)]">
-                        Pagos Online
-                      </span>
+                      <p className="mt-1 text-caption-1-regular text-text-secondary">
+                        Restaurantes, cafeterías y locales de comida con menú digital QR y gestión de pedidos.
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Option 2: Express Retail */}
+                {/* Option 2: Express */}
                 <div
+                  role="radio"
+                  aria-checked={preset === "express_retail"}
+                  tabIndex={0}
                   onClick={() => setPreset("express_retail")}
-                  className={`cursor-pointer rounded-xl border p-5 transition-all ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setPreset("express_retail");
+                    }
+                  }}
+                  className={`flex cursor-pointer flex-col justify-between gap-4 rounded-2xl border p-4 transition ${
                     preset === "express_retail"
-                      ? "border-[var(--color-accent-tertiary)] bg-[var(--color-accent-tertiary)]/10 ring-1 ring-[var(--color-accent-tertiary)]"
-                      : "border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] hover:border-[var(--color-accent-tertiary)]/40"
+                      ? "border-accent-500 bg-background-primary-default ring-1 ring-accent-500 shadow-xs"
+                      : "border-border-button-default bg-background-full/60 hover:border-border-button-hover hover:bg-background-primary-default/50"
                   }`}
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold text-[var(--color-accent-tertiary)]">
-                        Autoservicio & Retail (Komanda Kiosk)
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="flex size-9 items-center justify-center rounded-2lg bg-status-purple-background text-status-purple-text">
+                        <RiBarcodeBoxLine className="size-5" aria-hidden />
                       </span>
+                      <CheckboxGlyph
+                        state={{
+                          isSelected: preset === "express_retail",
+                          isIndeterminate: false,
+                          isFocusVisible: false,
+                          isDisabled: false,
+                          isHovered: false,
+                        }}
+                      />
                     </div>
-                    <p className="text-xs text-[var(--color-accent-tertiary)]/70 leading-relaxed">
-                      Kioscos, minimarkets y locales comerciales con venta rápida o autoservicio.
-                    </p>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-tertiary)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)]">
-                        Códigos de Barra
+                    <div>
+                      <span className="block text-body-semibold text-text-primary">
+                        Autoservicio &amp; Retail (Komanda Kiosk)
                       </span>
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-tertiary)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)]">
-                        Control de Stock
-                      </span>
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-tertiary)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)]">
-                        Arqueo de Caja
-                      </span>
-                      <span className="rounded-md border border-[var(--color-accent-tertiary)]/30 bg-[var(--color-accent-tertiary)]/15 px-2 py-0.5 text-[10px] text-[var(--color-accent-tertiary)] font-semibold">
-                        Komanda Kiosk
-                      </span>
+                      <p className="mt-1 text-caption-1-regular text-text-secondary">
+                        Kioscos, minimarkets y locales comerciales con venta rápida o autoservicio.
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              <Divider />
+
               {/* Business Name and Slug */}
-              <div className="space-y-4 pt-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label htmlFor="businessName" className="block text-xs font-semibold text-[var(--color-accent-tertiary)]/80 uppercase tracking-wider">
+                  <label htmlFor="businessName" className="block text-body-medium text-text-primary">
                     Nombre del comercio
                   </label>
                   <input
@@ -272,19 +297,19 @@ export default function BusinessRegistrationWizard({
                     placeholder="Ej. Kiosco San Martín o La Pizzería Central"
                     value={businessName}
                     onChange={handleNameChange}
-                    className="w-full rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm text-[var(--color-accent-tertiary)] placeholder-[var(--color-accent-tertiary)]/40 outline-none transition focus:border-[var(--color-accent-tertiary)]/50"
+                    className="w-full rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 text-body-regular text-text-primary placeholder:text-text-tertiary"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="slug" className="block text-xs font-semibold text-[var(--color-accent-tertiary)]/80 uppercase tracking-wider">
+                    <label htmlFor="slug" className="block text-body-medium text-text-primary">
                       Identificador público (URL)
                     </label>
-                    <span className="text-[11px] text-[var(--color-accent-tertiary)]/50">Se autogenera del nombre</span>
+                    <span className="text-caption-1-regular text-text-tertiary">Autogenerado</span>
                   </div>
-                  <div className="flex items-center rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] px-3 py-2 text-sm focus-within:border-[var(--color-accent-tertiary)]/50">
-                    <span className="text-xs text-[var(--color-accent-tertiary)]/50 select-none">ka.ar/</span>
+                  <div className="flex items-center rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 focus-within:border-accent-500">
+                    <span className="select-none text-body-2-medium text-text-tertiary">kda.ar/</span>
                     <input
                       id="slug"
                       type="text"
@@ -292,33 +317,60 @@ export default function BusinessRegistrationWizard({
                       placeholder="kiosco-san-martin"
                       value={slug}
                       onChange={handleSlugChange}
-                      className="w-full bg-transparent px-1 text-sm text-[var(--color-accent-tertiary)] outline-none placeholder-[var(--color-accent-tertiary)]/40"
+                      className="w-full !border-0 !bg-transparent px-1 py-0 text-body-regular text-text-primary placeholder:text-text-tertiary focus:!ring-0 focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
 
-              <button
+              <Button
                 type="button"
                 disabled={!businessName.trim() || !slug.trim()}
                 onClick={() => setStep(2)}
-                className="w-full rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                trailingIcon={RiArrowRightLine}
+                className="w-full"
               >
                 Continuar a Ubicación
-              </button>
+              </Button>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-[var(--color-accent-tertiary)]">¿Dónde funciona tu local?</h2>
-                <p className="mt-1 text-xs text-[var(--color-accent-tertiary)]/70">Confirmá el pin exacto. Esta ubicación será pública para tus clientes.</p>
+                <h2 className="text-headline-semibold text-text-primary">
+                  ¿Dónde funciona tu local?
+                </h2>
+                <p className="mt-1 text-body-2-regular text-text-secondary">
+                  Confirmá el pin exacto. Esta ubicación será pública para tus clientes.
+                </p>
               </div>
-              <LocationPicker initialValue={location} onConfirm={(value) => { setLocation(value); setErrorMessage(null); }} error={errorMessage} />
+              <LocationPicker
+                initialValue={location}
+                onConfirm={(value) => {
+                  setLocation(value);
+                  setErrorMessage(null);
+                }}
+                error={errorMessage}
+              />
               <div className="flex items-center gap-3 pt-2">
-                <button type="button" onClick={() => setStep(1)} className="rounded-xl border border-[var(--color-accent-tertiary)]/20 px-4 py-3 text-sm font-semibold text-[var(--color-accent-tertiary)]">Volver</button>
-                <button type="button" disabled={!location} onClick={() => setStep(3)} className="flex-1 rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40">Continuar a Datos de Cuenta</button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  leadingIcon={RiArrowLeftLine}
+                  onClick={() => setStep(1)}
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!location}
+                  trailingIcon={RiArrowRightLine}
+                  onClick={() => setStep(3)}
+                  className="flex-1"
+                >
+                  Continuar a Datos de Cuenta
+                </Button>
               </div>
             </div>
           )}
@@ -326,10 +378,10 @@ export default function BusinessRegistrationWizard({
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-[var(--color-accent-tertiary)]">
+                <h2 className="text-headline-semibold text-text-primary">
                   {authenticatedEmail ? "Usar tu cuenta actual" : "Creá tu cuenta de administrador"}
                 </h2>
-                <p className="text-xs text-[var(--color-accent-tertiary)]/70 mt-1">
+                <p className="mt-1 text-body-2-regular text-text-secondary">
                   {authenticatedEmail
                     ? `El negocio quedará vinculado a ${authenticatedEmail}.`
                     : "Con estos datos vas a iniciar sesión para gestionar tu catálogo, precios y reportes."}
@@ -337,74 +389,87 @@ export default function BusinessRegistrationWizard({
               </div>
 
               {/* Summary of Step 1 */}
-              <div className="flex items-center justify-between rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-3.5 text-xs">
-                <div>
-                  <span className="font-bold text-[var(--color-accent-tertiary)]">{businessName}</span>
-                  <span className="text-[var(--color-accent-tertiary)]/50 ml-2">({slug})</span>
-                  <p className="text-[var(--color-accent-tertiary)]/70 text-[11px] mt-0.5">
+              <div className="flex items-center justify-between rounded-2lg border border-border-button-default bg-background-primary-default p-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-body-semibold text-text-primary">{businessName}</span>
+                    <Chip variant="caption" color="neutral">@{slug}</Chip>
+                  </div>
+                  <p className="text-caption-1-regular text-text-secondary">
                     Modo: {preset === "gastronomy" ? "Gastronomía (Komanda POS)" : "Autoservicio & Retail (Komanda Kiosk)"}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="small"
                   onClick={() => setStep(1)}
-                  className="text-[var(--color-accent-tertiary)] hover:underline font-medium"
                 >
                   Cambiar
-                </button>
+                </Button>
               </div>
 
-              {!authenticatedEmail && <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="email" className="block text-xs font-semibold text-[var(--color-accent-tertiary)]/80 uppercase tracking-wider">
-                    Correo electrónico
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    placeholder="dueno@tunegocio.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm text-[var(--color-accent-tertiary)] placeholder-[var(--color-accent-tertiary)]/40 outline-none transition focus:border-[var(--color-accent-tertiary)]/50"
-                  />
-                </div>
+              {!authenticatedEmail ? (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="email" className="block text-body-medium text-text-primary">
+                      Correo electrónico
+                    </label>
+                    <div className="flex items-center gap-2 rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 focus-within:border-accent-500">
+                      <RiMailLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+                      <input
+                        id="email"
+                        type="email"
+                        required
+                        autoComplete="email"
+                        placeholder="dueno@tunegocio.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full !border-0 !bg-transparent p-0 text-body-regular text-text-primary placeholder:text-text-tertiary focus:!ring-0 focus:outline-none"
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="password" className="block text-xs font-semibold text-[var(--color-accent-tertiary)]/80 uppercase tracking-wider">
-                    Contraseña
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    autoComplete="new-password"
-                    placeholder="Mínimo 8 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm text-[var(--color-accent-tertiary)] placeholder-[var(--color-accent-tertiary)]/40 outline-none transition focus:border-[var(--color-accent-tertiary)]/50"
-                  />
+                  <div className="space-y-1.5">
+                    <label htmlFor="password" className="block text-body-medium text-text-primary">
+                      Contraseña
+                    </label>
+                    <div className="flex items-center gap-2 rounded-2lg border border-border-button-default bg-background-tertiary-default px-3 py-2 focus-within:border-accent-500">
+                      <RiLockPasswordLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+                      <input
+                        id="password"
+                        type="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        placeholder="Mínimo 8 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full !border-0 !bg-transparent p-0 text-body-regular text-text-primary placeholder:text-text-tertiary focus:!ring-0 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>}
+              ) : null}
 
               <div className="flex items-center gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  leadingIcon={RiArrowLeftLine}
                   onClick={() => setStep(1)}
-                  className="rounded-xl border border-[var(--color-accent-tertiary)]/20 px-4 py-3 text-sm font-semibold text-[var(--color-accent-tertiary)] hover:bg-[var(--color-accent-tertiary)]/10 transition-colors"
                 >
                   Volver
-                </button>
+                </Button>
 
-                <button
+                <Button
                   type="submit"
-                   disabled={isSubmitting || (!authenticatedEmail && (!email.trim() || password.length < 8))}
-                  className="flex-1 rounded-xl bg-[var(--color-accent-secondary)] py-3 text-sm font-semibold text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-tertiary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={isSubmitting || (!authenticatedEmail && (!email.trim() || password.length < 8))}
+                  trailingIcon={RiCheckLine}
+                  className="flex-1"
                 >
                   {isSubmitting ? "Creando negocio..." : "Crear negocio y comenzar"}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -412,14 +477,14 @@ export default function BusinessRegistrationWizard({
       </div>
 
       {/* Login link */}
-      {!authenticatedEmail && (
-          <div className="mt-8 text-center text-xs text-[var(--color-accent-tertiary)]/70">
-            ¿Ya tenés una cuenta en Komanda?{" "}
-            <Link href="/login" className="font-semibold text-[var(--color-accent-tertiary)] underline hover:opacity-80">
-              Iniciá sesión acá
-            </Link>
-          </div>
-      )}
+      {!authenticatedEmail ? (
+        <div className="mt-6 text-center text-body-2-regular text-text-secondary">
+          ¿Ya tenés una cuenta en Komanda?{" "}
+          <Link href="/login" className="text-body-2-semibold text-accent-400 hover:underline">
+            Iniciá sesión acá
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

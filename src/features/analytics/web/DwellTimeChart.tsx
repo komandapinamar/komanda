@@ -44,8 +44,8 @@ export default function DwellTimeChart({
 
   if (items.length === 0) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 text-center text-zinc-400">
-        <p className="text-sm">No hay datos de navegación en la carta para el rango seleccionado.</p>
+      <div className="liquid-glass-card flex h-64 flex-col items-center justify-center rounded-3xl p-6 text-center text-[#c2c2cc]">
+        <p className="text-xs">No hay datos de navegación en la carta para el rango seleccionado.</p>
       </div>
     );
   }
@@ -54,12 +54,12 @@ export default function DwellTimeChart({
   const { ticks, max } = buildTicks(maxAvgDwell);
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-sm">
-      <div>
-        <h2 className="text-base font-semibold text-zinc-100">
+    <div className="liquid-glass-card rounded-3xl p-6 sm:p-7">
+      <div className="border-b border-white/[0.08] pb-4">
+        <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
           Tiempo de Permanencia en Carta vs Compras
         </h2>
-        <p className="text-xs text-zinc-400">
+        <p className="mt-0.5 text-xs text-[#c2c2cc]">
           Permanencia promedio por visitante y compras concretadas
         </p>
       </div>
@@ -69,7 +69,7 @@ export default function DwellTimeChart({
           {ticks.map((tick) => (
             <span
               key={tick}
-              className="absolute right-0 -translate-y-1/2 text-[10px] tabular-nums text-zinc-500"
+              className="absolute right-0 -translate-y-1/2 text-[10px] tabular-nums text-[#9b9ba4]"
               style={{ bottom: `${(tick / max) * 100}%` }}
             >
               {formatDuration(tick)}
@@ -83,7 +83,7 @@ export default function DwellTimeChart({
               {ticks.map((tick) => (
                 <div
                   key={tick}
-                  className="pointer-events-none absolute inset-x-0 border-t border-zinc-800"
+                  className="pointer-events-none absolute inset-x-0 border-t border-white/[0.08]"
                   style={{ bottom: `${(tick / max) * 100}%` }}
                 />
               ))}
@@ -101,7 +101,7 @@ export default function DwellTimeChart({
                     >
                       <div
                         style={{ height: `${heightPercent}%` }}
-                        className="w-full max-w-[28px] rounded-t-md bg-amber-500/80 transition-colors hover:bg-(--color-accent-tertiary)"
+                        className="w-full max-w-[28px] rounded-t-xl bg-[#f4f3f1]/80 transition-colors hover:bg-white"
                       />
                     </div>
                   );
@@ -113,7 +113,7 @@ export default function DwellTimeChart({
               {items.map((item) => (
                 <span
                   key={item.bucket}
-                  className="min-w-[32px] flex-1 truncate text-center text-[10px] text-zinc-400"
+                  className="min-w-[32px] flex-1 truncate text-center text-[10px] text-[#c2c2cc]"
                 >
                   {formatBucketLabel(item.bucket, granularity)}
                 </span>

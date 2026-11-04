@@ -16,8 +16,14 @@ function slugFromRequest(request: NextRequest) {
   const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host"))
     ?.split(":")[0]
     .toLowerCase();
+  if (!host) return null;
+
+  if (host.endsWith(".localhost")) {
+    return normalizedSlug(host.slice(0, -".localhost".length));
+  }
+
   const rootDomain = storefrontRootDomain();
-  if (!host || !rootDomain || host === rootDomain || !host.endsWith(`.${rootDomain}`)) {
+  if (!rootDomain || host === rootDomain || !host.endsWith(`.${rootDomain}`)) {
     return null;
   }
   return normalizedSlug(host.slice(0, -(rootDomain.length + 1)));

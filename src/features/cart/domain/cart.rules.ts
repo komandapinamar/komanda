@@ -14,6 +14,7 @@ export const createCartSchema = z
             optionIds: z.array(z.uuid()).max(50).default([]),
             note: z.string().trim().max(500).optional(),
             confirmedUnitPrice: z.string().regex(/^\d{1,10}\.\d{2}$/).optional(),
+            calculatedSubtotal: z.string().regex(/^\d{1,10}\.\d{2}$/).optional(),
           })
           .strict(),
       )
@@ -27,6 +28,7 @@ export type CartSelection = z.infer<typeof createCartSchema>["lines"][number];
 
 export type RevalidationCatalog = {
   status: "draft" | "active" | "unavailable" | "archived";
+  itemType?: "unit" | "weighted";
   price: string;
   currency: string;
   addonGroups: Array<{
@@ -53,6 +55,40 @@ export function revalidateCartSelection(
 ) {
   if (catalog.status !== "active") {
     throw new CartRevalidationError("Catalog resource is unavailable.");
+  }
+  const catalogItemType = catalog.itemType ?? "unit";
+  if (catalogItemType === "unit" && selection.calculatedSubtotal !== undefined) {
+    throw new CartRevalidationError(
+      "calculatedSubtotal is not allowed for unit items.",
+    );
+  }
+  if (catalogItemType === "weighted") {
+    if (!selection.calculatedSubtotal || !/^\d{1,10}\.\d{2}$/.test(selection.calculatedSubtotal)) {
+      throw new CartRevalidationError(
+        "calculatedSubtotal is required for weighted items.",
+      );
+    }
+    const subtotalCents = moneyToCents(selection.calculatedSubtotal);
+    if (subtotalCents <= 0) {
+      throw new CartRevalidationError(
+        "calculatedSubtotal must be greater than zero.",
+      );
+    }
+    if (selection.quantity !== 1) {
+      throw new CartRevalidationError(
+        "Weighted items must have quantity = 1.",
+      );
+    }
+    if (selection.optionIds.length > 0) {
+      throw new CartRevalidationError(
+        "Weighted items do not support options.",
+      );
+    }
+    return {
+      itemType: "weighted" as const,
+      options: [],
+      unitPriceCents: subtotalCents,
+    };
   }
   if (
     selection.confirmedUnitPrice &&
@@ -84,6 +120,7 @@ export function revalidateCartSelection(
       })),
   );
   return {
+    itemType: "unit" as const,
     options,
     unitPriceCents:
       moneyToCents(catalog.price) +

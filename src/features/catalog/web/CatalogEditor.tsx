@@ -23,6 +23,7 @@ type Item = {
   description?: string | null;
   price: string;
   currency: string;
+  itemType?: "unit" | "weighted";
   imageAssetId?: string | null;
   videoAssetId?: string | null;
   imageUrl?: string | null;
@@ -78,7 +79,7 @@ export type Props = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm outline-none focus:border-[var(--color-accent-tertiary)]";
+  "w-full rounded-2xl border border-white/12 bg-[#101013]/90 px-3.5 py-2.5 text-sm text-[#f4f3f1] placeholder:text-[#9b9ba4] outline-none transition focus:border-white/30 focus:ring-2 focus:ring-white/15";
 
 async function mutate<T>(url: string, init: RequestInit) {
   return catalogFetch<T>(url, init);
@@ -156,12 +157,45 @@ export function CatalogEditor({
   ) {
     try {
       if (action === "archive") {
+        const categoryItems = items.filter(
+          (entry) =>
+            entry.categoryId === category.id && entry.status !== "archived",
+        );
+        for (const entry of categoryItems) {
+          await mutate<Item>(
+            `/api/v1/tenants/${tenantId}/catalog/items/${entry.id}`,
+            {
+              method: "PATCH",
+              headers: catalogHeaders(entry.version),
+              body: JSON.stringify({ status: "archived" }),
+            },
+          );
+        }
+        const categoryCombos = combos.filter(
+          (entry) =>
+            entry.categoryId === category.id && entry.status !== "archived",
+        );
+        for (const entry of categoryCombos) {
+          await mutate<null>(
+            `/api/v1/tenants/${tenantId}/catalog/combos/${entry.id}`,
+            {
+              method: "DELETE",
+              headers: { "If-Match": String(entry.version) },
+            },
+          );
+        }
         await mutate<null>(
           `/api/v1/tenants/${tenantId}/catalog/categories/${category.id}`,
           {
             method: "DELETE",
             headers: { "If-Match": String(category.version) },
           },
+        );
+        setItems((current) =>
+          current.filter((entry) => entry.categoryId !== category.id),
+        );
+        setCombos((current) =>
+          current.filter((entry) => entry.categoryId !== category.id),
         );
         setCategories((current) =>
           current.filter((item) => item.id !== category.id),
@@ -263,13 +297,14 @@ export function CatalogEditor({
       {message ? (
         <div
           role="alert"
-          className="flex items-start justify-between gap-4 rounded-xl border border-[var(--color-accent-tertiary)]/50 bg-[var(--color-accent-tertiary)]/10 p-4 text-sm text-[var(--color-accent-tertiary)]"
+          className="flex items-start justify-between gap-4 rounded-2xl border border-white/15 bg-[#101013]/95 p-4 text-xs text-[#f4f3f1]"
         >
           <span>{message}</span>
           <button
             type="button"
             onClick={() => setMessage(null)}
             aria-label="Cerrar"
+            className="text-sm text-[#c2c2cc] hover:text-white"
           >
             ×
           </button>
@@ -277,7 +312,7 @@ export function CatalogEditor({
       ) : null}
       {!isExpress ? (
         <nav
-          className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
+          className="inline-flex flex-wrap gap-1 rounded-2lg bg-background-secondary-default p-1 shadow-card"
           aria-label="Secciones del catálogo"
         >
           {(
@@ -291,7 +326,11 @@ export function CatalogEditor({
               key={value}
               type="button"
               onClick={() => setTab(value)}
-              className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold transition ${tab === value ? "bg-[var(--color-accent-tertiary)] text-[var(--color-accent-primary)]" : "text-zinc-400 hover:text-[var(--color-accent-tertiary)]"}`}
+              className={`cursor-pointer rounded-md px-4 py-1.5 text-body-medium transition ${
+                tab === value
+                  ? "bg-button-primary text-text-white shadow-xs"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
             >
               {label}
             </button>
@@ -300,11 +339,11 @@ export function CatalogEditor({
       ) : null}
 
       {tab === "menu" ? (
-        <section className="grid gap-6 lg:grid-cols-[230px_1fr]">
-          <aside className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-bold">Categorías</h2>
-              <span className="text-xs text-zinc-500">
+        <section className="grid gap-6 lg:grid-cols-[240px_1fr]">
+          <aside className="liquid-glass-card h-fit rounded-3xl p-5">
+            <div className="mb-3 flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <h2 className="text-sm font-medium text-[#f4f3f1]">Categorías</h2>
+              <span className="rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-0.5 text-xs text-[#c2c2cc] tabular-nums">
                 {activeCategories.length}
               </span>
             </div>
@@ -312,12 +351,16 @@ export function CatalogEditor({
               {activeCategories.map((category) => (
                 <div
                   key={category.id}
-                  className={`group flex items-center gap-2 rounded-lg p-2 ${categoryId === category.id ? "bg-zinc-800" : ""}`}
+                  className={`group flex items-center gap-2 rounded-2xl px-3 py-2 transition ${
+                    categoryId === category.id
+                      ? "border border-white/15 bg-white/[0.08]"
+                      : "hover:bg-white/[0.04]"
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={() => setCategoryId(category.id)}
-                    className="min-w-0 flex-1 truncate text-left text-sm font-semibold"
+                    className="min-w-0 flex-1 truncate text-left text-xs font-medium text-[#f4f3f1]"
                   >
                     {category.name}
                   </button>
@@ -326,9 +369,20 @@ export function CatalogEditor({
                       type="button"
                       title="Publicar categoría"
                       onClick={() => void categoryAction(category, "publish")}
-                      className="text-xs text-[var(--color-accent-tertiary)]"
+                      className="text-[11px] font-medium text-emerald-400 cursor-pointer hover:underline"
                     >
                       Publicar
+                    </button>
+                  ) : null}
+                  {!isReadOnly ? (
+                    <button
+                      type="button"
+                      title="Eliminar categoría"
+                      aria-label={`Eliminar categoría ${category.name}`}
+                      onClick={() => void categoryAction(category, "archive")}
+                      className="text-[11px] font-medium text-red-400 transition hover:text-red-300 cursor-pointer"
+                    >
+                      Borrar
                     </button>
                   ) : null}
                 </div>
@@ -337,7 +391,7 @@ export function CatalogEditor({
             {!isReadOnly ? (
               <form
                 onSubmit={createCategory}
-                className="mt-4 border-t border-zinc-800 pt-4"
+                className="mt-4 space-y-2.5 border-t border-white/[0.08] pt-4"
               >
                 <input
                   value={newCategory}
@@ -345,19 +399,19 @@ export function CatalogEditor({
                   placeholder="Nueva categoría"
                   className={inputClass}
                 />
-                <button className="mt-2 w-full rounded-lg bg-zinc-100 px-3 py-2 text-sm font-bold text-zinc-950">
+                <button className="inline-flex h-9 w-full items-center justify-center rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white">
                   Agregar categoría
                 </button>
               </form>
             ) : null}
           </aside>
-          <div className="min-w-0 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-            <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="liquid-prism-ring liquid-glass-card min-w-0 rounded-3xl p-6 sm:p-7">
+            <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
+                <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
                   {isExpress ? "Catálogo" : "Menú"}
                 </p>
-                <h2 className="mt-1 text-2xl font-bold">
+                <h2 className="mt-1 text-xl font-medium tracking-tight text-[#f4f3f1]">
                   {categories.find((category) => category.id === categoryId)
                     ?.name ?? "Seleccioná una categoría"}
                 </h2>
@@ -366,7 +420,7 @@ export function CatalogEditor({
                 <button
                   type="button"
                   onClick={() => setEditing(null)}
-                  className="rounded-lg bg-[var(--color-accent-tertiary)] px-4 py-2 text-sm font-bold text-[var(--color-accent-primary)]"
+                  className="bg-button-primary button-press-motion inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg px-4 text-body-medium text-text-white shadow-xs"
                 >
                   + Nuevo producto
                 </button>
@@ -377,9 +431,9 @@ export function CatalogEditor({
                 {visibleItems.map((item) => (
                   <article
                     key={item.id}
-                    className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950"
+                    className="overflow-hidden rounded-2xl border border-white/12 bg-[#101013]/90"
                   >
-                    <div className="relative h-40 bg-zinc-800">
+                    <div className="relative h-40 bg-[#18181c]">
                       {item.imageUrl ? (
                         <img
                           src={item.imageUrl}
@@ -387,10 +441,10 @@ export function CatalogEditor({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-4xl text-zinc-600">
+                        <div className="flex h-full items-center justify-center text-4xl text-[#9b9ba4]">
                           {isExpress ? (
                             <svg
-                              className="h-12 w-12 text-zinc-600"
+                              className="h-12 w-12 text-[#9b9ba4]"
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
@@ -408,7 +462,7 @@ export function CatalogEditor({
                         </div>
                       )}
                       {item.videoUrl ? (
-                        <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs">
+                        <span className="absolute bottom-2 left-2 rounded-full border border-white/15 bg-black/75 px-2.5 py-0.5 text-[11px] font-medium text-[#f4f3f1]">
                           Video
                         </span>
                       ) : null}
@@ -416,28 +470,40 @@ export function CatalogEditor({
                     <div className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-bold">{item.name}</h3>
-                          <p className="text-lg font-black text-[var(--color-accent-tertiary)]">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-[#f4f3f1]">{item.name}</h3>
+                            {item.itemType === "weighted" ? (
+                              <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-300">
+                                Balanza {item.barcode ? `• PLU ${item.barcode}` : ""}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-base font-medium text-[#f4f3f1] tabular-nums">
                             ${item.price}
+                            {item.itemType === "weighted" ? (
+                              <span className="ml-1 text-xs font-normal text-[#c2c2cc]">
+                                / kg ref.
+                              </span>
+                            ) : null}
                           </p>
                         </div>
                       </div>
                       {item.description ? (
-                        <p className="line-clamp-2 text-xs text-zinc-400">
+                        <p className="line-clamp-2 text-xs text-[#c2c2cc]">
                           {item.description}
                         </p>
                       ) : null}
                       {isExpress && item.trackStock ? (
-                        <p className="text-xs text-zinc-400">
+                        <p className="text-xs text-[#c2c2cc]">
                           Stock: {item.stockQuantity ?? 0}
                         </p>
                       ) : null}
                       {!isReadOnly ? (
-                        <div className="flex flex-wrap gap-3 border-t border-zinc-800 pt-3 text-xs font-bold">
+                        <div className="flex flex-wrap gap-3 border-t border-white/[0.08] pt-3 text-xs font-medium">
                           <button
                             type="button"
                             onClick={() => setEditing(item)}
-                            className="text-[var(--color-accent-tertiary)]"
+                            className="text-[#f4f3f1] hover:underline"
                           >
                             Editar
                           </button>
@@ -446,7 +512,7 @@ export function CatalogEditor({
                             <button
                               type="button"
                               onClick={() => void itemAction(item, "publish")}
-                              className="text-green-600"
+                              className="text-emerald-400 hover:underline"
                             >
                               Publicar
                             </button>
@@ -454,7 +520,7 @@ export function CatalogEditor({
                             <button
                               type="button"
                               onClick={() => void itemAction(item, "pause")}
-                              className="text-[var(--color-accent-tertiary)]"
+                              className="text-amber-300 hover:underline"
                             >
                               Pausar
                             </button>
@@ -462,7 +528,7 @@ export function CatalogEditor({
                           <button
                             type="button"
                             onClick={() => void itemAction(item, "archive")}
-                            className="text-[var(--color-accent-tertiary)]"
+                            className="text-red-400 hover:underline"
                           >
                             Borrar
                           </button>
@@ -473,11 +539,11 @@ export function CatalogEditor({
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-zinc-700 p-10 text-center">
-                <p className="font-semibold">
+              <div className="rounded-2xl border border-dashed border-white/15 bg-[#101013]/90 p-10 text-center">
+                <p className="text-sm font-medium text-[#f4f3f1]">
                   Todavía no hay productos en esta categoría.
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-xs text-[#c2c2cc]">
                   Creá el primero y agregale una imagen para que el menú sea más
                   atractivo.
                 </p>
@@ -563,6 +629,9 @@ function ItemModal({
   const [selectedGroups, setSelectedGroups] = useState(
     item?.addonGroupIds ?? [],
   );
+  const [itemType, setItemType] = useState<"unit" | "weighted">(
+    item?.itemType ?? "unit",
+  );
   const [trackStock, setTrackStock] = useState(item?.trackStock ?? false);
   const [stock, setStock] = useState(String(item?.stockQuantity ?? 0));
   const [barcode, setBarcode] = useState(item?.barcode ?? "");
@@ -575,22 +644,41 @@ function ItemModal({
       setError("Ingresá un precio válido, por ejemplo 3500 o 3500,50.");
       return;
     }
+    const rawDigits = barcode.trim().replace(/\D/g, "");
+    const normalizedPlu = /^(2[0-9])\d{11}$/.test(rawDigits)
+      ? rawDigits.slice(2, 7)
+      : rawDigits
+        ? rawDigits.slice(-5).padStart(5, "0")
+        : "";
+    if (isExpress && itemType === "weighted" && !/^(?!00000)\d{5}$/.test(normalizedPlu)) {
+      setError("Ingresá un Código PLU numérico válido de hasta 5 dígitos (ej. 00123).");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
+      const normalizedBarcode = isExpress
+        ? itemType === "weighted"
+          ? normalizedPlu
+          : barcode.trim() || null
+        : null;
       const body = {
         categoryId: selectedCategory,
         name,
         description: description.trim() || null,
         price: normalizedPrice,
         currency: "ARS",
+        itemType: isExpress ? itemType : "unit",
         imageAssetId: image.assetId,
         videoAssetId: video.assetId,
-        barcode: isExpress ? barcode.trim() || null : null,
+        barcode: normalizedBarcode,
         isGeneric: false,
         genericIcon: null,
-        trackStock: isExpress && trackStock,
-        stockQuantity: isExpress && trackStock ? Number(stock) || 0 : 0,
+        trackStock: isExpress && itemType === "unit" && trackStock,
+        stockQuantity:
+          isExpress && itemType === "unit" && trackStock
+            ? Number(stock) || 0
+            : 0,
         status: item?.status ?? "draft",
         addonGroupIds: isExpress ? [] : selectedGroups,
         ...(item ? { version: item.version } : {}),
@@ -626,74 +714,74 @@ function ItemModal({
       role="dialog"
       aria-modal="true"
       aria-label={item ? "Editar producto" : "Nuevo producto"}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-6"
     >
       <form
         onSubmit={save}
-        className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl sm:rounded-2xl"
+        className="liquid-glass-card max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl p-6 sm:p-7 shadow-2xl sm:rounded-3xl"
       >
-        <header className="mb-5 flex items-start justify-between">
+        <header className="mb-5 flex items-start justify-between border-b border-white/[0.08] pb-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
+            <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
               {item ? "Editar producto" : "Nuevo producto"}
             </p>
-            <h2 className="mt-1 text-2xl font-bold">
+            <h2 className="mt-1 text-xl font-medium tracking-tight text-[#f4f3f1]">
               Información del producto
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-2xl text-zinc-400"
+            className="text-2xl text-[#c2c2cc] hover:text-white"
             aria-label="Cerrar"
           >
             ×
           </button>
         </header>
         {error ? (
-          <p className="mb-4 rounded-lg bg-[var(--color-accent-tertiary)]/10 p-3 text-sm text-[var(--color-accent-tertiary)]">
+          <p className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3.5 text-xs text-amber-200">
             {error}
           </p>
         ) : null}
         <div className="grid gap-5 md:grid-cols-2">
-          <div className="space-y-3">
-            <label className="block text-sm font-semibold">
+          <div className="space-y-3.5">
+            <label className="block text-xs font-medium text-[#c2c2cc]">
               Nombre
               <input
                 required
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                className={`${inputClass} mt-1`}
+                className={`${inputClass} mt-1.5`}
               />
             </label>
-            <label className="block text-sm font-semibold">
+            <label className="block text-xs font-medium text-[#c2c2cc]">
               Descripción
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={3}
-                className={`${inputClass} mt-1`}
+                className={`${inputClass} mt-1.5`}
                 placeholder="Contale al cliente qué incluye"
               />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm font-semibold">
+              <label className="block text-xs font-medium text-[#c2c2cc]">
                 Precio
                 <input
                   required
                   inputMode="decimal"
                   value={price}
                   onChange={(event) => setPrice(event.target.value)}
-                  className={`${inputClass} mt-1`}
+                  className={`${inputClass} mt-1.5`}
                   placeholder="3500,50"
                 />
               </label>
-              <label className="block text-sm font-semibold">
+              <label className="block text-xs font-medium text-[#c2c2cc]">
                 Categoría
                 <select
                   value={selectedCategory}
                   onChange={(event) => setSelectedCategory(event.target.value)}
-                  className={`${inputClass} mt-1`}
+                  className={`${inputClass} mt-1.5`}
                 >
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -705,34 +793,56 @@ function ItemModal({
             </div>
             {isExpress ? (
               <>
-                <label className="block text-sm font-semibold">
-                  Código de barras
+                <label className="block text-xs font-medium text-[#c2c2cc]">
+                  Tipo de producto
+                  <select
+                    value={itemType}
+                    onChange={(event) =>
+                      setItemType(event.target.value as "unit" | "weighted")
+                    }
+                    className={`${inputClass} mt-1.5`}
+                  >
+                    <option value="unit">Unidad (código de barras estándar)</option>
+                    <option value="weighted">Balanza (PLU 5 dígitos)</option>
+                  </select>
+                </label>
+                <label className="block text-xs font-medium text-[#c2c2cc]">
+                  {itemType === "weighted"
+                    ? "Código PLU (5 dígitos, ej. 00123)"
+                    : "Código de barras"}
                   <input
                     value={barcode}
                     onChange={(event) => setBarcode(event.target.value)}
-                    className={`${inputClass} mt-1`}
-                    placeholder="Opcional"
+                    className={`${inputClass} mt-1.5`}
+                    placeholder={
+                      itemType === "weighted" ? "Ej: 00123" : "Opcional"
+                    }
                   />
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={trackStock}
-                    onChange={(event) => setTrackStock(event.target.checked)}
-                  />{" "}
-                  Controlar stock
-                </label>
-                {trackStock ? (
-                  <label className="block text-sm font-semibold">
-                    Stock inicial
-                    <input
-                      type="number"
-                      min="0"
-                      value={stock}
-                      onChange={(event) => setStock(event.target.value)}
-                      className={`${inputClass} mt-1`}
-                    />
-                  </label>
+                {itemType === "unit" ? (
+                  <>
+                    <label className="flex items-center gap-2 text-xs text-[#d4d4dc]">
+                      <input
+                        type="checkbox"
+                        checked={trackStock}
+                        onChange={(event) => setTrackStock(event.target.checked)}
+                        className="accent-[#f4f3f1]"
+                      />{" "}
+                      Controlar stock
+                    </label>
+                    {trackStock ? (
+                      <label className="block text-xs font-medium text-[#c2c2cc]">
+                        Stock inicial
+                        <input
+                          type="number"
+                          min="0"
+                          value={stock}
+                          onChange={(event) => setStock(event.target.value)}
+                          className={`${inputClass} mt-1.5`}
+                        />
+                      </label>
+                    ) : null}
+                  </>
                 ) : null}
               </>
             ) : null}
@@ -752,17 +862,17 @@ function ItemModal({
             />
             {!isExpress ? (
               <div>
-                <p className="mb-2 text-sm font-semibold">
+                <p className="mb-2 text-xs font-medium text-[#c2c2cc]">
                   Adicionales disponibles
                 </p>
                 {groups.filter((group) => group.status !== "archived").length ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 rounded-2xl border border-white/12 bg-[#101013]/90 p-3.5">
                     {groups
                       .filter((group) => group.status !== "archived")
                       .map((group) => (
                         <label
                           key={group.id}
-                          className="flex items-center gap-2 text-sm text-zinc-300"
+                          className="flex items-center gap-2 text-xs text-[#f4f3f1]"
                         >
                           <input
                             type="checkbox"
@@ -774,13 +884,14 @@ function ItemModal({
                                   : current.filter((id) => id !== group.id),
                               )
                             }
+                            className="accent-[#f4f3f1]"
                           />
                           {group.name}
                         </label>
                       ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-[#9b9ba4]">
                     Creá grupos desde la pestaña Adicionales.
                   </p>
                 )}
@@ -788,17 +899,17 @@ function ItemModal({
             ) : null}
           </div>
         </div>
-        <footer className="mt-6 flex justify-end gap-3 border-t border-zinc-800 pt-4">
+        <footer className="mt-6 flex justify-end gap-2.5 border-t border-white/[0.08] pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-bold text-zinc-400"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-4 text-xs font-medium text-[#f4f3f1] transition hover:bg-white/[0.12]"
           >
             Cancelar
           </button>
           <button
             disabled={saving}
-            className="rounded-lg bg-[var(--color-accent-tertiary)] px-5 py-2 text-sm font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-full bg-[#f4f3f1] px-5 text-xs font-medium text-[#141416] transition hover:bg-white disabled:opacity-50"
           >
             {saving ? "Guardando..." : "Guardar producto"}
           </button>
@@ -904,6 +1015,66 @@ function AddonPanel({
       setSaving(false);
     }
   }
+  async function archiveGroup(group: AddonGroup) {
+    setSaving(true);
+    try {
+      await mutate<null>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "DELETE",
+          headers: { "If-Match": String(group.version) },
+        },
+      );
+      setGroups(groups.filter((entry) => entry.id !== group.id));
+      onMessage("Grupo de adicionales eliminado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el grupo de adicionales.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function removeOption(group: AddonGroup, optionId: string) {
+    if (group.options.length <= 1) {
+      await archiveGroup(group);
+      return;
+    }
+    setSaving(true);
+    try {
+      const options = group.options
+        .filter((option) => option.id !== optionId)
+        .map((option, index) => ({
+          name: option.name,
+          description: option.description ?? null,
+          priceDelta: option.priceDelta,
+          status: option.status === "unavailable" ? "unavailable" : "active",
+          sortOrder: index,
+        }));
+      const updated = await mutate<AddonGroup>(
+        `/api/v1/tenants/${tenantId}/catalog/addon-groups/${group.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(group.version),
+          body: JSON.stringify({ options, version: group.version }),
+        },
+      );
+      setGroups(
+        groups.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+      onMessage("Opción adicional eliminada.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar la opción adicional.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
   async function saveOption(group: AddonGroup) {
     if (!editingOption) return;
     const price = normalizeMoneyInput(editingOption.priceDelta);
@@ -950,47 +1121,60 @@ function AddonPanel({
   }
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <header className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
+      <div className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7">
+        <header className="mb-5 border-b border-white/[0.08] pb-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
             Configuración reutilizable
           </p>
-          <h2 className="mt-1 text-2xl font-bold">Adicionales</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="mt-1 text-xl font-medium tracking-tight text-[#f4f3f1]">Adicionales</h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
             Creá opciones como salsas, tamaños o extras y asignalas a cualquier
             producto.
           </p>
         </header>
         {groups.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3.5 sm:grid-cols-2">
             {groups
               .filter((group) => group.status !== "archived")
               .map((group) => (
                 <article
                   key={group.id}
-                  className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
+                  className="rounded-2xl border border-white/12 bg-[#101013]/90 p-4"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold">{group.name}</h3>
-                    {group.status === "draft" && !readOnly ? (
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => void publishGroup(group)}
-                        className="rounded-md bg-[var(--color-accent-tertiary)] px-2 py-1 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
-                      >
-                        Publicar
-                      </button>
-                    ) : (
-                      <span className="text-[11px] uppercase tracking-wide text-zinc-500">
-                        {group.status === "active" ? "Publicado" : group.status}
-                      </span>
-                    )}
+                    <h3 className="text-sm font-medium text-[#f4f3f1]">{group.name}</h3>
+                    <div className="flex items-center gap-2">
+                      {group.status === "draft" && !readOnly ? (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void publishGroup(group)}
+                          className="rounded-full bg-[#f4f3f1] px-2.5 py-1 text-[11px] font-medium text-[#141416] disabled:opacity-50 cursor-pointer"
+                        >
+                          Publicar
+                        </button>
+                      ) : (
+                        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+                          {group.status === "active" ? "Publicado" : group.status}
+                        </span>
+                      )}
+                      {!readOnly ? (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          aria-label={`Eliminar grupo ${group.name}`}
+                          onClick={() => void archiveGroup(group)}
+                          className="text-xs font-medium text-red-400 transition hover:text-red-300 disabled:opacity-50 cursor-pointer"
+                        >
+                          Borrar
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-zinc-500">
+                  <p className="mt-1.5 text-xs text-[#c2c2cc]">
                     Elegir entre {group.minSelected} y {group.maxSelected}
                   </p>
-                  <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+                  <ul className="mt-3 space-y-2 text-xs text-[#d4d4dc]">
                     {(group.options ?? []).map((option) => {
                       const isEditing =
                         editingOption?.groupId === group.id &&
@@ -999,7 +1183,7 @@ function AddonPanel({
                         return (
                           <li
                             key={option.id}
-                            className="space-y-2 rounded-lg border border-zinc-700 bg-zinc-900 p-3"
+                            className="space-y-2 rounded-2xl border border-white/15 bg-[#141416] p-3"
                           >
                             <input
                               value={editingOption.name}
@@ -1039,14 +1223,14 @@ function AddonPanel({
                                 type="button"
                                 disabled={saving}
                                 onClick={() => void saveOption(group)}
-                                className="rounded-md bg-[var(--color-accent-tertiary)] px-3 py-1.5 text-xs font-bold text-[var(--color-accent-primary)] disabled:opacity-50"
+                                className="rounded-full bg-[#f4f3f1] px-3 py-1.5 text-xs font-medium text-[#141416] disabled:opacity-50"
                               >
                                 Guardar
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditingOption(null)}
-                                className="px-3 py-1.5 text-xs font-bold text-zinc-400"
+                                className="px-3 py-1.5 text-xs font-medium text-[#c2c2cc]"
                               >
                                 Cancelar
                               </button>
@@ -1057,32 +1241,42 @@ function AddonPanel({
                       return (
                         <li key={option.id} className="space-y-1">
                           <div className="flex justify-between gap-2">
-                            <span>{option.name}</span>
-                            <span className="shrink-0 text-zinc-500">
+                            <span className="text-[#f4f3f1]">{option.name}</span>
+                            <span className="shrink-0 text-[#c2c2cc] tabular-nums">
                               +${option.priceDelta}
                             </span>
                           </div>
                           {option.description ? (
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-[#c2c2cc]">
                               {option.description}
                             </p>
                           ) : null}
                           {!readOnly ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setEditingOption({
-                                  groupId: group.id,
-                                  optionId: option.id,
-                                  name: option.name,
-                                  description: option.description ?? "",
-                                  priceDelta: option.priceDelta,
-                                })
-                              }
-                              className="text-xs text-[var(--color-accent-tertiary)] underline underline-offset-2"
-                            >
-                              Editar
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingOption({
+                                    groupId: group.id,
+                                    optionId: option.id,
+                                    name: option.name,
+                                    description: option.description ?? "",
+                                    priceDelta: option.priceDelta,
+                                  })
+                                }
+                                className="text-xs font-medium text-[#f4f3f1] underline underline-offset-2 cursor-pointer"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => void removeOption(group, option.id)}
+                                className="text-xs font-medium text-red-400 underline underline-offset-2 hover:text-red-300 disabled:opacity-50 cursor-pointer"
+                              >
+                                Borrar
+                              </button>
+                            </div>
                           ) : null}
                         </li>
                       );
@@ -1092,7 +1286,7 @@ function AddonPanel({
               ))}
           </div>
         ) : (
-          <p className="rounded-lg border border-dashed border-zinc-700 p-8 text-center text-sm text-zinc-500">
+          <p className="rounded-2xl border border-dashed border-white/15 bg-[#101013]/90 p-8 text-center text-xs text-[#c2c2cc]">
             Aún no hay grupos de adicionales.
           </p>
         )}
@@ -1100,9 +1294,9 @@ function AddonPanel({
       {!readOnly ? (
         <form
           onSubmit={create}
-          className="h-fit space-y-3 rounded-xl border border-zinc-800 bg-zinc-900 p-5"
+          className="liquid-glass-card h-fit space-y-3 rounded-3xl p-6"
         >
-          <h2 className="font-bold">Nuevo grupo</h2>
+          <h2 className="text-base font-medium text-[#f4f3f1]">Nuevo grupo</h2>
           <input
             required
             value={name}
@@ -1132,7 +1326,7 @@ function AddonPanel({
           />
           <button
             disabled={saving}
-            className="w-full rounded-lg bg-[var(--color-accent-tertiary)] px-4 py-2 text-sm font-bold text-[var(--color-accent-primary)]"
+            className="inline-flex h-10 w-full items-center justify-center rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white"
           >
             {saving ? "Creando..." : "Crear grupo"}
           </button>
@@ -1159,111 +1353,419 @@ function ComboPanel({
   readOnly: boolean;
   onMessage: (value: string) => void;
 }) {
+  const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [comboCategory, setComboCategory] = useState(categories[0]?.id ?? "");
-  const [selected, setSelected] = useState<string[]>([]);
-  async function create(event: FormEvent) {
+  const [comboCategory, setComboCategory] = useState(
+    categories.find((c) => c.status === "active")?.id ??
+      categories[0]?.id ??
+      "",
+  );
+  const [image, setImage] = useState<MediaValue>({
+    assetId: null,
+    publicUrl: null,
+  });
+  const [selectedQuantities, setSelectedQuantities] = useState<
+    Record<string, number>
+  >({});
+  const [saving, setSaving] = useState(false);
+
+  const availableItems = useMemo(
+    () => items.filter((item) => item.status !== "archived"),
+    [items],
+  );
+
+  function resetForm() {
+    setEditingCombo(null);
+    setName("");
+    setDescription("");
+    setPrice("");
+    setComboCategory(
+      categories.find((c) => c.status === "active")?.id ??
+        categories[0]?.id ??
+        "",
+    );
+    setImage({ assetId: null, publicUrl: null });
+    setSelectedQuantities({});
+  }
+
+  function startEdit(combo: Combo) {
+    setEditingCombo(combo);
+    setName(combo.name);
+    setDescription(combo.description ?? "");
+    setPrice(combo.price);
+    setComboCategory(combo.categoryId || (categories[0]?.id ?? ""));
+    setImage({
+      assetId: combo.imageAssetId ?? null,
+      publicUrl: combo.imageUrl ?? null,
+    });
+    const quantities: Record<string, number> = {};
+    for (const line of combo.items) {
+      quantities[line.itemId] = Math.max(1, line.quantity);
+    }
+    setSelectedQuantities(quantities);
+  }
+
+  function toggleItem(itemId: string, checked: boolean) {
+    setSelectedQuantities((current) => {
+      const next = { ...current };
+      if (checked) {
+        next[itemId] = next[itemId] ?? 1;
+      } else {
+        delete next[itemId];
+      }
+      return next;
+    });
+  }
+
+  function changeItemQuantity(itemId: string, delta: number) {
+    setSelectedQuantities((current) => {
+      const currentQty = current[itemId] ?? 1;
+      const nextQty = Math.max(1, Math.min(50, currentQty + delta));
+      return {
+        ...current,
+        [itemId]: nextQty,
+      };
+    });
+  }
+
+  async function save(event: FormEvent) {
     event.preventDefault();
     const normalized = normalizeMoneyInput(price);
-    if (!normalized || !selected.length) {
+    const selectedEntries = Object.entries(selectedQuantities).filter(
+      ([, qty]) => qty > 0,
+    );
+    if (!normalized || selectedEntries.length === 0) {
       onMessage("Un combo necesita un precio válido y al menos un producto.");
       return;
     }
+    setSaving(true);
     try {
-      const created = await mutate<Combo>(
-        `/api/v1/tenants/${tenantId}/catalog/combos`,
-        {
-          method: "POST",
-          headers: catalogHeaders(),
-          body: JSON.stringify({
-            categoryId: comboCategory,
-            name,
-            description: null,
-            price: normalized,
-            currency: "ARS",
-            status: "draft",
-            items: selected.map((itemId, sortOrder) => ({
-              itemId,
-              quantity: 1,
-              sortOrder,
-            })),
-          }),
-        },
-      );
-      setCombos([
-        ...combos,
-        {
-          ...created,
-          items: selected.map((itemId) => ({
-            itemId,
-            itemName:
-              items.find((item) => item.id === itemId)?.name ?? "Producto",
-            quantity: 1,
-          })),
-        },
-      ]);
-      setName("");
-      setPrice("");
-      setSelected([]);
-      onMessage("Combo creado.");
+      const itemsPayload = selectedEntries.map(([itemId, quantity], sortOrder) => ({
+        itemId,
+        quantity,
+        sortOrder,
+      }));
+      const enrichedLines = itemsPayload.map(({ itemId, quantity }) => ({
+        itemId,
+        itemName:
+          items.find((item) => item.id === itemId)?.name ?? "Producto",
+        quantity,
+      }));
+
+      if (editingCombo) {
+        const updated = await mutate<Combo>(
+          `/api/v1/tenants/${tenantId}/catalog/combos/${editingCombo.id}`,
+          {
+            method: "PATCH",
+            headers: catalogHeaders(editingCombo.version),
+            body: JSON.stringify({
+              version: editingCombo.version,
+              categoryId: comboCategory,
+              name,
+              description: description.trim() || null,
+              price: normalized,
+              currency: "ARS",
+              imageAssetId: image.assetId,
+              items: itemsPayload,
+            }),
+          },
+        );
+        setCombos(
+          combos.map((entry) =>
+            entry.id === updated.id
+              ? {
+                  ...entry,
+                  ...updated,
+                  imageAssetId: image.assetId,
+                  imageUrl: image.publicUrl,
+                  items: enrichedLines,
+                }
+              : entry,
+          ),
+        );
+        resetForm();
+        onMessage("Combo actualizado.");
+      } else {
+        const created = await mutate<Combo>(
+          `/api/v1/tenants/${tenantId}/catalog/combos`,
+          {
+            method: "POST",
+            headers: catalogHeaders(),
+            body: JSON.stringify({
+              categoryId: comboCategory,
+              name,
+              description: description.trim() || null,
+              price: normalized,
+              currency: "ARS",
+              imageAssetId: image.assetId,
+              status: "draft",
+              items: itemsPayload,
+            }),
+          },
+        );
+        setCombos([
+          ...combos,
+          {
+            ...created,
+            imageAssetId: image.assetId,
+            imageUrl: image.publicUrl,
+            items: enrichedLines,
+          },
+        ]);
+        resetForm();
+        onMessage("Combo creado.");
+      }
     } catch (error) {
       onMessage(
-        error instanceof Error ? error.message : "No se pudo crear el combo.",
+        error instanceof Error
+          ? error.message
+          : editingCombo
+            ? "No se pudo actualizar el combo."
+            : "No se pudo crear el combo.",
       );
+    } finally {
+      setSaving(false);
     }
   }
+
+  async function updateComboStatus(
+    combo: Combo,
+    nextStatus: "active" | "unavailable",
+  ) {
+    setSaving(true);
+    try {
+      const updated = await mutate<Combo>(
+        `/api/v1/tenants/${tenantId}/catalog/combos/${combo.id}`,
+        {
+          method: "PATCH",
+          headers: catalogHeaders(combo.version),
+          body: JSON.stringify({ version: combo.version, status: nextStatus }),
+        },
+      );
+      setCombos(
+        combos.map((entry) =>
+          entry.id === updated.id ? { ...entry, ...updated } : entry,
+        ),
+      );
+      if (editingCombo?.id === updated.id) {
+        setEditingCombo((current) =>
+          current ? { ...current, ...updated } : null,
+        );
+      }
+      onMessage(
+        nextStatus === "active"
+          ? "Combo publicado."
+          : "Combo pausado en el menú.",
+      );
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : nextStatus === "active"
+            ? "No se pudo publicar el combo."
+            : "No se pudo pausar el combo.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function archiveCombo(combo: Combo) {
+    setSaving(true);
+    try {
+      await mutate<null>(
+        `/api/v1/tenants/${tenantId}/catalog/combos/${combo.id}`,
+        {
+          method: "DELETE",
+          headers: { "If-Match": String(combo.version) },
+        },
+      );
+      setCombos(combos.filter((entry) => entry.id !== combo.id));
+      if (editingCombo?.id === combo.id) {
+        resetForm();
+      }
+      onMessage("Combo eliminado.");
+    } catch (error) {
+      onMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el combo.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <header className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent-tertiary)]">
+    <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="liquid-prism-ring liquid-glass-card rounded-3xl p-6 sm:p-7">
+        <header className="mb-5 border-b border-white/[0.08] pb-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">
             Venta agrupada
           </p>
-          <h2 className="mt-1 text-2xl font-bold">Combos</h2>
+          <h2 className="mt-1 text-xl font-medium tracking-tight text-[#f4f3f1]">
+            Combos
+          </h2>
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
+            Armá promociones con varios productos y publicalas dentro de una
+            categoría activa para que aparezcan en el menú.
+          </p>
         </header>
-        {combos.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+        {combos.filter((combo) => combo.status !== "archived").length ? (
+          <div className="grid gap-3.5 sm:grid-cols-2">
             {combos
               .filter((combo) => combo.status !== "archived")
-              .map((combo) => (
-                <article
-                  key={combo.id}
-                  className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
-                >
-                  <div className="flex justify-between gap-2">
-                    <h3 className="font-bold">{combo.name}</h3>
-                  </div>
-                  <p className="mt-2 text-lg font-black text-[var(--color-accent-tertiary)]">
-                    ${combo.price}
-                  </p>
-                  <ul className="mt-3 space-y-1 text-sm text-zinc-400">
-                    {combo.items.map((line) => (
-                      <li key={line.itemId}>
-                        {line.quantity} × {line.itemName}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+              .map((combo) => {
+                const categoryName =
+                  categories.find((cat) => cat.id === combo.categoryId)?.name ??
+                  "Sin categoría";
+                return (
+                  <article
+                    key={combo.id}
+                    className="flex flex-col justify-between rounded-2xl border border-white/12 bg-[#101013]/90 p-4"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h3 className="text-sm font-medium text-[#f4f3f1]">
+                              {combo.name}
+                            </h3>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                                combo.status === "active"
+                                  ? "border border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+                                  : combo.status === "unavailable"
+                                    ? "border border-amber-400/30 bg-amber-500/15 text-amber-200"
+                                    : "border border-white/15 bg-white/[0.06] text-[#c2c2cc]"
+                              }`}
+                            >
+                              {combo.status === "active"
+                                ? "Publicado"
+                                : combo.status === "unavailable"
+                                  ? "Pausado"
+                                  : "Borrador"}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-[#9b9ba4]">
+                            Categoría: {categoryName}
+                          </p>
+                        </div>
+                        {combo.imageUrl ? (
+                          <img
+                            src={combo.imageUrl}
+                            alt={combo.name}
+                            className="size-12 shrink-0 rounded-xl object-cover ring-1 ring-white/12"
+                          />
+                        ) : null}
+                      </div>
+
+                      <p className="mt-2 text-base font-medium text-[#f4f3f1] tabular-nums">
+                        ${combo.price}
+                      </p>
+
+                      {combo.description ? (
+                        <p className="mt-1.5 text-xs text-[#c2c2cc]">
+                          {combo.description}
+                        </p>
+                      ) : null}
+
+                      <ul className="mt-3 space-y-1 text-xs text-[#c2c2cc]">
+                        {combo.items.map((line) => (
+                          <li key={line.itemId}>
+                            {line.quantity} × {line.itemName}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {!readOnly ? (
+                      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/[0.08] pt-3">
+                        {combo.status !== "active" ? (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() =>
+                              void updateComboStatus(combo, "active")
+                            }
+                            className="rounded-full bg-[#f4f3f1] px-2.5 py-1 text-[11px] font-medium text-[#141416] disabled:opacity-50 cursor-pointer"
+                          >
+                            Publicar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() =>
+                              void updateComboStatus(combo, "unavailable")
+                            }
+                            className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-[#f4f3f1] transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
+                          >
+                            Pausar
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => startEdit(combo)}
+                          className="text-xs font-medium text-[#f4f3f1] underline underline-offset-2 transition hover:text-white disabled:opacity-50 cursor-pointer"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={saving}
+                          aria-label={`Eliminar combo ${combo.name}`}
+                          onClick={() => void archiveCombo(combo)}
+                          className="ml-auto text-xs font-medium text-red-400 transition hover:text-red-300 disabled:opacity-50 cursor-pointer"
+                        >
+                          Borrar
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
           </div>
         ) : (
-          <p className="rounded-lg border border-dashed border-zinc-700 p-8 text-center text-sm text-zinc-500">
+          <p className="rounded-2xl border border-dashed border-white/15 bg-[#101013]/90 p-8 text-center text-xs text-[#c2c2cc]">
             Aún no hay combos.
           </p>
         )}
       </div>
       {!readOnly ? (
         <form
-          onSubmit={create}
-          className="h-fit space-y-3 rounded-xl border border-zinc-800 bg-zinc-900 p-5"
+          onSubmit={save}
+          className="liquid-glass-card h-fit space-y-3 rounded-3xl p-6"
         >
-          <h2 className="font-bold">Nuevo combo</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-base font-medium text-[#f4f3f1]">
+              {editingCombo ? "Editar combo" : "Nuevo combo"}
+            </h2>
+            {editingCombo ? (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-xs font-medium text-[#c2c2cc] underline underline-offset-2 hover:text-white cursor-pointer"
+              >
+                Cancelar
+              </button>
+            ) : null}
+          </div>
           <input
             required
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Nombre del combo"
+            className={inputClass}
+          />
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={2}
+            placeholder="Descripción opcional (ej. Ideal para compartir)"
             className={inputClass}
           />
           <input
@@ -1285,29 +1787,71 @@ function ComboPanel({
               </option>
             ))}
           </select>
-          <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-800 p-3">
-            <p className="text-xs font-bold uppercase text-zinc-500">
-              Productos incluidos
+          <MediaUploader
+            tenantId={tenantId}
+            kind="image"
+            value={image}
+            onChange={setImage}
+          />
+          <div className="max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-white/12 bg-[#101013]/90 p-3.5">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#c2c2cc]">
+              Productos incluidos y cantidades
             </p>
-            {items.map((item) => (
-              <label key={item.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(item.id)}
-                  onChange={(event) =>
-                    setSelected((current) =>
-                      event.target.checked
-                        ? [...current, item.id]
-                        : current.filter((id) => id !== item.id),
-                    )
-                  }
-                />
-                {item.name}
-              </label>
-            ))}
+            {availableItems.map((item) => {
+              const qty = selectedQuantities[item.id] ?? 0;
+              const isSelected = qty > 0;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 py-0.5 text-xs text-[#f4f3f1]"
+                >
+                  <label className="flex min-w-0 flex-1 items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(event) =>
+                        toggleItem(item.id, event.target.checked)
+                      }
+                      className="accent-[#f4f3f1]"
+                    />
+                    <span className="truncate">{item.name}</span>
+                  </label>
+                  {isSelected ? (
+                    <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-1 py-0.5">
+                      <button
+                        type="button"
+                        onClick={() => changeItemQuantity(item.id, -1)}
+                        aria-label={`Disminuir cantidad de ${item.name}`}
+                        className="flex size-5 items-center justify-center rounded-full text-xs text-[#f4f3f1] hover:bg-white/10 cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <span className="min-w-4 text-center text-[11px] font-medium tabular-nums">
+                        {qty}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => changeItemQuantity(item.id, 1)}
+                        aria-label={`Aumentar cantidad de ${item.name}`}
+                        className="flex size-5 items-center justify-center rounded-full text-xs text-[#f4f3f1] hover:bg-white/10 cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          <button className="w-full rounded-lg bg-[var(--color-accent-tertiary)] px-4 py-2 text-sm font-bold text-[var(--color-accent-primary)]">
-            Crear combo
+          <button
+            disabled={saving}
+            className="inline-flex h-10 w-full items-center justify-center rounded-full bg-[#f4f3f1] px-4 text-xs font-medium text-[#141416] transition hover:bg-white disabled:opacity-50 cursor-pointer"
+          >
+            {saving
+              ? "Guardando..."
+              : editingCombo
+                ? "Guardar cambios"
+                : "Crear combo"}
           </button>
         </form>
       ) : null}

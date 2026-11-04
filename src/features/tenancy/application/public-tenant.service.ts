@@ -22,6 +22,10 @@ import {
 import { normalizeTenantSlug } from "@/features/provisioning/domain/provisioning.schemas";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
+import {
+  normalizeOpeningHours,
+  type OpeningHours,
+} from "@/features/tenancy/domain/opening-hours";
 import { fetchTenantReadiness } from "./tenant-readiness.service";
 
 export class PublicTenantNotFoundError extends Error {}
@@ -33,6 +37,8 @@ export type PublicTenant = {
   currency: string;
   locationId: string;
   preset: TenantPreset;
+  openingHours?: OpeningHours;
+  timezone?: string;
 };
 
 export type PublicDirectoryTenant = {
@@ -46,6 +52,8 @@ export type PublicDirectoryTenant = {
   lng: number;
   mapQuery: string;
   categoriesCount: number;
+  contactPhone: string | null;
+  openingHours: OpeningHours;
 };
 
 export class PublicTenantService {
@@ -100,10 +108,48 @@ export class PublicTenantService {
             lat: confirmedLocation.lat,
             lng: confirmedLocation.lng,
             categoriesCount: categories.length,
+            contactPhone: eligibility.contactPhone,
+            openingHours: eligibility.primaryLocation?.openingHours ?? {},
           });
         }
 
         return results;
+      },
+    );
+  }
+
+  /**
+   * Returns the real directory visibility for the given tenants. A tenant that
+   * is `active` in the database can still be absent from the public page when
+   * it has no confirmed location or is missing an ordering requirement.
+   */
+  async listDirectoryListing(
+    tenantIds: string[],
+  ): Promise<Record<string, boolean>> {
+    if (tenantIds.length === 0) return {};
+
+    return withPlatformServiceTransaction(
+      { serviceId: "public-directory-listing", correlationId: randomUUID() },
+      async (transaction) => {
+        const listing: Record<string, boolean> = {};
+
+        for (const tenantId of tenantIds) {
+          await transaction.execute(
+            sql`select set_config('app.tenant_id', ${tenantId}, true)`,
+          );
+          try {
+            const eligibility = await fetchTenantReadiness(transaction, tenantId);
+            const confirmedLocation = parseConfirmedLocation(
+              eligibility.primaryLocation?.address,
+            );
+            listing[tenantId] =
+              eligibility.orderingAvailable && confirmedLocation !== null;
+          } catch {
+            listing[tenantId] = false;
+          }
+        }
+
+        return listing;
       },
     );
   }
@@ -150,6 +196,8 @@ export class PublicTenantService {
       currency: tenant.resolved.defaultCurrency,
       locationId: tenant.location.id,
       preset: (tenant.resolved.preset ?? "gastronomy") as TenantPreset,
+      openingHours: normalizeOpeningHours(tenant.location.openingHours),
+      timezone: tenant.location.timezone,
     };
   }
 
@@ -234,7 +282,8 @@ export class PublicTenantService {
               eq(catalogCombos.tenantId, tenant.id),
               eq(catalogCombos.status, "active"),
             ),
-          ),
+          )
+          .orderBy(asc(catalogCombos.name)),
         transaction
           .select()
           .from(addonGroups)
@@ -254,10 +303,19 @@ export class PublicTenantService {
         transaction
           .select()
           .from(comboItems)
-          .where(eq(comboItems.tenantId, tenant.id)),
+          .where(eq(comboItems.tenantId, tenant.id))
+          .orderBy(asc(comboItems.sortOrder)),
       ]);
 
       const menuTheme = settingsResult[0]?.menuTheme ?? "classic";
+      const openingHours =
+        eligibility.primaryLocation?.openingHours ?? tenant.openingHours ?? {};
+      const timezone = tenant.timezone ?? "America/Argentina/Buenos_Aires";
+
+      const scheduleProps: { openingHours?: OpeningHours; timezone?: string } = {
+        openingHours,
+        timezone,
+      };
 
       return {
         tenant: {
@@ -267,10 +325,12 @@ export class PublicTenantService {
           menuTheme,
           orderingAvailable: eligibility.orderingAvailable,
           preset: tenant.preset,
+          ...scheduleProps,
         },
         menuTheme,
         orderingAvailable: eligibility.orderingAvailable,
         preset: tenant.preset,
+        ...scheduleProps,
         revision: Math.max(
           1,
           ...categories.map(({ version }) => version),
@@ -301,7 +361,16 @@ export class PublicTenantService {
                 }),
             })),
           combos: combos
-            .filter(({ combo }) => combo.categoryId === category.id)
+            .filter(({ combo }) => {
+              if (combo.categoryId !== category.id) return false;
+              const lines = comboLines.filter(({ comboId }) => comboId === combo.id);
+              return (
+                lines.length > 0 &&
+                lines.every((line) =>
+                  items.some(({ item }) => item.id === line.itemId),
+                )
+              );
+            })
             .map(({ combo, media }) => ({
               ...combo,
               imageUrl: media?.status === "ready" ? media.publicUrl : null,

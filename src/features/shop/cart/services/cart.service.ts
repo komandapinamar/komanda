@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  normalizeOpeningHours,
+  type OpeningHours,
+} from "@/features/tenancy/domain/opening-hours";
 import type {
   CartSnapshotLine,
   OfficialCart,
@@ -35,6 +39,8 @@ type CartApiResponse = {
   } | null;
   updatedAt?: string;
   expiresAt?: string;
+  openingHours?: OpeningHours | null;
+  timezone?: string;
 };
 
 function toNumber(value: unknown, fallback = 0) {
@@ -83,6 +89,10 @@ export function normalizeCartLine(line: unknown): OfficialCartLine {
   const quantity = toNumber(source.quantity, 0);
   const { optionIds, optionNames, selectedOptions } =
     normalizeCartLineOptions(source.options);
+  const kind: "item" | "combo" =
+    source.kind === "combo" || (Boolean(source.comboId) && !source.itemId)
+      ? "combo"
+      : "item";
 
   return {
     id: source.id ? String(source.id) : undefined,
@@ -94,6 +104,7 @@ export function normalizeCartLine(line: unknown): OfficialCartLine {
         source.id ??
         "",
     ),
+    kind,
     quantity,
     name: String(source.name ?? source.nameSnapshot ?? "Producto"),
     unitPrice,
@@ -150,6 +161,10 @@ export function normalizeCartResponse(payload: CartApiResponse): OfficialCart {
     version: toOptionalNumber(payload.version),
     updatedAt: payload.updatedAt,
     expiresAt: payload.expiresAt,
+    ...(payload.openingHours !== undefined && payload.openingHours !== null
+      ? { openingHours: normalizeOpeningHours(payload.openingHours) }
+      : {}),
+    ...(payload.timezone ? { timezone: String(payload.timezone) } : {}),
   };
 }
 
@@ -182,7 +197,7 @@ async function requestCart(
 
 export function buildCartSnapshot(lines: CartSnapshotLine[]) {
   return lines.map((line) => ({
-    kind: "item" as const,
+    kind: (line.kind ?? "item") as "item" | "combo",
     resourceId: line.documentId,
     quantity: line.quantity,
     optionIds: line.optionIds ?? [],

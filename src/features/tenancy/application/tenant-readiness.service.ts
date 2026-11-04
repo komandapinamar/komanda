@@ -16,6 +16,10 @@ import type {
 } from "@/features/identity/application/session.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { parseConfirmedLocation } from "@/features/directory/utils/directory-maps";
+import {
+  normalizeOpeningHours,
+  type OpeningHours,
+} from "@/features/tenancy/domain/opening-hours";
 
 export type TenantReadinessCheck = {
   code: string;
@@ -39,8 +43,10 @@ export type TenantEligibilityResult = {
     id: string;
     name: string;
     address: unknown;
+    openingHours: OpeningHours;
   } | null;
   salesEnabled: boolean;
+  contactPhone: string | null;
 };
 
 export async function fetchTenantReadiness(
@@ -67,6 +73,7 @@ export async function fetchTenantReadiness(
       id: tenantLocations.id,
       name: tenantLocations.name,
       address: tenantLocations.address,
+      openingHours: tenantLocations.openingHours,
     })
     .from(tenantLocations)
     .where(
@@ -102,7 +109,10 @@ export async function fetchTenantReadiness(
     .limit(1);
 
   const [settings] = await transaction
-    .select({ salesEnabled: tenantSettings.salesEnabled })
+    .select({
+      salesEnabled: tenantSettings.salesEnabled,
+      contactPhone: tenantSettings.contactPhone,
+    })
     .from(tenantSettings)
     .where(eq(tenantSettings.tenantId, tenantId))
     .limit(1);
@@ -119,11 +129,6 @@ export async function fetchTenantReadiness(
       requiredForActivation: true,
     },
     {
-      code: "currency",
-      complete: tenant.defaultCurrency.length === 3,
-      requiredForActivation: true,
-    },
-    {
       code: "published_item",
       complete: Boolean(publishedItem),
       requiredForActivation: true,
@@ -132,11 +137,6 @@ export async function fetchTenantReadiness(
       code: "payment_connected",
       complete: Boolean(paymentIntegration),
       requiredForActivation: true,
-    },
-    {
-      code: "print_agent_connected",
-      complete: false,
-      requiredForActivation: false,
     },
   ];
 
@@ -152,8 +152,16 @@ export async function fetchTenantReadiness(
     orderingAvailable,
     checks,
     tenant,
-    primaryLocation: location ?? null,
+    primaryLocation: location
+      ? {
+          id: location.id,
+          name: location.name,
+          address: location.address,
+          openingHours: normalizeOpeningHours(location.openingHours),
+        }
+      : null,
     salesEnabled,
+    contactPhone: settings?.contactPhone ?? null,
   };
 }
 

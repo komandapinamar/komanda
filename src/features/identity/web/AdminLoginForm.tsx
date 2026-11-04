@@ -1,99 +1,40 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Chip } from "@/components/base/badges/chip";
+import { Divider } from "@/components/base/divider/divider";
+import AdminLoginCredentialsForm from "@/features/identity/web/AdminLoginCredentialsForm";
 
 export default function AdminLoginForm() {
-  const router = useRouter();
-  const [message, setMessage] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage(null);
-    setPending(true);
-    const form = new FormData(event.currentTarget);
-    try {
-      const response = await fetch("/api/v1/auth/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { title?: string; detail?: string };
-        throw new Error(payload.detail ?? payload.title ?? "No se pudo iniciar sesión. Verificá tus credenciales.");
-      }
-      window.location.href = "/admin/select-business";
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
-    } finally {
-      setPending(false);
-    }
-  }
-
   return (
-    <form
-      onSubmit={submit}
-      className="flex w-full flex-col gap-4 rounded-xl border border-[var(--color-accent-tertiary)]/15 bg-[var(--color-accent-primary)] p-6 shadow-sm"
-    >
-      <div className="space-y-1 mb-8">
-        <h1 className="text-4xl font-normal text-[var(--color-accent-tertiary)] tracking-tighter justify-center flex">Komanda Business</h1>
-        <h1 className="text-2xl font-thin text-[var(--color-accent-tertiary)] justify-center flex">Login</h1>
+    <div className="flex w-full flex-col gap-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-8">
+      <div className="flex flex-col items-start gap-2">
+        <div className="flex w-full items-center justify-between">
+          <span className="komanda-logo font-sans text-2xl font-normal tracking-tighter text-white normal-case">
+            Komanda Business
+          </span>
+        </div>
+        <h1 className="text-title-2-semibold text-text-primary">
+          Iniciar sesión
+        </h1>
+        <p className="text-body-regular text-text-secondary">
+          Ingresá con tu cuenta para administrar catálogo, pedidos y analíticas.
+        </p>
       </div>
 
-      <label className="flex flex-col gap-2 text-sm text-[var(--color-accent-tertiary)]/80">
-          <span>Email</span>
-        <input
-          required
-            type="email"
-            name="email"
-            autoComplete="email"
-            placeholder="Email"
-          className="rounded-xl border border-[var(--color-accent-tertiary)]/15 px-4 py-3 text-[var(--color-accent-tertiary)] outline-none transition focus:border-[var(--color-accent-tertiary)]/40"
-        />
-      </label>
+      <AdminLoginCredentialsForm />
 
-      <label className="flex flex-col gap-2 text-sm text-[var(--color-accent-tertiary)]/80">
-        <span>Password</span>
-        <input
-          required
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          placeholder="Password"
-          className="rounded-xl border border-[var(--color-accent-tertiary)]/15 px-4 py-3 text-[var(--color-accent-tertiary)] outline-none transition focus:border-[var(--color-accent-tertiary)]/40"
-        />
-      </label>
+      <Divider>o creá tu cuenta</Divider>
 
-      <Link href="/forgot-password" className="text-right text-sm text-[var(--color-accent-tertiary)] underline">
-        ¿Olvidaste tu contraseña?
-      </Link>
-
-      {message ? (
-        <p
-          aria-live="polite"
-          className="text-sm text-red-600"
+      <div className="flex items-center justify-between rounded-2lg border border-border-button-default bg-background-primary-default/50 px-4 py-3">
+        <span className="text-body-2-regular text-text-secondary">
+          ¿Querés abrir tu propio local?
+        </span>
+        <Link
+          href="/register"
+          className="text-body-2-semibold text-accent-400 hover:underline"
         >
-          {message}
-        </p>
-      ) : null}
-
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-[var(--color-accent-secondary)] px-4 py-3 text-sm font-medium text-[var(--color-accent-primary)] transition hover:bg-[var(--color-accent-tertiary)] disabled:cursor-not-allowed disabled:bg-[var(--color-accent-tertiary)]/60"
-      >
-        {pending ? "Signing in..." : "Login"}
-      </button>
-
-      <div className="mt-2 text-center text-xs text-[var(--color-accent-tertiary)]/70">
-        ¿Querés abrir tu propio local?{" "}
-        <Link href="/register" className="font-semibold text-[var(--color-accent-tertiary)] underline hover:opacity-80">
           Registrá tu negocio
         </Link>
       </div>
-    </form>
+    </div>
   );
 }

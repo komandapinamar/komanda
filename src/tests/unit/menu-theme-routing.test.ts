@@ -133,6 +133,7 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
                   description: "Doble carne con queso",
                   price: "12000.00",
                   currency: "ARS",
+                  itemType: "unit",
                   barcode: null,
                   isGeneric: false,
                   genericIcon: null,
@@ -184,6 +185,7 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
                   description: "Lata 354ml",
                   price: "3000.00",
                   currency: "ARS",
+                  itemType: "unit",
                   barcode: null,
                   isGeneric: false,
                   genericIcon: null,
@@ -232,6 +234,7 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
                   description: "Pollo entero",
                   price: "9000.00",
                   currency: "ARS",
+                  itemType: "unit",
                   barcode: null,
                   isGeneric: false,
                   genericIcon: null,
@@ -319,6 +322,92 @@ describe("Menu Theme & Video Asset Foundation (Epic 1)", () => {
       catalogSpy.mockResolvedValueOnce(createMockCatalog({ menuTheme: "classic" }));
       const themeClassic = await getTenantMenuTheme("t2");
       expect(themeClassic).toBe("classic");
+    });
+
+    it("maps active combos into category menu_items with kind='combo' and included items description", async () => {
+      vi.spyOn(PublicTenantService.prototype, "catalog").mockResolvedValue(
+        createMockCatalog({
+          menuTheme: "classic",
+          tenantSlug: "burger-spot",
+          tenantName: "Burger Spot",
+          categories: [
+            {
+              id: "cat-1",
+              name: "Promos",
+              items: [
+                {
+                  id: "item-1",
+                  tenantId: "tenant-1",
+                  categoryId: "cat-1",
+                  name: "Smash Burger",
+                  normalizedName: "smash-burger",
+                  description: "Doble carne",
+                  price: "8000.00",
+                  currency: "ARS",
+                  itemType: "unit",
+                  barcode: null,
+                  isGeneric: false,
+                  genericIcon: null,
+                  destinationStation: null,
+                  trackStock: false,
+                  stockQuantity: 0,
+                  imageAssetId: "img-1",
+                  videoAssetId: null,
+                  status: "active",
+                  sortOrder: 0,
+                  version: 1,
+                  archivedAt: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  imageUrl: "https://cdn.komanda.app/images/smash.jpg",
+                  videoUrl: null,
+                  addonGroups: [],
+                },
+              ],
+              combos: [
+                {
+                  id: "combo-1",
+                  tenantId: "tenant-1",
+                  categoryId: "cat-1",
+                  name: "Combo Amigos",
+                  normalizedName: "combo-amigos",
+                  description: "Para compartir",
+                  price: "14500.00",
+                  currency: "ARS",
+                  imageAssetId: null,
+                  status: "active",
+                  version: 1,
+                  archivedAt: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  imageUrl: null,
+                  items: [
+                    {
+                      tenantId: "tenant-1",
+                      comboId: "combo-1",
+                      itemId: "item-1",
+                      quantity: 2,
+                      sortOrder: 0,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      );
+
+      const items = await getMenuItems("burger-spot");
+      expect(items).toHaveLength(2);
+      const comboItem = items.find((entry) => entry.documentId === "combo-1");
+      expect(comboItem).toBeDefined();
+      expect(comboItem?.kind).toBe("combo");
+      expect(comboItem?.name).toBe("Combo Amigos");
+      expect(comboItem?.price).toBe(14500);
+      expect(comboItem?.description).toBe(
+        "Para compartir · Incluye: 2 × Smash Burger",
+      );
+      expect(comboItem?.image).toBe("https://cdn.komanda.app/images/smash.jpg");
     });
   });
 

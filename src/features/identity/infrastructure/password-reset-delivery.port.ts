@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { publicBaseUrl } from "@/lib/config/public-site";
 
-export type PasswordResetDelivery = (input: {
-  email: string;
-  token: string;
-}) => Promise<void>;
+export type PasswordResetDelivery = (
+  email: string,
+  token: string,
+) => Promise<void>;
 
-type PasswordResetMessage = Parameters<PasswordResetDelivery>[0];
+type PasswordResetMessage = { email: string; token: string };
 
 function templatePath() {
   return resolve(process.cwd(), "src/features/identity/infrastructure/templates/password-reset.html");
@@ -17,7 +17,7 @@ function renderTemplate(url: string): string {
   return readFileSync(templatePath(), "utf8").replace(/\{\{url\}\}/g, url);
 }
 
-export class ResendPasswordResetDelivery implements PasswordResetDelivery {
+export class ResendPasswordResetDelivery {
   constructor(
     private readonly apiKey: string,
     private readonly publicBaseUrl: string,
@@ -55,7 +55,7 @@ export class ResendPasswordResetDelivery implements PasswordResetDelivery {
   }
 }
 
-export class HttpPasswordResetDelivery implements PasswordResetDelivery {
+export class HttpPasswordResetDelivery {
   constructor(
     private readonly endpoint: string,
     private readonly token: string,
@@ -87,7 +87,7 @@ export class HttpPasswordResetDelivery implements PasswordResetDelivery {
   }
 }
 
-export class CapturePasswordResetDelivery implements PasswordResetDelivery {
+export class CapturePasswordResetDelivery {
   readonly messages: Array<{ email: string; token: string }> = [];
 
   async deliver(input: PasswordResetMessage) {
@@ -95,7 +95,7 @@ export class CapturePasswordResetDelivery implements PasswordResetDelivery {
   }
 }
 
-export class FileCapturePasswordResetDelivery implements PasswordResetDelivery {
+export class FileCapturePasswordResetDelivery {
   constructor(private readonly path: string) {}
 
   async deliver(input: PasswordResetMessage) {
@@ -114,7 +114,7 @@ function deploymentEnvironment() {
   return process.env.KOMANDA_ENVIRONMENT ?? process.env.NODE_ENV ?? "development";
 }
 
-export function passwordResetDeliveryFromEnvironment(): PasswordResetDelivery {
+function createPasswordResetAdapter() {
   const delivery = process.env.IDENTITY_VERIFICATION_DELIVERY;
 
   if (delivery === "resend") {
@@ -150,4 +150,9 @@ export function passwordResetDeliveryFromEnvironment(): PasswordResetDelivery {
   throw new Error(
     "A production password reset delivery adapter must be configured explicitly.",
   );
+}
+
+export function passwordResetDeliveryFromEnvironment(): PasswordResetDelivery {
+  const adapter = createPasswordResetAdapter();
+  return (email, token) => adapter.deliver({ email, token });
 }

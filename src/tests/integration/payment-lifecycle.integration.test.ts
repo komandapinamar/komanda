@@ -29,6 +29,7 @@ const cart = {
       cartId: "00000000-0000-4000-8000-000000000001",
       itemId: "20000000-0000-4000-8000-000000000001",
       comboId: null,
+      itemType: "unit" as const,
       quantity: 1,
       nameSnapshot: "Burger",
       unitPriceSnapshot: "1000.00",

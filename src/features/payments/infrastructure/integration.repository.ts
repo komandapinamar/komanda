@@ -236,6 +236,7 @@ export class IntegrationRepository {
     currency: string;
     customer: Record<string, unknown>;
     notes?: string;
+    scheduledFor?: Date | null;
     idempotencyKey: string;
   }) {
     const [attempt] = await this.transaction
@@ -248,6 +249,7 @@ export class IntegrationRepository {
         currency: input.currency,
         customerSnapshot: input.customer,
         notes: input.notes,
+        scheduledFor: input.scheduledFor ?? null,
         idempotencyKey: input.idempotencyKey,
       })
       .onConflictDoNothing()

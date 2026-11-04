@@ -87,28 +87,34 @@ export default async function TenantOrdersPage({
   const page = await new OrderQueryService().list({ context });
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm uppercase text-(--color-accent-tertiary)">
-            Operación
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <header className="flex flex-col justify-between gap-4 border-b border-separator-border pb-5 sm:flex-row sm:items-end">
+        <div className="space-y-1">
+          <p className="text-caption-1-semibold uppercase tracking-wider text-text-secondary">
+            Operación · @{authority.membership.tenantSlug}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold">Pedidos en curso</h1>
+          <h1 className="text-title-1-semibold text-text-primary">
+            Pedidos en curso
+          </h1>
+          <p className="text-body-regular text-text-secondary">
+            Monitoreá cobros, cocina y entregas en tiempo real.
+          </p>
         </div>
         <Link
           href={`/admin/${tenantId}/orders/new`}
-          className="rounded-sm bg-(--color-accent-tertiary) px-4 py-3 text-sm font-semibold text-zinc-950"
+          className="bg-button-primary button-press-motion inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-2lg px-3.5 text-body-medium text-text-white shadow-xs"
         >
-          Crear pedido directo
+          <span>Crear pedido directo</span>
         </Link>
       </header>
 
       {createdRef ? (
         <div
           role="status"
-          className="rounded-sm border border-emerald-500/40 bg-emerald-950/40 p-4 text-emerald-300"
+          className="flex items-center gap-2.5 rounded-2lg border border-emerald-500/30 bg-status-lime-background px-4 py-3 text-body-medium text-status-lime-text"
         >
-          <p className="font-medium">
+          <span>✓</span>
+          <p>
             Pedido creado correctamente
             {createdRef !== "1" ? ` (#${createdRef})` : ""}.
           </p>

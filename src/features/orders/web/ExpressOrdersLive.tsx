@@ -16,12 +16,12 @@ function formatDate(value: string | null) {
 
 function sourceBadge(source: string | null) {
   if (source === "admin_direct") {
-    return { label: "Caja Mostrador", bg: "bg-zinc-800 text-zinc-300 border-zinc-700" };
+    return { label: "Caja Mostrador", bg: "border-white/12 bg-white/[0.04] text-[#d4d4dc]" };
   }
   if (source === "mercadopago_webhook") {
-    return { label: "Cobro Digital MP", bg: "bg-amber-950/60 text-amber-300 border-amber-800/40" };
+    return { label: "Cobro Digital MP", bg: "border-amber-400/30 bg-amber-500/15 text-amber-300" };
   }
-  return { label: source ?? "Mostrador", bg: "bg-zinc-800 text-zinc-400 border-zinc-700" };
+  return { label: source ?? "Mostrador", bg: "border-white/12 bg-white/[0.04] text-[#c2c2cc]" };
 }
 
 export function ExpressOrdersLive({
@@ -42,76 +42,78 @@ export function ExpressOrdersLive({
   return (
     <section className="space-y-6" aria-label="Transacciones de Salón y Kiosk">
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Total Facturado</p>
-          <p className="mt-2 text-3xl font-black text-[var(--color-accent-tertiary)]">
+        <div className="liquid-glass-card rounded-3xl p-6">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">Total Facturado</p>
+          <p className="mt-2.5 text-3xl font-medium tracking-tight text-[#f4f3f1] tabular-nums">
             ${totalRevenue.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Tickets Emitidos</p>
-          <p className="mt-2 text-3xl font-bold text-white">{orders.length}</p>
+        <div className="liquid-glass-card rounded-3xl p-6">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">Tickets Emitidos</p>
+          <p className="mt-2.5 text-3xl font-medium tracking-tight text-[#f4f3f1] tabular-nums">{orders.length}</p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Cobros Digitales</p>
-          <p className="mt-2 text-3xl font-bold text-emerald-400">{digitalCount}</p>
+        <div className="liquid-glass-card rounded-3xl p-6">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#c2c2cc]">Cobros Digitales</p>
+          <p className="mt-2.5 text-3xl font-medium tracking-tight text-emerald-400 tabular-nums">{digitalCount}</p>
         </div>
       </div>
 
       <AdminOrdersLive tenantId={tenantId} initialOrders={initialOrders} onOrdersChange={setOrders} />
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-        <div className="px-6 py-4 border-b border-zinc-800 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">Transacciones Recientes</h2>
-          <span className="text-xs text-zinc-400">{orders.length} comprobantes</span>
+      <div className="liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">Transacciones Recientes</h2>
+          <span className="text-xs text-[#c2c2cc] tabular-nums">{orders.length} comprobantes</span>
         </div>
 
         {orders.length === 0 ? (
-          <div className="p-12 text-center text-zinc-500">
+          <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-10 text-center text-sm text-[#c2c2cc]">
             No hay transacciones registradas en este turno.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-zinc-300">
-              <thead className="bg-zinc-950 text-xs uppercase text-zinc-400 border-b border-zinc-800">
+          <div className="overflow-x-auto rounded-2xl border border-white/12 bg-[#101013]/90">
+            <table className="w-full text-left text-xs text-[#d4d4dc]">
+              <thead className="border-b border-white/[0.08] bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#c2c2cc]">
                 <tr>
-                  <th className="px-6 py-3">Comprobante</th>
-                  <th className="px-6 py-3">Origen</th>
-                  <th className="px-6 py-3">Artículos</th>
-                  <th className="px-6 py-3">Total</th>
-                  <th className="px-6 py-3">Pago</th>
-                  <th className="px-6 py-3">Fecha y Hora</th>
+                  <th className="px-5 py-3.5 font-medium">Comprobante</th>
+                  <th className="px-5 py-3.5 font-medium">Origen</th>
+                  <th className="px-5 py-3.5 font-medium">Artículos</th>
+                  <th className="px-5 py-3.5 font-medium">Total</th>
+                  <th className="px-5 py-3.5 font-medium">Pago</th>
+                  <th className="px-5 py-3.5 font-medium">Fecha y Hora</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-white/[0.08]">
                 {orders.map((order) => {
                   const badge = sourceBadge(order.source);
                   const totalUnits = order.lines.reduce((acc, l) => acc + l.quantity, 0);
                   return (
-                    <tr key={order.id} className="hover:bg-zinc-800/40 transition">
-                      <td className="px-6 py-4 font-bold text-white">
+                    <tr key={order.id} className="transition hover:bg-white/[0.03]">
+                      <td className="px-5 py-3.5 font-medium text-[#f4f3f1]">
                         #{order.purchaseNumber ?? order.id.slice(0, 8)}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block border px-2.5 py-1 rounded-full text-xs font-medium ${badge.bg}`}>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${badge.bg}`}>
                           {badge.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-zinc-200">{totalUnits} un.</span>
-                        <span className="text-zinc-500 text-xs ml-1.5">({order.lines.length} líneas)</span>
+                      <td className="px-5 py-3.5">
+                        <span className="text-[#f4f3f1]">{totalUnits} un.</span>
+                        <span className="ml-1.5 text-xs text-[#c2c2cc]">({order.lines.length} líneas)</span>
                       </td>
-                      <td className="px-6 py-4 font-bold text-[var(--color-accent-tertiary)]">
+                      <td className="px-5 py-3.5 font-medium text-[#f4f3f1] tabular-nums">
                         ${Number(order.total).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                          order.paymentStatus === "paid" ? "bg-emerald-950 text-emerald-400 border border-emerald-800/50" : "bg-amber-950 text-amber-300 border border-amber-800/50"
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+                          order.paymentStatus === "paid"
+                            ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+                            : "border-amber-400/30 bg-amber-500/15 text-amber-300"
                         }`}>
                           {order.paymentStatus === "paid" ? "Cobrado" : "Pendiente"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-xs text-zinc-400">
+                      <td className="px-5 py-3.5 text-xs text-[#c2c2cc]">
                         {formatDate(order.createdAt)}
                       </td>
                     </tr>

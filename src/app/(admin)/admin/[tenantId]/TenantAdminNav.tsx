@@ -25,10 +25,10 @@ function NavItem({ item }: { item: TenantAdminNavItem }) {
     <Link
       href={item.href}
       aria-current={isActive ? "page" : undefined}
-      className={`rounded-md px-3 py-2 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-tertiary) ${
+      className={`inline-flex h-8 items-center justify-center rounded-lg px-3 text-body-medium transition outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring ${
         isActive
-          ? "bg-zinc-800 text-(--color-accent-tertiary) shadow-sm"
-          : "text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100"
+          ? "bg-button-primary text-text-white shadow-nav-selected"
+          : "text-text-secondary hover:bg-background-primary-hover hover:text-text-primary"
       }`}
     >
       {item.label}
@@ -36,28 +36,38 @@ function NavItem({ item }: { item: TenantAdminNavItem }) {
   );
 }
 
-export function TenantAdminNav({ items, switchBusiness }: { items: TenantAdminNavItem[]; switchBusiness: ReactNode }) {
+export function TenantAdminNav({
+  items,
+  switchBusiness,
+}: {
+  items: TenantAdminNavItem[];
+  switchBusiness: ReactNode;
+}) {
   return (
     <>
-      <nav className="hidden items-center gap-1 text-sm md:flex" aria-label="Navegación principal">
-        {items.map((item) => (
-          <NavItem key={item.href} item={item} />
-        ))}
-        {switchBusiness}
+      <nav className="hidden items-center gap-1 md:flex" aria-label="Navegación principal">
+        <div className="flex items-center gap-1 rounded-2lg bg-background-full p-1">
+          {items.map((item) => (
+            <NavItem key={item.href} item={item} />
+          ))}
+        </div>
+        <div className="ms-2">{switchBusiness}</div>
       </nav>
       <details className="relative md:hidden">
-        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-100 marker:hidden [&::-webkit-details-marker]:hidden">
+        <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-lg border border-border-button-default bg-background-primary-default px-3 text-body-medium text-text-primary shadow-xs marker:hidden [&::-webkit-details-marker]:hidden">
           Menú
-          <span aria-hidden className="text-zinc-500">v</span>
+          <span aria-hidden className="text-text-secondary">▾</span>
         </summary>
         <nav
-          className="absolute right-0 top-12 z-20 grid min-w-52 gap-1 rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm shadow-xl"
+          className="absolute right-0 top-10 z-50 grid min-w-52 gap-1 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-2 shadow-dropdown"
           aria-label="Navegación principal"
         >
           {items.map((item) => (
             <NavItem key={item.href} item={item} />
           ))}
-          {switchBusiness}
+          <div className="mt-1 border-t border-separator-border pt-1.5">
+            {switchBusiness}
+          </div>
         </nav>
       </details>
     </>

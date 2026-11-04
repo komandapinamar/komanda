@@ -23,6 +23,7 @@ export const createCashOrderSchema = z
         path: ["phone"],
       }),
     notes: optionalTrimmedString,
+    scheduledFor: z.string().datetime({ offset: true }).nullable().optional(),
     cartVersion: z.number().int().positive().optional(),
   })
   .strict();
@@ -36,6 +37,7 @@ export type CreateCashOrderResponse = {
   pickupPin: string;
   total: string;
   paymentStatus: "pending";
+  scheduledFor?: string | null;
   expiresAt: string;
   secondsRemaining: number;
 };

@@ -45,7 +45,18 @@ export default async function TenantAnalyticsPage({
   });
 
   return (
-    <main className="mx-auto space-y-8 px-6 py-10">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <header className="space-y-1 border-b border-separator-border pb-5">
+        <p className="text-caption-1-semibold uppercase tracking-wider text-text-secondary">
+          Administración · @{authority.membership.tenantSlug}
+        </p>
+        <h1 className="text-title-1-semibold text-text-primary">
+          Analítica operativa
+        </h1>
+        <p className="text-body-regular text-text-secondary">
+          Seguimiento de facturación, demanda horaria, tiempos de cocina y conversión.
+        </p>
+      </header>
       <AnalyticsShell
         tenantId={tenantId}
         initialData={initialData as DashboardAnalyticsData}

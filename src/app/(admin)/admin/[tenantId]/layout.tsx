@@ -1,11 +1,12 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { coreSessionService } from "@/features/identity/web/authenticated-session";
 import { SESSION_COOKIE_NAME } from "@/features/identity/web/session-cookie";
-import { canAccess } from "@/lib/authorization/permissions";
 import { TenantPresetProvider } from "@/features/tenancy/web/tenant-preset-context";
 import { AdminNavShell } from "@/features/tenancy/web/shells/admin-nav-shell";
+import { ButtonLink } from "@/components/base/buttons/button";
+import { Chip } from "@/components/base/badges/chip";
+import { StatusDot } from "@/components/base/badges/status-dot";
 
 export default async function TenantAdminLayout({
   children,
@@ -26,21 +27,26 @@ export default async function TenantAdminLayout({
 
   return (
     <TenantPresetProvider preset={authority.membership.tenantPreset ?? "gastronomy"}>
-      <div className="min-h-dvh bg-black text-zinc-100">
-        <header className="border-b border-zinc-800 bg-zinc-900">
-          <div className="mx-auto flex items-center justify-between gap-6 px-6 py-4">
-            <div>
-              <p className="tracking-tighter text-2xl font-thin">
-                  Komanda Business
+      <div className="min-h-[calc(100dvh-3.5rem)] bg-background-full text-text-primary antialiased">
+        <header className="sticky top-0 z-40 border-b border-separator-border bg-background-secondary-default/95 backdrop-blur-md shadow-card">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-2.5">
+              <p className="komanda-logo font-sans text-xl font-normal tracking-tighter text-white normal-case sm:text-2xl">
+                <span className="sm:hidden">Kda</span>
+                <span className="hidden sm:inline">Komanda Business</span>
               </p>
             </div>
             <AdminNavShell
               tenantId={tenantId}
               role={authority.membership.role}
               switchBusiness={
-                <Link href="/admin/select-business" className="rounded-md px-3 py-2 text-(--color-accent-tertiary)">
+                <ButtonLink
+                  href="/admin/select-business"
+                  variant="secondary"
+                  size="small"
+                >
                   Cambiar negocio
-                </Link>
+                </ButtonLink>
               }
             />
           </div>

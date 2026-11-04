@@ -65,36 +65,44 @@ export function PrintingIntegrationPanel({
   }
 
   return (
-    <section className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+    <section className="space-y-5 rounded-2xl border border-border-component-detail-container bg-background-secondary-default p-6 shadow-card sm:p-7">
       {message ? (
-        <p role="status" className="rounded-md border border-zinc-700 p-3 text-sm">
+        <p role="status" className="rounded-2lg border border-border-button-default bg-background-primary-default px-4 py-3 text-body-2-medium text-text-primary">
           {message}
         </p>
       ) : null}
-      <label className="block text-sm">
-        <span className="text-zinc-400">Nombre del agente</span>
+      <label className="grid gap-1.5 text-body-medium text-text-primary">
+        <span>Nombre del agente</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100"
+          className="w-full px-3.5 py-2 text-body-regular"
         />
       </label>
       <button
         type="button"
         onClick={createPairing}
-        className="rounded-md bg-(--color-accent-tertiary) px-4 py-2 text-sm font-semibold text-zinc-950"
+        className="bg-button-primary button-press-motion inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg px-4 text-body-medium text-text-white shadow-xs"
       >
         Generate pairing code
       </button>
       {pairing ? (
-        <div className="space-y-2">
-          <p className="text-sm text-zinc-400">One-time pairing code</p>
-          <p className="font-mono text-4xl tracking-[0.4em] text-amber-300">{pairing.code}</p>
-          <p className="text-xs text-zinc-500">Expires {new Date(pairing.expiresAt).toLocaleTimeString()}</p>
+        <div className="space-y-2 rounded-2lg border border-border-button-default bg-background-primary-default p-5">
+          <p className="text-caption-1-medium text-text-secondary">One-time pairing code</p>
+          <p className="font-mono text-4xl tracking-[0.4em] text-accent-400">{pairing.code}</p>
+          <p className="text-caption-1-regular text-text-tertiary">Expires {new Date(pairing.expiresAt).toLocaleTimeString()}</p>
         </div>
       ) : null}
-      {agentId && !pairing ? <p className="text-sm text-zinc-400">Paired agent: {agentId} ({status ?? "active"})</p> : null}
-      {agentId && !pairing ? <button type="button" onClick={revoke} className="rounded-md border border-red-400 px-4 py-2 text-sm font-semibold text-red-200">Revoke agent</button> : null}
+      {agentId && !pairing ? <p className="text-body-regular text-text-secondary">Paired agent: {agentId} ({status ?? "active"})</p> : null}
+      {agentId && !pairing ? (
+        <button
+          type="button"
+          onClick={revoke}
+          className="bg-button-danger button-press-motion inline-flex h-9 cursor-pointer items-center justify-center rounded-2lg px-4 text-body-medium text-text-white shadow-xs"
+        >
+          Revoke agent
+        </button>
+      ) : null}
     </section>
   );
 }

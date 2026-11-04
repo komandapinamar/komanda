@@ -1,6 +1,7 @@
 import { problemResponse, nonDisclosingNotFound } from "@/lib/http/problem";
 import { ZodError } from "zod";
 import { TenantAccessDeniedError } from "@/features/identity/application/session.service";
+import { CartRevalidationError } from "@/features/cart/domain/cart.rules";
 
 export class PaymentGatewayNotConfiguredError extends Error {
   constructor(message = "El local no tiene una cuenta de Mercado Pago activa para recibir cobros.") {
@@ -29,6 +30,16 @@ export function kioskPaymentErrorResponse(error: unknown, correlationId: string)
     (error instanceof Error && error.message === "INVALID_SESSION")
   ) {
     return nonDisclosingNotFound(correlationId);
+  }
+
+  if (error instanceof CartRevalidationError) {
+    return problemResponse({
+      status: 400,
+      title: "Bad Request",
+      code: "CART_REVALIDATION_FAILED",
+      detail: error.message,
+      correlationId,
+    });
   }
 
   if (error instanceof ZodError) {

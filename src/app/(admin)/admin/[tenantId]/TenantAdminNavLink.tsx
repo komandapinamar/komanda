@@ -28,10 +28,10 @@ export function TenantAdminNavLink({
     <Link
       href={href}
       aria-current={isActive ? "page" : undefined}
-      className={`rounded-md px-3 py-2 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-tertiary) ${
+      className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4f3f1] ${
         isActive
-          ? "bg-zinc-800 text-(--color-accent-tertiary) shadow-sm"
-          : "text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100"
+          ? "bg-[#f4f3f1] text-[#141416] shadow-sm"
+          : "text-[#c2c2cc] hover:bg-white/[0.06] hover:text-[#f4f3f1]"
       }`}
     >
       {children}

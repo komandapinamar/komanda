@@ -24,22 +24,22 @@ export default function KitchenPerformancePanel({
   const cancelledBeforeCooking = kitchen?.cancelledBeforeCookingCount ?? 0;
 
   return (
-    <div className="font-[family-name:var(--font-instrument-sans)] rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-sm space-y-6">
+    <div className="font-[family-name:var(--font-instrument-sans)] liquid-glass-card rounded-3xl p-6 sm:p-7 space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-zinc-100">
+          <h2 className="text-xl font-medium tracking-tight text-[#f4f3f1]">
             Demoras en Cocina
           </h2>
-          <p className="text-xs text-zinc-400">
+          <p className="mt-0.5 text-xs text-[#c2c2cc]">
             Tiempos observados de preparación y comandas en curso
           </p>
         </div>
 
         {cancelledBeforeCooking > 0 && (
-          <span className="self-start sm:self-auto rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-medium text-zinc-400 border border-zinc-700/60">
+          <span className="self-start sm:self-auto rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-[#c2c2cc]">
             Cancelados antes de cocinar:{" "}
-            <strong className="text-zinc-200">{cancelledBeforeCooking}</strong>
+            <strong className="text-[#f4f3f1]">{cancelledBeforeCooking}</strong>
           </span>
         )}
       </div>
@@ -47,69 +47,69 @@ export default function KitchenPerformancePanel({
       {/* 3 Metric Cards for Observed Kitchen Times */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Waiting Card */}
-        <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/90 p-4">
-          <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+        <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
+          <span className="text-[11px] font-medium text-[#c2c2cc] uppercase tracking-wider">
             Espera de Cocina
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-100">
+            <span className="text-2xl font-medium text-[#f4f3f1] tabular-nums">
               {waiting ? `${waiting.p50} min` : "--"}
             </span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-zinc-400">
+          <div className="mt-1.5 flex items-center justify-between text-xs text-[#c2c2cc]">
             <span>
               p90:{" "}
-              <strong className="text-(--color-accent-tertiary) font-semibold">
+              <strong className="text-[#f4f3f1] font-medium">
                 {waiting ? `${waiting.p90} min` : "--"}
               </strong>
             </span>
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-[#9b9ba4]">
               Base: {waiting?.sampleSize ?? 0} pedidos
             </span>
           </div>
         </div>
 
         {/* Preparation Card */}
-        <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/90 p-4">
-          <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+        <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
+          <span className="text-[11px] font-medium text-[#c2c2cc] uppercase tracking-wider">
             Preparación
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-100">
+            <span className="text-2xl font-medium text-[#f4f3f1] tabular-nums">
               {prep ? `${prep.p50} min` : "--"}
             </span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-zinc-400">
+          <div className="mt-1.5 flex items-center justify-between text-xs text-[#c2c2cc]">
             <span>
               p90:{" "}
-              <strong className="text-(--color-accent-tertiary) font-semibold">
+              <strong className="text-[#f4f3f1] font-medium">
                 {prep ? `${prep.p90} min` : "--"}
               </strong>
             </span>
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-[#9b9ba4]">
               Base: {prep?.sampleSize ?? 0} pedidos
             </span>
           </div>
         </div>
 
         {/* Total Time Until Ready Card */}
-        <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/90 p-4">
-          <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+        <div className="rounded-2xl border border-white/12 bg-[#101013]/90 p-5">
+          <span className="text-[11px] font-medium text-[#c2c2cc] uppercase tracking-wider">
             Tiempo Total Hasta Listo
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-100">
+            <span className="text-2xl font-medium text-[#f4f3f1] tabular-nums">
               {total ? `${total.p50} min` : "--"}
             </span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-zinc-400">
+          <div className="mt-1.5 flex items-center justify-between text-xs text-[#c2c2cc]">
             <span>
               p90:{" "}
-              <strong className="text-(--color-accent-tertiary) font-semibold">
+              <strong className="text-[#f4f3f1] font-medium">
                 {total ? `${total.p90} min` : "--"}
               </strong>
             </span>
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-[#9b9ba4]">
               Base: {total?.sampleSize ?? 0} pedidos
             </span>
           </div>
@@ -117,22 +117,22 @@ export default function KitchenPerformancePanel({
       </div>
 
       {/* Pending Orders Queue */}
-      <div className="space-y-3 pt-2 border-t border-zinc-800/80">
+      <div className="space-y-3 pt-2 border-t border-white/[0.08]">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-zinc-200">
+          <h3 className="text-sm font-medium text-[#f4f3f1]">
             Comandas en Curso ({pendingOrders.length})
           </h3>
-          <span className="text-[11px] text-zinc-500">
+          <span className="text-xs text-[#9b9ba4]">
             Ordenadas por mayor tiempo de espera
           </span>
         </div>
 
         {pendingOrders.length === 0 ? (
-          <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-zinc-800 text-center text-xs text-zinc-500">
+          <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-white/15 bg-[#101013]/90 text-center text-xs text-[#c2c2cc]">
             No hay comandas pendientes en cocina en este momento.
           </div>
         ) : (
-          <div className="overflow-x-auto max-h-60 divide-y divide-zinc-800/60 rounded-lg border border-zinc-800 bg-zinc-950/40">
+          <div className="overflow-x-auto max-h-60 divide-y divide-white/[0.08] rounded-2xl border border-white/12 bg-[#101013]/90">
             {pendingOrders.map((order) => {
               const isUrgent = order.waitingAgeMinutes >= 25;
               const isModerate = order.waitingAgeMinutes >= 15;
@@ -140,17 +140,17 @@ export default function KitchenPerformancePanel({
               return (
                 <div
                   key={order.orderId}
-                  className="flex items-center justify-between px-4 py-3 text-xs hover:bg-zinc-900/60 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 text-xs hover:bg-white/[0.03] transition"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-zinc-200">
+                    <span className="font-medium text-[#f4f3f1]">
                       Comanda #{order.purchaseNumber}
                     </span>
                     <span
-                      className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
+                      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${
                         order.fulfillmentStatus === "preparing"
-                          ? "bg-(--color-accent-tertiary)/10 text-amber-300 border border-(--color-accent-tertiary)/20"
-                          : "bg-zinc-800 text-zinc-400 border border-zinc-700/40"
+                          ? "border-amber-400/30 bg-amber-500/15 text-amber-300"
+                          : "border-white/12 bg-white/[0.04] text-[#c2c2cc]"
                       }`}
                     >
                       {order.fulfillmentStatus === "preparing"
@@ -159,14 +159,14 @@ export default function KitchenPerformancePanel({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 tabular-nums">
                     <span
-                      className={`font-semibold ${
+                      className={`font-medium ${
                         isUrgent
                           ? "text-red-400"
                           : isModerate
-                          ? "text-(--color-accent-tertiary)"
-                          : "text-zinc-300"
+                          ? "text-amber-300"
+                          : "text-[#d4d4dc]"
                       }`}
                     >
                       {order.waitingAgeMinutes} min de espera
