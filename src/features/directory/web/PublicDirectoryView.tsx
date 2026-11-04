@@ -536,7 +536,6 @@ export function PublicDirectoryView({ tenants }: Props) {
                                     className="pointer-events-auto inline-flex h-7 items-center gap-2 rounded-full border border-white/20 bg-[#101013]/95 px-3 text-[11px] font-medium text-[#f4f3f1] shadow-lg backdrop-blur-md transition hover:bg-black"
                                     title="Abrir en Google Maps"
                                   >
-                                    <span className="size-2 rounded-full bg-[#d97757]" />
                                     <span>Cómo llegar</span>
                                     <span className="text-[#c2c2cc]">↗</span>
                                   </a>

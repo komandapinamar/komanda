@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
           </p>
         ) : null}
         <Link href="/login" className="mt-5 inline-block text-body-2-medium text-accent-400 hover:underline">
-          ← Volver al inicio de sesión
+          Volver al inicio de sesión
         </Link>
       </div>
     </main>
