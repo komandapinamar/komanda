@@ -26,6 +26,54 @@ Fulfillment
    ↓
 Analytics
 
+## Background Workers
+
+Core has background workers that are deployed as their own processes. They are
+not part of the Next.js or Fastify runtime and they never serve traffic.
+
+| Worker | Command | What it does |
+| --- | --- | --- |
+| Outbox dispatcher | `npm run outbox:dispatch` | Claims pending `outbox_events` with a lease, applies the consumer registered for the event type and publishes the event. Also self-heals a missing kitchen ticket for `print.intent.created`. |
+| Payment reconciliation | `npm run payments:reconcile` | Resolves payments left in `verification_required` after an ambiguous provider response, by querying the provider and transitioning the order to `paid` or `failed`. |
+
+Both workers accept `--once` to run a single round and exit, which is the shape
+a scheduled job needs:
+
+```bash
+npm run outbox:dispatch -- --once
+npm run payments:reconcile -- --once
+```
+
+Continuous mode is the default and drains with an interval
+(`OUTBOX_DISPATCH_INTERVAL_MS`, `PAYMENT_RECONCILE_INTERVAL_MS`). Both workers
+handle `SIGTERM`/`SIGINT`: they finish the round in progress, close the
+database pool and exit, so a rollout never interrupts a delivery in flight.
+
+### RLS and platform services
+
+The dispatcher scans every tenant's events, and the reconciliation scanner
+every tenant's payment attempts. Under forced RLS that requires a policy that
+recognizes the platform `service_id`
+(`drizzle/0031_platform_service_rls_policies.sql`):
+
+| `app.service_id` | Allows |
+| --- | --- |
+| `outbox-dispatcher` | Claim, publish and fail events of every tenant |
+| `outbox:metrics` | Cross-tenant backlog counters for the health check |
+| `payment:reconciliation-scanner` | Read payment attempts of every tenant |
+
+Without that migration applied, the workers run and claim nothing. The
+dispatcher detects it and reports `outbox.claim_stalled` instead of failing
+silently.
+
+### Event types without a consumer
+
+The outbox also receives events that no consumer handles yet (`order.*`,
+`catalog.*`). Those events stay pending on purpose: the health check reports
+them separately as "without consumer" so a missing consumer is not confused
+with a stalled worker, and they are ready for the consumer that implements
+that behaviour later.
+
 ## Target Architecture
 
 This repository owns Komanda's operational product: `app.komanda.com`, tenant

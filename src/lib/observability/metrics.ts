@@ -14,10 +14,16 @@ export type MetricEvent =
   | "outbox.failed"
   | "outbox.retry_scheduled"
   | "outbox.dead_lettered"
+  | "outbox.consumer_applied"
+  | "outbox.consumer_skipped"
+  | "outbox.claim_stalled"
   | "payment.verification_required"
   | "payment.reconciled"
   | "payment.reconciliation_failed"
+  | "payment.reconciliation_scanned"
   | "payment.verification_lag_alert"
+  | "worker.iteration_completed"
+  | "worker.iteration_failed"
   | "migration.reported"
   | "identity.password_reset.delivery_failed";
 

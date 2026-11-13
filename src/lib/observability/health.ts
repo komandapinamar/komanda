@@ -62,15 +62,26 @@ export async function checkOutboxHealth(): Promise<HealthCheckResult> {
   try {
     const metrics = await readOutboxMetrics();
     const latencyMs = Math.round(performance.now() - started);
-    if (metrics.deadLetterCount > 50 || metrics.oldestPendingSeconds > 300) {
+    const claimable = metrics.claimablePendingCount ?? 0;
+    const unhandled = metrics.unhandledPendingCount ?? 0;
+    const oldestClaimable = metrics.oldestClaimablePendingSeconds ?? 0;
+    const detail =
+      `Outbox backlog: ${claimable} claimable, ${unhandled} without consumer, ` +
+      `${metrics.deadLetterCount} in DLQ`;
+
+    // Solo degrada el servicio lo que el dispatcher deberia estar drenando.
+    // Un evento sin consumidor es una funcionalidad pendiente, no una falla
+    // del worker: dejarlo degradando la readiness obliga a reiniciar procesos
+    // que estan sanos.
+    if (metrics.deadLetterCount > 50 || oldestClaimable > 300) {
       return {
         name: "outbox",
         status: "degraded",
         latencyMs,
-        detail: `Outbox backlog: ${metrics.pendingCount} pending, oldest ${Math.round(metrics.oldestPendingSeconds)}s, ${metrics.deadLetterCount} in DLQ`,
+        detail,
       };
     }
-    return { name: "outbox", status: "ok", latencyMs };
+    return { name: "outbox", status: "ok", latencyMs, detail };
   } catch (error) {
     return {
       name: "outbox",

@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { db } from "@/db";
 import { emitMetric } from "@/lib/observability/metrics";
+import { eventTypeFilter } from "@/lib/outbox/outbox-event-types";
+import { OUTBOX_DISPATCH_SERVICE_ID } from "@/lib/outbox/outbox-service-ids";
+import { withPlatformServiceTransaction } from "@/db/tenant-transaction";
 
 export type ClaimedOutboxEvent = {
   id: string;
@@ -22,6 +24,13 @@ type DispatcherOptions = {
   leaseMs?: number;
   maxAttempts?: number;
   consumers: Record<string, OutboxConsumer>;
+  /**
+   * Tipos de evento que este dispatcher puede reclamar. Sin esta lista el
+   * dispatcher reclama cualquier evento y falla al no encontrar consumidor.
+   * Cuando la lista esta vacia no se reclama nada: un dispatcher sin
+   * consumidores no debe girar ni tocar la outbox.
+   */
+  eventTypes?: readonly string[];
 };
 
 const DEFAULT_LEASE_MS = 30_000;
@@ -43,6 +52,7 @@ export class OutboxDispatcher {
   private readonly leaseMs: number;
   private readonly maxAttempts: number;
   private readonly consumers: Record<string, OutboxConsumer>;
+  private readonly eventTypes?: readonly string[];
 
   constructor(options: DispatcherOptions) {
     this.workerId = options.workerId ?? `outbox-${randomUUID()}`;
@@ -50,6 +60,7 @@ export class OutboxDispatcher {
     this.leaseMs = options.leaseMs ?? DEFAULT_LEASE_MS;
     this.maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     this.consumers = options.consumers;
+    this.eventTypes = options.eventTypes;
   }
 
   async dispatchOnce() {
@@ -87,8 +98,20 @@ export class OutboxDispatcher {
   }
 
   private async claimBatch() {
+    // Un dispatcher sin consumidores (o sin tipos de evento) no debe tocar la
+    // outbox: reclamaria eventos que no puede publicar y los quemaria contra
+    // el dead-letter.
+    if (this.eventTypes && this.eventTypes.length === 0) {
+      return [];
+    }
     const leaseSeconds = Math.max(1, Math.ceil(this.leaseMs / 1_000));
-    const result = await db.execute<ClaimedOutboxEvent>(sql`
+    // El barrido es cross-tenant: el dispatcher recorre la outbox de todos los
+    // tenants. Bajo RLS eso solo es posible con el service_id de plataforma
+    // (politica outbox_events_platform_dispatch).
+    const result = await withPlatformServiceTransaction(
+      { serviceId: OUTBOX_DISPATCH_SERVICE_ID, correlationId: this.workerId },
+      (transaction) =>
+        transaction.execute<ClaimedOutboxEvent>(sql`
       with candidates as (
         select id
         from outbox_events
@@ -96,6 +119,7 @@ export class OutboxDispatcher {
           and dead_letter_at is null
           and available_at <= now()
           and (leased_until is null or leased_until < now())
+          ${this.eventTypes ? sql`and ${eventTypeFilter(this.eventTypes)}` : sql``}
         order by sequence asc
         limit ${this.batchSize}
         for update skip locked
@@ -109,23 +133,31 @@ export class OutboxDispatcher {
       returning event.id, event.tenant_id as "tenantId", event.aggregate_type as "aggregateType",
         event.aggregate_id as "aggregateId", event.event_type as "eventType", event.payload,
         event.sequence::text as sequence, event.attempts
-    `);
+    `),
+    );
     emitMetric("outbox.claimed", { count: result.rows.length, tags: { workerId: this.workerId } });
     return result.rows;
   }
 
   private async markPublished(id: string) {
-    await db.execute(sql`
+    await withPlatformServiceTransaction(
+      { serviceId: OUTBOX_DISPATCH_SERVICE_ID, correlationId: this.workerId },
+      (transaction) =>
+        transaction.execute(sql`
       update outbox_events
       set published_at = now(), claimed_by = null, leased_until = null, last_error = null
       where id = ${id}::uuid and claimed_by = ${this.workerId}
-    `);
+    `),
+    );
   }
 
   private async markFailed(event: ClaimedOutboxEvent, message: string) {
     const deadLetter = event.attempts >= this.maxAttempts;
     const retryMs = backoffMs(event.attempts);
-    await db.execute(sql`
+    await withPlatformServiceTransaction(
+      { serviceId: OUTBOX_DISPATCH_SERVICE_ID, correlationId: this.workerId },
+      (transaction) =>
+        transaction.execute(sql`
       update outbox_events
       set available_at = case when ${deadLetter} then available_at else now() + make_interval(msecs => ${retryMs}) end,
           claimed_by = null,
@@ -133,7 +165,8 @@ export class OutboxDispatcher {
           last_error = ${message},
           dead_letter_at = case when ${deadLetter} then now() else dead_letter_at end
       where id = ${event.id}::uuid and claimed_by = ${this.workerId}
-    `);
+    `),
+    );
     emitMetric(deadLetter ? "outbox.dead_lettered" : "outbox.retry_scheduled", {
       tenantId: event.tenantId,
       result: "failed",
