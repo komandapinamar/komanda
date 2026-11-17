@@ -8,6 +8,10 @@
 # Env requerido: DATABASE_URL, DATABASE_DIRECT_URL, DATABASE_RUNTIME_PASSWORD,
 # APP_ENCRYPTION_KEY_BASE64, OBJECT_STORAGE_*, MERCADOPAGO_*, SESSION_SECRET,
 # IDENTITY_VERIFICATION_* ... ver src/.env.production.example.
+#
+# Monitoreo: ver MONITORING.md. El contenedor ping-healthchecks es el
+# dead-man's switch (avisa a Healthchecks.io cada minuto; si el VPS se cae o
+# se cuelga, los pings se cortan y Healthchecks dispara la alerta).
 # ---------------------------------------------------------------------------
 
 services:
@@ -34,6 +38,12 @@ services:
       - ./src/.env.production
     expose:
       - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   fastify:
     build:
@@ -45,6 +55,12 @@ services:
       - ./src/.env.production
     expose:
       - "3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   worker-outbox:
     build:
@@ -63,6 +79,23 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+
+  # Dead-man's switch: un ping a Healthchecks.io por minuto. Vive DENTRO del
+  # VPS a proposito: si el VPS muere o se cuelga, los pings se cortan y
+  # Healthchecks (externo) dispara la alerta.
+  ping-healthchecks:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          curl -fsS --max-time 10 "$$HEALTHCHECKS_PING_URL" >/dev/null 2>&1 || true
+          sleep 60
+        done
+    environment:
+      HEALTHCHECKS_PING_URL: ${HEALTHCHECKS_PING_URL:?set HEALTHCHECKS_PING_URL in .env}
 
 volumes:
   caddy_data:
