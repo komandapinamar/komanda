@@ -197,8 +197,14 @@ async function receiveWebhook(input: {
       payload: { ...input.payload, resourceId: providerPaymentId, routed: Boolean(attempt) },
     });
     operationIdentifiers({ paymentAttemptId: attempt?.id });
-    if (!event) return { tenantId: account.tenantId, duplicate: true, routed: Boolean(attempt), paymentAttemptId: attempt?.id ?? null, webhookEventId: null };
-    if (!attempt) return { tenantId: account.tenantId, duplicate: false, routed: false, paymentAttemptId: null, webhookEventId: event.id };
+    if (!event) {
+      committedEvent("webhook.ignored", { result: "ignored" });
+      return { tenantId: account.tenantId, duplicate: true, routed: Boolean(attempt), paymentAttemptId: attempt?.id ?? null, webhookEventId: null };
+    }
+    if (!attempt) {
+      committedEvent("webhook.ignored", { result: "ignored" });
+      return { tenantId: account.tenantId, duplicate: false, routed: false, paymentAttemptId: null, webhookEventId: event.id };
+    }
 
     const outOfOrder = priority(status) < priority(attempt.status);
     if (!outOfOrder) {
@@ -363,6 +369,7 @@ async function receiveWebhook(input: {
         }
       }
     }
+    committedEvent("webhook.processed", { result: "ok" });
     return { tenantId: account.tenantId, duplicate: false, routed: true, outOfOrder, paymentAttemptId: attempt.id, webhookEventId: event.id };
   });
 }

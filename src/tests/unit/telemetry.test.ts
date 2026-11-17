@@ -22,7 +22,6 @@ beforeEach(async () => {
   metricExporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
   exporters.spans = spans;
   exporters.metrics = metricExporter;
-  vi.stubEnv("KOMANDA_TELEMETRY_ENABLED", "true");
   vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318");
   vi.stubEnv("OTEL_TRACES_SAMPLER_ARG", "1");
   vi.stubEnv("KOMANDA_TELEMETRY_IDENTIFIER_KEY", "synthetic-key-that-is-at-least-32-characters");
@@ -59,18 +58,46 @@ describe("manual server telemetry", () => {
     expect(captured[0].resource.attributes["service.name"]).toBe("komanda-web");
   });
 
-  it("does not initialize providers or exporters without explicit opt-in", async () => {
-    vi.stubEnv("KOMANDA_TELEMETRY_ENABLED", "");
+  it("does not export in test without an endpoint", async () => {
+    vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "");
     await telemetry.initializeTelemetry();
     await telemetry.observeOperation("order.create_direct", {}, async () => "unchanged");
     expect(spans.getFinishedSpans()).toEqual([]);
     expect(metricExporter.getMetrics()).toEqual([]);
   });
 
-  it("ignores incomplete/invalid configuration without a localhost fallback", async () => {
+  it("rejects an endpoint with embedded credentials instead of exporting", async () => {
     vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://user:secret@example.org/otlp");
-    await expect(telemetry.initializeTelemetry()).resolves.toBeUndefined();
+    await expect(telemetry.initializeTelemetry()).rejects.toThrow(/not an allowed base URL/);
+    await telemetry.observeOperation("print.report", {}, async () => undefined);
     expect(spans.getFinishedSpans()).toEqual([]);
+    expect(metricExporter.getMetrics()).toEqual([]);
+  });
+
+  it("records committed events outside an operation instead of dropping them", async () => {
+    const captured: import("@opentelemetry/sdk-metrics").ResourceMetrics[] = [];
+    vi.spyOn(metricExporter, "export").mockImplementation((batch, done) => { captured.push(batch); done({ code: 0 }); });
+    await telemetry.initializeTelemetry();
+    telemetry.committedEvent("order.created", { result: "ok" });
+    await telemetry.shutdownTelemetry();
+    const points = captured.flatMap((resource) => resource.scopeMetrics.flatMap((scope) =>
+      scope.metrics.flatMap((metric) => metric.descriptor.name === "komanda.events" && metric.dataPointType === DataPointType.SUM ? metric.dataPoints : [])));
+    expect(points.find((point) => point.attributes.event === "order.created")?.value).toBe(1);
+  });
+
+  it("keeps committed events when instrumentation fails before the span starts", async () => {
+    const captured: import("@opentelemetry/sdk-metrics").ResourceMetrics[] = [];
+    vi.spyOn(metricExporter, "export").mockImplementation((batch, done) => { captured.push(batch); done({ code: 0 }); });
+    await telemetry.initializeTelemetry();
+    vi.spyOn(trace, "getTracer").mockImplementation(() => { throw new Error("telemetry failure"); });
+    await telemetry.observeOperation("order.create_direct", {}, async () => {
+      telemetry.committedEvent("order.created", { result: "ok" });
+      return "created";
+    });
+    await telemetry.shutdownTelemetry();
+    const points = captured.flatMap((resource) => resource.scopeMetrics.flatMap((scope) =>
+      scope.metrics.flatMap((metric) => metric.descriptor.name === "komanda.events" && metric.dataPointType === DataPointType.SUM ? metric.dataPoints : [])));
+    expect(points.find((point) => point.attributes.event === "order.created")?.value).toBe(1);
   });
 
   it("uses a bounded metric vocabulary and rejects arbitrary tags", () => {

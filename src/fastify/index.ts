@@ -19,7 +19,9 @@ try {
 }
 
 async function main() {
+  const { loadRuntimeConfig } = await import("@/lib/config");
   const { initializeTelemetry } = await import("@/lib/observability/telemetry");
+  loadRuntimeConfig({ role: "fastify" });
   await initializeTelemetry("komanda-fastify");
   const { buildFastifyServer } = await import("./server");
   const { shutdownManager } = await import("@/lib/runtime/shutdown");

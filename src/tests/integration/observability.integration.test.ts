@@ -42,18 +42,23 @@ describe("observability", () => {
   });
 
   it("exports a synthetic operation flow over local OTLP HTTP/protobuf and drains final metrics", async () => {
-    const requests: Array<{ url?: string; type?: string; body: Buffer }> = [];
+    const requests: Array<{ url?: string; type?: string; authorization?: string; body: Buffer }> = [];
     const receiver = createServer(async (request, response) => {
       const chunks = [];
       for await (const chunk of request) chunks.push(Buffer.from(chunk));
-      requests.push({ url: request.url, type: request.headers["content-type"], body: Buffer.concat(chunks) });
+      requests.push({
+        url: request.url,
+        type: request.headers["content-type"],
+        authorization: request.headers.authorization,
+        body: Buffer.concat(chunks),
+      });
       response.writeHead(200, { "Content-Type": "application/x-protobuf" });
       response.end();
     });
     await new Promise<void>((resolve) => receiver.listen(0, "127.0.0.1", resolve));
     const address = receiver.address() as import("node:net").AddressInfo;
-    vi.stubEnv("KOMANDA_TELEMETRY_ENABLED", "true");
     vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", `http://127.0.0.1:${address.port}`);
+    vi.stubEnv("OTEL_EXPORTER_OTLP_HEADERS", "Authorization=Basic%20dGVzdDp0b2tlbg==");
     vi.stubEnv("OTEL_TRACES_SAMPLER_ARG", "1");
     vi.stubEnv("KOMANDA_TELEMETRY_IDENTIFIER_KEY", "synthetic-test-key-never-used-in-production");
     try {
@@ -67,7 +72,10 @@ describe("observability", () => {
         });
       }
       await shutdownTelemetry();
-      expect(requests.map((request) => request.url).sort()).toEqual(["/v1/metrics", "/v1/traces"]);
+      expect(new Set(requests.map((request) => request.url))).toEqual(new Set(["/v1/metrics", "/v1/traces"]));
+      for (const request of requests) {
+        expect(request.authorization).toBe("Basic dGVzdDp0b2tlbg==");
+      }
       for (const request of requests) {
         expect(request.type).toMatch(/application\/x-protobuf/);
         const wire = request.body.toString("utf8");
@@ -81,6 +89,7 @@ describe("observability", () => {
       expect(traces).toContain("print.report");
       const exportedMetrics = requests.find((request) => request.url === "/v1/metrics")!.body.toString("utf8");
       expect(exportedMetrics).toContain("komanda.events");
+      expect(exportedMetrics).toContain("order.event");
       expect(exportedMetrics).toContain("komanda.operation.duration");
       expect(exportedMetrics).not.toContain("komanda.orderId");
     } finally {

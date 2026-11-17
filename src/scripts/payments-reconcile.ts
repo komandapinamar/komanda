@@ -32,7 +32,9 @@ try {
  *   PAYMENT_RECONCILE_LIMIT              intentos por ronda (50)
  */
 export async function runPaymentReconciliationScript() {
+  const { loadRuntimeConfig } = await import("@/lib/config");
   const { initializeTelemetry } = await import("@/lib/observability/telemetry");
+  loadRuntimeConfig({ role: "worker" });
   await initializeTelemetry("komanda-reconcile");
   const { parseWorkerInterval, runWorkerLoop } = await import(
     "@/workers/runtime/worker-runtime"

@@ -9,6 +9,7 @@ import { BatchSpanProcessor, TraceIdRatioBasedSampler } from "@opentelemetry/sdk
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
+import { config, ConfigurationError } from "@/lib/config";
 import type { MetricFields } from "./metrics";
 
 const operations = [
@@ -17,6 +18,7 @@ const operations = [
   "print.enqueue", "outbox.deliver",
 ] as const;
 export type Operation = typeof operations[number];
+const serviceNames = ["komanda-web", "komanda-fastify", "komanda-outbox", "komanda-reconcile"] as const;
 const identities = ["tenantId", "orderId", "paymentAttemptId", "attemptId", "jobId", "correlationId", "eventId"] as const;
 type Identifiers = Partial<Record<typeof identities[number], string | undefined>>;
 type PendingEvent = { event: string; fields: MetricFields };
@@ -64,7 +66,7 @@ export function metricAttributes(event: string, fields: MetricFields): Attribute
 }
 
 function protectedAttributes(fields: Identifiers): Attributes {
-  const key = process.env.KOMANDA_TELEMETRY_IDENTIFIER_KEY;
+  const key = config.telemetry.identifierKey();
   if (!key || key.length < 32) return {};
   const attributes: Attributes = {};
   for (const name of identities) {
@@ -84,13 +86,23 @@ export function recordMetric(event: string, fields: MetricFields) {
   try { state.record?.(event, fields); } catch { /* Export is never a business dependency. */ }
 }
 
-/** Call only inside the operation's transaction; release after its promise commits. */
+/**
+ * Call only inside the operation's transaction. Buffered until the enclosing
+ * operation succeeds. Outside an operation it is recorded immediately: dropping
+ * it silently would hide real commits.
+ */
 export function committedEvent(event: string, fields: MetricFields = {}) {
-  pending.getStore()?.push({ event, fields });
+  const store = pending.getStore();
+  if (store) store.push({ event, fields });
+  else recordMetric(event, fields);
 }
 
 function bestEffort(effect: () => void) {
   try { effect(); } catch { /* Telemetry must not replace a business result/error. */ }
+}
+
+function release(events: PendingEvent[]) {
+  for (const event of events) recordMetric(event.event, event.fields);
 }
 
 export async function observeOperation<T>(
@@ -109,7 +121,7 @@ export async function observeOperation<T>(
       try {
         const value = await pending.run(events, run);
         if (parent) parent.push(...events);
-        else for (const event of events) recordMetric(event.event, event.fields);
+        else release(events);
         bestEffort(() => span.setStatus({ code: SpanStatusCode.OK }));
         return value;
       } catch (error) {
@@ -129,44 +141,91 @@ export async function observeOperation<T>(
     });
   } catch (error) {
     if (entered) throw error;
-    // Instrumentation failed before invoking business work. Never invoke it twice.
-    return run();
+    // Instrumentation failed before invoking business work. Never invoke it
+    // twice, but keep recording committed events outside a span.
+    const events: PendingEvent[] = [];
+    const value = await pending.run(events, run);
+    release(events);
+    return value;
   }
 }
 
-function configuration(serviceName: string) {
-  if (process.env.KOMANDA_TELEMETRY_ENABLED !== "true") return;
-  const raw = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-  if (!raw) return;
-  const endpoint = new URL(raw);
-  if (!["https:", "http:"].includes(endpoint.protocol) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) return;
-  if (endpoint.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)) return;
-  const headers = Object.fromEntries((process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "").split(",").filter(Boolean).map((entry) => {
+function parseHeaders(raw: string | undefined, problems: string[]): Record<string, string> {
+  if (!raw) return {};
+  const headers: Record<string, string> = {};
+  for (const entry of raw.split(",").filter((item) => item.trim())) {
     const index = entry.indexOf("=");
-    if (index < 1) throw new Error("Invalid telemetry headers");
-    return [entry.slice(0, index).trim(), decodeURIComponent(entry.slice(index + 1).trim())];
-  }));
-  const ratio = Number(process.env.OTEL_TRACES_SAMPLER_ARG ?? "0.1");
+    if (index < 1) {
+      problems.push("OTEL_EXPORTER_OTLP_HEADERS has a malformed entry.");
+      continue;
+    }
+    try {
+      headers[entry.slice(0, index).trim()] = decodeURIComponent(entry.slice(index + 1).trim());
+    } catch {
+      problems.push("OTEL_EXPORTER_OTLP_HEADERS has an invalid percent-encoding.");
+    }
+  }
+  return headers;
+}
+
+function configuration(serviceName: string) {
+  const environment = config.environment();
+  const endpointValue = config.telemetry.endpoint();
+  // Local development and unit tests only export when explicitly configured.
+  if (environment === "test" && !endpointValue) return undefined;
+
+  const problems: string[] = [];
+  if (!endpointValue) problems.push("OTEL_EXPORTER_OTLP_ENDPOINT is required.");
+  const endpoint = endpointValue ? new URL(endpointValue) : undefined;
+  if (endpoint) {
+    if (!["https:", "http:"].includes(endpoint.protocol) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
+      problems.push("OTEL_EXPORTER_OTLP_ENDPOINT is not an allowed base URL.");
+    } else if (endpoint.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)) {
+      problems.push("OTEL_EXPORTER_OTLP_ENDPOINT must use HTTPS outside loopback.");
+    }
+  }
+  const headers = parseHeaders(config.telemetry.headers(), problems);
+  if (environment !== "test" && Object.keys(headers).length === 0) {
+    problems.push("OTEL_EXPORTER_OTLP_HEADERS is required.");
+  }
+  const identifierKey = config.telemetry.identifierKey();
+  if (environment !== "test" && (!identifierKey || identifierKey.length < 32)) {
+    problems.push("KOMANDA_TELEMETRY_IDENTIFIER_KEY must have at least 32 characters.");
+  }
+  if (!serviceNames.includes(serviceName as typeof serviceNames[number])) {
+    problems.push(`Unknown OTEL_SERVICE_NAME "${serviceName}".`);
+  }
+  if (problems.length > 0) throw new ConfigurationError(problems);
+
   return {
-    endpoint: endpoint.href.replace(/\/$/, ""), headers,
-    ratio: Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1,
-    serviceName: /^komanda-(web|fastify|outbox|reconcile)$/.test(serviceName) ? serviceName : "komanda-web",
+    endpoint: endpoint!.href.replace(/\/$/, ""),
+    headers,
+    ratio: config.telemetry.samplingRatio(),
+    serviceName,
+    environment,
+    version: process.env.KOMANDA_SERVICE_VERSION?.trim() || process.env.NEXT_DEPLOYMENT_ID?.trim() || undefined,
   };
 }
 
-export function initializeTelemetry(serviceName = process.env.OTEL_SERVICE_NAME ?? "komanda-web"): Promise<void> {
+export function initializeTelemetry(serviceName = config.telemetry.serviceName() ?? "komanda-web"): Promise<void> {
   if (state.starting) return state.starting;
   state.starting = Promise.resolve().then(() => {
+    let diagnostics: string | undefined;
     try {
-      const config = configuration(serviceName);
-      if (!config) return;
+      const settings = configuration(serviceName);
+      if (!settings) return;
       const batch = new BatchSpanProcessor(new OTLPTraceExporter({
-        url: `${config.endpoint}/v1/traces`, headers: config.headers, timeoutMillis: 2000,
+        url: `${settings.endpoint}/v1/traces`, headers: settings.headers, timeoutMillis: 2000,
       }), { maxQueueSize: 512, maxExportBatchSize: 64, scheduledDelayMillis: 5000, exportTimeoutMillis: 2000 });
       state.sdk = new NodeSDK({
         autoDetectResources: false,
-        resource: resourceFromAttributes({ "service.name": config.serviceName }),
-        sampler: new TraceIdRatioBasedSampler(config.ratio),
+        resource: resourceFromAttributes({
+          "service.name": settings.serviceName,
+          "deployment.environment": settings.environment,
+          ...(settings.version ? { "service.version": settings.version } : {}),
+          ...(process.env.HOSTNAME?.trim() ? { "service.instance.id": process.env.HOSTNAME.trim() } : {}),
+        }),
+        sampler: new TraceIdRatioBasedSampler(settings.ratio),
         // Next may produce its own spans containing URLs. Export only ours.
         spanProcessors: [{
           onStart() {},
@@ -175,7 +234,7 @@ export function initializeTelemetry(serviceName = process.env.OTEL_SERVICE_NAME 
           shutdown: () => batch.shutdown(),
         }],
         metricReader: new PeriodicExportingMetricReader({
-          exporter: new OTLPMetricExporter({ url: `${config.endpoint}/v1/metrics`, headers: config.headers, timeoutMillis: 2000 }),
+          exporter: new OTLPMetricExporter({ url: `${settings.endpoint}/v1/metrics`, headers: settings.headers, timeoutMillis: 2000 }),
           exportIntervalMillis: 15000, exportTimeoutMillis: 3000,
         }),
         instrumentations: [],
@@ -199,7 +258,19 @@ export function initializeTelemetry(serviceName = process.env.OTEL_SERVICE_NAME 
         if (Number.isFinite(count) && count >= 0) events.add(count, attributes);
         if (Number.isFinite(fields.latencyMs) && fields.latencyMs! >= 0) duration.record(fields.latencyMs! / 1000, attributes);
       };
-    } catch { state.record = undefined; /* Invalid config cannot break startup/readiness. */ }
+      diagnostics = `[telemetry] ${settings.serviceName} (${settings.environment}) -> ${new URL(settings.endpoint).host}`;
+    } catch (error) {
+      state.record = undefined;
+      // Configuration problems are fatal in prod/stg: telemetry is required.
+      const report = error instanceof ConfigurationError ? error.problems : ["Unexpected telemetry initialization failure."];
+      // In test, an absent endpoint simply disables export; an explicitly
+      // configured but invalid endpoint must still fail loudly.
+      if (config.environment() !== "test" || config.telemetry.endpoint()) {
+        throw new ConfigurationError(report);
+      }
+      console.warn("[telemetry] Disabled in test:", report.join(" "));
+    }
+    if (diagnostics) console.info(diagnostics);
   });
   return state.starting;
 }

@@ -1,3 +1,5 @@
+import { recordMetric } from "./telemetry";
+
 export type MetricEvent =
   | "provisioning.completed"
   | "provisioning.failed"
@@ -55,4 +57,3 @@ export function emitMetric(event: MetricEvent, fields: MetricFields = {}) {
 
   return payload;
 }
-import { recordMetric } from "./telemetry";
