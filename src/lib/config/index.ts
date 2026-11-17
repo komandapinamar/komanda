@@ -365,14 +365,18 @@ export const config = {
 };
 
 /** Solo para diagnostico: nombres y estado, nunca valores ni secretos. */
-export function describeConfiguration() {
+export function describeConfiguration(options: { role?: RuntimeRole } = {}) {
   const environment = resolveEnvironment();
+  const role = options.role ?? "web";
   return {
     environment,
     variables: Object.entries(registry).map(([name, spec]) => ({
       name,
       secret: Boolean(spec.secret),
-      required: Boolean(spec.requiredIn?.includes(environment)),
+      required: Boolean(
+        spec.requiredIn?.includes(environment) &&
+          (!spec.roles || spec.roles.includes(role)),
+      ),
       configured: Boolean(process.env[name]?.trim()),
     })),
   };
