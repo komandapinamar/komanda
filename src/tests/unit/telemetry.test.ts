@@ -66,6 +66,14 @@ describe("manual server telemetry", () => {
     expect(metricExporter.getMetrics()).toEqual([]);
   });
 
+  it("rejects unedited template placeholders", async () => {
+    vi.stubEnv(
+      "OTEL_EXPORTER_OTLP_ENDPOINT",
+      "https://otlp-gateway-<region>.grafana.net/otlp",
+    );
+    await expect(telemetry.initializeTelemetry()).rejects.toThrow(/template placeholder/);
+  });
+
   it("rejects an endpoint with embedded credentials instead of exporting", async () => {
     vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://user:secret@example.org/otlp");
     await expect(telemetry.initializeTelemetry()).rejects.toThrow(/not an allowed base URL/);

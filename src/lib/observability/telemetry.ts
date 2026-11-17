@@ -192,7 +192,9 @@ function configuration(serviceName: string) {
 
   const problems: string[] = [];
   if (!endpointValue) problems.push("OTEL_EXPORTER_OTLP_ENDPOINT is required.");
-  const endpoint = endpointValue ? new URL(endpointValue) : undefined;
+  const endpoint = endpointValue && !/<[^>]+>|REPLACE_ME|CHANGE_ME/i.test(endpointValue)
+    ? (() => { try { return new URL(endpointValue); } catch { problems.push("OTEL_EXPORTER_OTLP_ENDPOINT must be a valid URL."); return undefined; } })()
+    : undefined;
   if (endpoint) {
     if (!["https:", "http:"].includes(endpoint.protocol) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
       problems.push("OTEL_EXPORTER_OTLP_ENDPOINT is not an allowed base URL.");
@@ -207,6 +209,18 @@ function configuration(serviceName: string) {
   const identifierKey = config.telemetry.identifierKey();
   if (environment !== "test" && (!identifierKey || identifierKey.length < 32)) {
     problems.push("KOMANDA_TELEMETRY_IDENTIFIER_KEY must have at least 32 characters.");
+  }
+  // Reject unedited templates: a placeholder would start cleanly and then fail
+  // every export silently at runtime.
+  const template = /<[^>]+>|REPLACE_ME|CHANGE_ME/i;
+  if (endpointValue && template.test(endpointValue)) {
+    problems.push("OTEL_EXPORTER_OTLP_ENDPOINT still contains a template placeholder.");
+  }
+  if (template.test(config.telemetry.headers() ?? "")) {
+    problems.push("OTEL_EXPORTER_OTLP_HEADERS still contains a template placeholder.");
+  }
+  if (identifierKey && template.test(identifierKey)) {
+    problems.push("KOMANDA_TELEMETRY_IDENTIFIER_KEY still contains a template placeholder.");
   }
   if (!serviceNames.includes(serviceName as typeof serviceNames[number])) {
     problems.push(`Unknown OTEL_SERVICE_NAME "${serviceName}".`);
