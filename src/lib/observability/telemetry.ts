@@ -94,7 +94,7 @@ export function recordMetric(event: string, fields: MetricFields) {
 export function committedEvent(event: string, fields: MetricFields = {}) {
   const store = pending.getStore();
   if (store) store.push({ event, fields });
-  else recordMetric(event, fields);
+  else release([{ event, fields }]);
 }
 
 function bestEffort(effect: () => void) {
@@ -102,7 +102,23 @@ function bestEffort(effect: () => void) {
 }
 
 function release(events: PendingEvent[]) {
-  for (const event of events) recordMetric(event.event, event.fields);
+  for (const event of events) {
+    // Preserve the console envelope operators already rely on, now emitted
+    // when the enclosing operation commits rather than before it.
+    if (process.env.NODE_ENV !== "test") {
+      console.info("[metric]", JSON.stringify({
+        event: event.event,
+        tenantId: event.fields.tenantId,
+        correlationId: event.fields.correlationId,
+        result: event.fields.result,
+        latencyMs: event.fields.latencyMs,
+        count: event.fields.count ?? 1,
+        tags: event.fields.tags ?? {},
+        emittedAt: new Date().toISOString(),
+      }));
+    }
+    recordMetric(event.event, event.fields);
+  }
 }
 
 export async function observeOperation<T>(
