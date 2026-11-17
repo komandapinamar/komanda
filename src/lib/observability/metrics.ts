@@ -37,6 +37,7 @@ export type MetricFields = {
 };
 
 export function emitMetric(event: MetricEvent, fields: MetricFields = {}) {
+  recordMetric(event, fields);
   const payload = {
     event,
     tenantId: fields.tenantId,
@@ -54,3 +55,4 @@ export function emitMetric(event: MetricEvent, fields: MetricFields = {}) {
 
   return payload;
 }
+import { recordMetric } from "./telemetry";

@@ -19,6 +19,8 @@ try {
 }
 
 async function main() {
+  const { initializeTelemetry } = await import("@/lib/observability/telemetry");
+  await initializeTelemetry("komanda-fastify");
   const { buildFastifyServer } = await import("./server");
   const { shutdownManager } = await import("@/lib/runtime/shutdown");
 

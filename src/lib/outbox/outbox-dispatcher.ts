@@ -4,6 +4,7 @@ import { emitMetric } from "@/lib/observability/metrics";
 import { eventTypeFilter } from "@/lib/outbox/outbox-event-types";
 import { OUTBOX_DISPATCH_SERVICE_ID } from "@/lib/outbox/outbox-service-ids";
 import { withPlatformServiceTransaction } from "@/db/tenant-transaction";
+import { observeOperation } from "@/lib/observability/telemetry";
 
 export type ClaimedOutboxEvent = {
   id: string;
@@ -71,6 +72,12 @@ export class OutboxDispatcher {
     for (const event of events) {
       const started = performance.now();
       try {
+        await observeOperation("outbox.deliver", {
+          tenantId: event.tenantId,
+          eventId: event.id,
+          orderId: event.aggregateType === "order" ? event.aggregateId : undefined,
+          paymentAttemptId: event.aggregateType === "payment_attempt" ? event.aggregateId : undefined,
+        }, async () => {
         const consumer = this.consumers[event.eventType];
         if (!consumer) throw new Error(`No consumer registered for ${event.eventType}.`);
         await consumer(event);
@@ -81,6 +88,7 @@ export class OutboxDispatcher {
           result: "ok",
           latencyMs: Math.round(performance.now() - started),
           tags: { eventType: event.eventType },
+        });
         });
       } catch (error) {
         failed += 1;

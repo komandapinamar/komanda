@@ -1,5 +1,6 @@
 import { runtimePool } from "@/db";
 import { emitMetric } from "@/lib/observability/metrics";
+import { shutdownTelemetry } from "@/lib/observability/telemetry";
 
 /**
  * Runtime comun de los procesos de background.
@@ -98,9 +99,11 @@ export async function runWorkerLoop<T>(
     sleeper.interrupt();
   };
 
+  const onSigterm = () => stop("SIGTERM");
+  const onSigint = () => stop("SIGINT");
   if (registerSignals) {
-    process.once("SIGTERM", () => stop("SIGTERM"));
-    process.once("SIGINT", () => stop("SIGINT"));
+    process.once("SIGTERM", onSigterm);
+    process.once("SIGINT", onSigint);
   }
   if (signal) {
     if (signal.aborted) {
@@ -144,6 +147,12 @@ export async function runWorkerLoop<T>(
 
     if (once || stopping) break;
     await sleep(intervalMs);
+  }
+
+  await shutdownTelemetry();
+  if (registerSignals) {
+    process.removeListener("SIGTERM", onSigterm);
+    process.removeListener("SIGINT", onSigint);
   }
 
   if (closePool) {

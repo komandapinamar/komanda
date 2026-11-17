@@ -31,6 +31,8 @@ try {
  *   OUTBOX_DISPATCH_BATCH_SIZE   eventos por ronda (por defecto 25)
  */
 export async function runOutboxDispatchScript() {
+  const { initializeTelemetry } = await import("@/lib/observability/telemetry");
+  await initializeTelemetry("komanda-outbox");
   const { parseWorkerInterval, runWorkerLoop } = await import(
     "@/workers/runtime/worker-runtime"
   );

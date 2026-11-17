@@ -36,6 +36,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-web
     expose:
       - "3000"
     healthcheck:
@@ -53,6 +55,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-fastify
     expose:
       - "3001"
     healthcheck:
@@ -70,6 +74,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-outbox
 
   worker-reconcile:
     build:
@@ -79,6 +85,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-reconcile
 
   # Dead-man's switch: un ping a Healthchecks.io por minuto. Vive DENTRO del
   # VPS a proposito: si el VPS muere o se cuelga, los pings se cortan y

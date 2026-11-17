@@ -191,3 +191,18 @@ The compose setup creates `komanda-dev-media` and enables anonymous reads for
 local previews. `src/.env.local` contains the matching `OBJECT_STORAGE_*`
 configuration. Use a private bucket plus a CDN/public media origin in staging
 and production, setting `OBJECT_STORAGE_PUBLIC_BASE_URL` accordingly.
+# Optional Grafana Cloud telemetry
+
+Server observability is disabled by default. Set `KOMANDA_TELEMETRY_ENABLED=true`,
+the Grafana Cloud **OTLP base endpoint** (`https://…/otlp`),
+`OTEL_EXPORTER_OTLP_HEADERS` and a runtime-only
+`KOMANDA_TELEMETRY_IDENTIFIER_KEY` (at least 32 characters).
+Never put these secrets in Git or `NEXT_PUBLIC_*` variables.
+Compose assigns separate `komanda-web`, `komanda-fastify`, `komanda-outbox`
+and `komanda-reconcile` identities. CLI entrypoints also assign their identity.
+`OTEL_TRACES_SAMPLER_ARG` is a ratio from 0 to 1 (default 0.1); metrics are not sampled.
+
+The workspace runbook is `docs/telemetria.md`; import
+`infra/monitoring/grafana/komanda-operations.json` from that workspace into Grafana.
+Rollback: set `KOMANDA_TELEMETRY_ENABLED=false` and restart the four processes.
+No database migration or API/client change is required.

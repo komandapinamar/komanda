@@ -19,6 +19,7 @@ import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import type { TenantContext } from "@/lib/tenant-context/types";
+import { committedEvent, observeOperation } from "@/lib/observability/telemetry";
 
 export { ForbiddenRoleError };
 
@@ -43,7 +44,7 @@ export class CollectCashService {
       );
     }
 
-    return withTenantTransaction(context, async (transaction) => {
+    return observeOperation("payment.collect_cash", { ...context, orderId }, () => withTenantTransaction(context, async (transaction) => {
       const idempotency = new IdempotencyService(transaction);
       const claim = await idempotency.claim({
         tenantId: context.tenantId,
@@ -241,7 +242,8 @@ export class CollectCashService {
 
       await idempotency.complete(claim.recordId, 200, response);
 
+      committedEvent("payment.cash_collected", { result: "ok" });
       return response;
-    });
+    }));
   }
 }

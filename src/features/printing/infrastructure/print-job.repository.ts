@@ -7,6 +7,7 @@ import {
 } from "@/db/schema";
 import type { TenantTransaction } from "@/db/tenant-transaction";
 import type { TenantContext } from "@/lib/tenant-context/types";
+import { committedEvent } from "@/lib/observability/telemetry";
 
 type PrintJobRecord = typeof tenantPrintJobs.$inferSelect;
 
@@ -280,6 +281,7 @@ export class PrintJobRepository {
       )
       .returning();
     if (!updated) return null;
+    committedEvent(input.status === "printed" ? "print.device_reported_printed" : "print.device_reported_failed", { result: input.status === "printed" ? "ok" : "failed" });
 
     await this.transaction
       .insert(printJobAttempts)
