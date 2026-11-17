@@ -42,6 +42,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "env:verify": "tsx scripts/verify-runtime-environment.ts",
+    "config:check": "tsx scripts/check-config.ts",
     "seed:multitenant:acceptance": "tsx scripts/seed-multitenant-acceptance.ts",
     "seed:dev": "tsx scripts/seed-dev-tenant.ts",
     "seed:local": "tsx scripts/seed-local-tenant.ts"
