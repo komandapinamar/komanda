@@ -1,0 +1,30 @@
+# ---------------------------------------------------------------------------
+# Caddy — reverse proxy de Komanda Core.
+# Routing por path: SSE y cola de impresión van a Fastify; el resto a Next.js.
+# ---------------------------------------------------------------------------
+
+{
+	encode zstd gzip
+
+	# Fastify: cola de impresion (claim/result)
+	handle /api/v1/print/* {
+		reverse_proxy fastify:3001
+	}
+
+	# Fastify: SSE de ordenes (POS/Kiosk). flush_interval -1 = streaming sin buffer.
+	handle /api/v1/tenants/*/orders/events {
+		reverse_proxy fastify:3001 {
+			flush_interval -1
+		}
+	}
+
+	# Fastify: health real (con probe de base)
+	handle /api/health* {
+		reverse_proxy fastify:3001
+	}
+
+	# Todo lo demas: Next.js (storefront + backoffice)
+	handle {
+		reverse_proxy web:3000
+	}
+}
