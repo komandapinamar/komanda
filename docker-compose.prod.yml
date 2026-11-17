@@ -5,13 +5,14 @@
 #   docker compose run --rm web npm run db:prepare
 # (con DATABASE_DIRECT_URL apuntando al rol de migración de Supabase).
 #
-# Env requerido: DATABASE_URL, DATABASE_DIRECT_URL, DATABASE_RUNTIME_PASSWORD,
-# APP_ENCRYPTION_KEY_BASE64, OBJECT_STORAGE_*, MERCADOPAGO_*, SESSION_SECRET,
-# IDENTITY_VERIFICATION_* ... ver src/.env.production.example.
+# src/.env.production solo declara KOMANDA_ENV=prod. Las variables y secretos
+# reales viven en ./secrets/komanda/prod.env (fuera de git) y se montan
+# read-only en /run/secrets/komanda. El registro esta en src/lib/config/index.ts.
 #
 # Monitoreo: ver MONITORING.md. El contenedor ping-healthchecks es el
 # dead-man's switch (avisa a Healthchecks.io cada minuto; si el VPS se cae o
 # se cuelga, los pings se cortan y Healthchecks dispara la alerta).
+# CPU/RAM/disco y alertas por email: docs/telemetria.md del workspace.
 # ---------------------------------------------------------------------------
 
 services:
@@ -36,6 +37,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-web
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
     expose:
       - "3000"
     healthcheck:
@@ -53,6 +60,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-fastify
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
     expose:
       - "3001"
     healthcheck:
@@ -70,6 +83,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-outbox
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
 
   worker-reconcile:
     build:
@@ -79,6 +98,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-reconcile
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
 
   # Dead-man's switch: un ping a Healthchecks.io por minuto. Vive DENTRO del
   # VPS a proposito: si el VPS muere o se cuelga, los pings se cortan y

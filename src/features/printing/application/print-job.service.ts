@@ -8,6 +8,7 @@ import { PrintJobRepository } from "@/features/printing/infrastructure/print-job
 import type { OrderView } from "@/features/orders/infrastructure/order.repository";
 import { IdempotencyService } from "@/lib/idempotency/idempotency.service";
 import { createVerifiedTenantContext, type TenantContext } from "@/lib/tenant-context/types";
+import { committedEvent, observeOperation, operationIdentifiers } from "@/lib/observability/telemetry";
 
 const printJobResultSchema = z
   .object({
@@ -41,9 +42,12 @@ export class PrintJobService {
 
   async claim(token: string, correlationId: string) {
     const context = await this.agentContextFromToken(token, correlationId);
-    return withTenantTransaction(context, (transaction) =>
-      new PrintJobRepository(transaction, context).claimNext(),
-    );
+    return observeOperation("print.claim", context, () => withTenantTransaction(context, async (transaction) => {
+      const result = await new PrintJobRepository(transaction, context).claimNext();
+      if (result) operationIdentifiers({ jobId: result.job.id, orderId: result.job.orderId });
+      if (result) committedEvent("print.claimed", { result: "ok" });
+      return result;
+    }));
   }
 
   async reportResult(input: {
@@ -55,7 +59,7 @@ export class PrintJobService {
   }) {
     const request = printJobResultSchema.parse(input.body);
     const context = await this.agentContextFromToken(input.token, input.correlationId);
-    return withTenantTransaction(context, async (transaction) => {
+    return observeOperation("print.report", { ...context, jobId: input.jobId }, () => withTenantTransaction(context, async (transaction) => {
       const idempotency = new IdempotencyService(transaction);
       const claim = await idempotency.claim({
         tenantId: context.tenantId,
@@ -87,10 +91,19 @@ export class PrintJobService {
       };
       await idempotency.complete(claim.recordId, 200, response);
       return response;
-    });
+    }));
   }
 
   async enqueueOrderTicketInTransaction(
+    transaction: TenantTransaction,
+    context: TenantContext,
+    order: OrderView,
+  ) {
+    return observeOperation("print.enqueue", { ...context, orderId: order.id }, () =>
+      this.enqueueTicket(transaction, context, order));
+  }
+
+  private async enqueueTicket(
     transaction: TenantTransaction,
     context: TenantContext,
     order: OrderView,

@@ -43,3 +43,7 @@ artifacts/001-multi-tenant-base/*
 !artifacts/001-multi-tenant-base/*.md
 !artifacts/001-multi-tenant-base/*.json
 .test-artifacts/
+
+# Mounted runtime secrets (only templates are versioned)
+/secrets/komanda/*
+!/secrets/komanda/*.example

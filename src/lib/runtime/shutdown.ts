@@ -1,6 +1,7 @@
 import "server-only";
 
 import { runtimePool } from "@/db";
+import { shutdownTelemetry } from "@/lib/observability/telemetry";
 
 type ShutdownHook = () => Promise<void> | void;
 
@@ -80,6 +81,8 @@ class GracefulShutdownManager {
       while (this.activeRequests > 0 && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
+
+      await shutdownTelemetry();
 
       // 4. Close database pool
       try {

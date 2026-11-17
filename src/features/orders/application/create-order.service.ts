@@ -14,6 +14,7 @@ import { BillingRepository } from "@/features/billing/infrastructure/billing.rep
 import { DiscountRepository } from "@/features/discounts/infrastructure/discount.repository";
 import { calculateDiscountAmounts } from "@/features/discounts/domain/discount.rules";
 import { canNotifyOwnerOfCashOrder } from "@/features/orders/domain/owner-cash-whatsapp";
+import { committedEvent, observeOperation, operationIdentifiers } from "@/lib/observability/telemetry";
 
 const customerSchema = z
   .object({
@@ -108,7 +109,7 @@ export class CreateOrderService {
     idempotencyKey: string,
   ) {
     const request = createDirectOrderSchema.parse(value);
-    return withTenantTransaction(context, async (transaction) => {
+    return observeOperation("order.create_direct", context, () => withTenantTransaction(context, async (transaction) => {
       const repository = new OrderRepository(transaction, context);
       const cart = await repository.loadCart(request.cartId);
       if (!cart || cart.status === "expired") {
@@ -131,6 +132,7 @@ export class CreateOrderService {
       });
 
       if (created) {
+        committedEvent("order.created", { result: "ok" });
         if (typeof (transaction as { insert?: unknown }).insert === "function") {
           await transaction.insert(cashRegisterMovements).values({
             tenantId: context.tenantId,
@@ -188,8 +190,9 @@ export class CreateOrderService {
         });
       }
 
+      operationIdentifiers({ orderId: order.id });
       return order;
-    });
+    }));
   }
 
   async createDirectFromItems(
@@ -198,7 +201,7 @@ export class CreateOrderService {
     idempotencyKey: string,
   ) {
     const request = createDirectOrderSchemaFromItems.parse(value);
-    return withTenantTransaction(context, async (transaction) => {
+    return observeOperation("order.create_items", context, () => withTenantTransaction(context, async (transaction) => {
       const [tenantRow] = await transaction
         .select({ currency: tenants.defaultCurrency })
         .from(tenants)
@@ -356,6 +359,7 @@ export class CreateOrderService {
       });
 
       if (created) {
+        committedEvent("order.created", { result: "ok" });
         if (request.tender === "cash" && request.paymentStatus === "paid") {
           await transaction.insert(cashRegisterMovements).values({
             tenantId: context.tenantId,
@@ -431,8 +435,9 @@ export class CreateOrderService {
         }
       }
 
+      operationIdentifiers({ orderId: order.id });
       return order;
-    });
+    }));
   }
 
   async createPaidFromPaymentAttempt(input: {
@@ -441,7 +446,7 @@ export class CreateOrderService {
     approvedAt?: Date | null;
   }) {
     const { context } = input;
-    return withTenantTransaction(context, async (transaction) => {
+    return observeOperation("order.create_paid", { ...context, paymentAttemptId: input.paymentAttemptId }, () => withTenantTransaction(context, async (transaction) => {
       const repository = new OrderRepository(transaction, context);
       const attempt = await repository.loadPaymentAttempt(input.paymentAttemptId);
       if (!attempt) {
@@ -469,6 +474,7 @@ export class CreateOrderService {
       });
 
       if (created) {
+        committedEvent("order.created", { result: "ok" });
         await appendAuditEvent(transaction, context, {
           action: "order.create_paid",
           resourceType: "order",
@@ -518,7 +524,8 @@ export class CreateOrderService {
         });
       }
 
+      operationIdentifiers({ orderId: order.id });
       return order;
-    });
+    }));
   }
 }

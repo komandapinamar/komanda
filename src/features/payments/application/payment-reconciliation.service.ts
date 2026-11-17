@@ -14,6 +14,7 @@ import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
 import { emitMetric } from "@/lib/observability/metrics";
+import { committedEvent, observeOperation } from "@/lib/observability/telemetry";
 
 const DEFAULT_THRESHOLD_SECONDS = 30;
 const ALERT_LAG_MS = 5 * 60 * 1000; // 5 minutes
@@ -44,7 +45,7 @@ export class PaymentReconciliationService {
       actor: { kind: "service", serviceId: "payment:reconciler" },
     });
 
-    return withTenantTransaction(context, async (transaction) => {
+    return observeOperation("payment.reconcile", { ...input, paymentAttemptId: input.attemptId }, () => withTenantTransaction(context, async (transaction) => {
       const integrations = new IntegrationRepository(transaction, input.tenantId);
       const orders = new OrderRepository(transaction, context);
 
@@ -161,6 +162,7 @@ export class PaymentReconciliationService {
               approvedAt,
             });
             if (createResult.order) {
+              if (createResult.created) committedEvent("order.created", { result: "ok" });
               targetOrderId = createResult.order.id;
               await appendAuditEvent(transaction, context, {
                 action: "order.create_paid",
@@ -185,7 +187,7 @@ export class PaymentReconciliationService {
           }
         }
 
-        emitMetric("payment.reconciled", {
+        committedEvent("payment.reconciled", {
           tenantId: input.tenantId,
           result: "ok",
           tags: { attemptId: attempt.id, orderId: targetOrderId ?? "" },
@@ -222,7 +224,7 @@ export class PaymentReconciliationService {
           });
         }
 
-        emitMetric("payment.reconciled", {
+        committedEvent("payment.reconciled", {
           tenantId: input.tenantId,
           result: "failed",
           tags: { attemptId: attempt.id, reason: providerStatus },
@@ -265,7 +267,7 @@ export class PaymentReconciliationService {
         orderId: existingOrder?.id ?? null,
         resolved: false,
       };
-    });
+    }));
   }
 
   async scanAndReconcileUncertainPayments(options?: {
