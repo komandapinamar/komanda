@@ -1,0 +1,127 @@
+# ---------------------------------------------------------------------------
+# Komanda Core — producción sobre VPS.
+#
+# Antes del primer arranque, aplicar las migraciones una sola vez:
+#   docker compose run --rm web npm run db:prepare
+# (con DATABASE_DIRECT_URL apuntando al rol de migración de Supabase).
+#
+# src/.env.production solo declara KOMANDA_ENV=prod. Las variables y secretos
+# reales viven en ./secrets/komanda/prod.env (fuera de git) y se montan
+# read-only en /run/secrets/komanda. El registro esta en src/lib/config/index.ts.
+#
+# Monitoreo: ver MONITORING.md. El contenedor ping-healthchecks es el
+# dead-man's switch (avisa a Healthchecks.io cada minuto; si el VPS se cae o
+# se cuelga, los pings se cortan y Healthchecks dispara la alerta).
+# CPU/RAM/disco y alertas por email: docs/telemetria.md del workspace.
+# ---------------------------------------------------------------------------
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - fastify
+
+  web:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-web
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  fastify:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    command: ["npm", "run", "start:fastify"]
+    restart: unless-stopped
+    env_file:
+      - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-fastify
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  worker-outbox:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    command: ["npm", "run", "outbox:dispatch"]
+    restart: unless-stopped
+    env_file:
+      - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-outbox
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
+
+  worker-reconcile:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    command: ["npm", "run", "payments:reconcile"]
+    restart: unless-stopped
+    env_file:
+      - ./src/.env.production
+    environment:
+      OTEL_SERVICE_NAME: komanda-reconcile
+      KOMANDA_SECRETS_DIR: /run/secrets/komanda
+    volumes:
+      - ./secrets/komanda:/run/secrets/komanda:ro
+    stop_grace_period: 30s
+
+  # Dead-man's switch: un ping a Healthchecks.io por minuto. Vive DENTRO del
+  # VPS a proposito: si el VPS muere o se cuelga, los pings se cortan y
+  # Healthchecks (externo) dispara la alerta.
+  ping-healthchecks:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          curl -fsS --max-time 10 "$$HEALTHCHECKS_PING_URL" >/dev/null 2>&1 || true
+          sleep 60
+        done
+    environment:
+      HEALTHCHECKS_PING_URL: ${HEALTHCHECKS_PING_URL:?set HEALTHCHECKS_PING_URL in .env}
+
+volumes:
+  caddy_data:
+  caddy_config:

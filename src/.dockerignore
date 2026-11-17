@@ -1,0 +1,15 @@
+# No mandar al contexto de build nada que no haga falta (y nada con secretos).
+node_modules
+.next
+.git
+.env
+.env.*
+*.log
+tests
+playwright-report
+test-results
+coverage
+.mise
+.claude
+.cursor
+Dockerfile

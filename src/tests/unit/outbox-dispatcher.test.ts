@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const execute = vi.fn();
 
-vi.mock("@/db", () => ({ db: { execute } }));
+vi.mock("@/db/tenant-transaction", () => ({
+  withPlatformServiceTransaction: vi.fn(
+    async (_context: unknown, callback: (transaction: { execute: typeof execute }) => unknown) =>
+      callback({ execute }),
+  ),
+}));
 
 const { OutboxDispatcher } = await import("@/lib/outbox/outbox-dispatcher");
 
@@ -47,4 +52,39 @@ describe("OutboxDispatcher", () => {
     });
     expect(execute).toHaveBeenCalledTimes(2);
   });
+
+  it("does not touch the outbox when there are no consumable event types", async () => {
+    const dispatcher = new OutboxDispatcher({ consumers: {}, eventTypes: [] });
+
+    await expect(dispatcher.dispatchOnce()).resolves.toEqual({
+      claimed: 0,
+      succeeded: 0,
+      failed: 0,
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("restricts the claim to the registered event types", async () => {
+    execute.mockResolvedValueOnce({ rows: [] });
+    const dispatcher = new OutboxDispatcher({
+      consumers: { "print.intent.created": vi.fn() },
+      eventTypes: ["print.intent.created"],
+    });
+
+    await dispatcher.dispatchOnce();
+
+    const [query] = execute.mock.calls[0] as [{ queryChunks: unknown[] }];
+    const text = flattenSql(query.queryChunks);
+    expect(text).toContain("event_type in");
+  });
 });
+
+function flattenSql(chunks: unknown): string {
+  if (!chunks) return "";
+  if (Array.isArray(chunks)) return chunks.map(flattenSql).join("");
+  if (typeof chunks === "string") return chunks;
+  const chunk = chunks as { value?: unknown; queryChunks?: unknown };
+  if (Array.isArray(chunk.value)) return chunk.value.join("");
+  if (Array.isArray(chunk.queryChunks)) return flattenSql(chunk.queryChunks);
+  return "";
+}

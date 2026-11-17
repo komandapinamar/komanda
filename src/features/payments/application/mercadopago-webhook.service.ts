@@ -12,6 +12,7 @@ import { PrintJobService } from "@/features/printing/application/print-job.servi
 import { appendAuditEvent } from "@/lib/audit/audit.service";
 import { appendOutboxEvent } from "@/lib/outbox/outbox.service";
 import { createVerifiedTenantContext } from "@/lib/tenant-context/types";
+import { committedEvent, observeOperation, operationIdentifiers } from "@/lib/observability/telemetry";
 
 export type ReceivedMercadoPagoWebhook = {
   providerEventId: string;
@@ -125,6 +126,16 @@ export async function receiveMercadoPagoWebhook(input: {
   correlationId: string;
   paymentClient?: MercadoPagoPaymentLookup;
 }) {
+  return observeOperation("payment.webhook", { correlationId: input.correlationId }, () => receiveWebhook(input));
+}
+
+async function receiveWebhook(input: {
+  routingKey: string;
+  event: ReceivedMercadoPagoWebhook;
+  payload: Record<string, unknown>;
+  correlationId: string;
+  paymentClient?: MercadoPagoPaymentLookup;
+}) {
   const { account, tokens } = await withPlatformServiceTransaction(
     { serviceId: "mercadopago:webhook-router", correlationId: input.correlationId },
     async (transaction) => {
@@ -138,6 +149,7 @@ export async function receiveMercadoPagoWebhook(input: {
   );
 
   if (!account || !tokens) throw new MercadoPagoWebhookRoutingError("Webhook route not found.");
+  operationIdentifiers({ tenantId: account.tenantId });
   const payment = await (input.paymentClient ?? new MercadoPagoTenantPaymentClient()).getPayment(
     tokens.accessToken,
     input.event.resourceId,
@@ -184,8 +196,15 @@ export async function receiveMercadoPagoWebhook(input: {
       status: attempt ? "processed" : "ignored",
       payload: { ...input.payload, resourceId: providerPaymentId, routed: Boolean(attempt) },
     });
-    if (!event) return { tenantId: account.tenantId, duplicate: true, routed: Boolean(attempt), paymentAttemptId: attempt?.id ?? null, webhookEventId: null };
-    if (!attempt) return { tenantId: account.tenantId, duplicate: false, routed: false, paymentAttemptId: null, webhookEventId: event.id };
+    operationIdentifiers({ paymentAttemptId: attempt?.id });
+    if (!event) {
+      committedEvent("webhook.ignored", { result: "ignored" });
+      return { tenantId: account.tenantId, duplicate: true, routed: Boolean(attempt), paymentAttemptId: attempt?.id ?? null, webhookEventId: null };
+    }
+    if (!attempt) {
+      committedEvent("webhook.ignored", { result: "ignored" });
+      return { tenantId: account.tenantId, duplicate: false, routed: false, paymentAttemptId: null, webhookEventId: event.id };
+    }
 
     const outOfOrder = priority(status) < priority(attempt.status);
     if (!outOfOrder) {
@@ -199,6 +218,7 @@ export async function receiveMercadoPagoWebhook(input: {
         processedAt: processedAt(payment, status),
         failureCode: status === "failed" ? "provider_status" : null,
       });
+      if (updated && attempt.status !== status) committedEvent("payment.status_changed", { result: "ok" });
       await appendOutboxEvent(transaction, context, {
         aggregateType: "payment_attempt",
         aggregateId: attempt.id,
@@ -221,9 +241,11 @@ export async function receiveMercadoPagoWebhook(input: {
             approvedAt: updated.processedAt ?? new Date(),
           });
           if (result.order) {
+            operationIdentifiers({ orderId: result.order.id });
             targetOrder = { id: result.order.id, locationId: result.order.locationId };
           }
           if (result.created) {
+            committedEvent("order.created", { result: "ok" });
             await appendAuditEvent(transaction, context, {
               action: "order.create_paid",
               resourceType: "order",
@@ -347,6 +369,7 @@ export async function receiveMercadoPagoWebhook(input: {
         }
       }
     }
+    committedEvent("webhook.processed", { result: "ok" });
     return { tenantId: account.tenantId, duplicate: false, routed: true, outOfOrder, paymentAttemptId: attempt.id, webhookEventId: event.id };
   });
 }

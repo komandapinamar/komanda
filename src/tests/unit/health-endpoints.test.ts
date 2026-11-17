@@ -52,23 +52,56 @@ describe("Health Checks (Liveness, Readiness, Outbox & Printing)", () => {
   it("checkOutboxHealth reports ok when backlog is normal", async () => {
     mockReadOutboxMetrics.mockResolvedValueOnce({
       pendingCount: 5,
+      claimablePendingCount: 0,
+      unhandledPendingCount: 5,
       deadLetterCount: 0,
       oldestPendingSeconds: 10,
+      oldestClaimablePendingSeconds: 0,
     });
     const result = await checkOutboxHealth();
     expect(result.status).toBe("ok");
     expect(result.name).toBe("outbox");
   });
 
+  it("checkOutboxHealth does not degrade because of events without consumer", async () => {
+    mockReadOutboxMetrics.mockResolvedValueOnce({
+      pendingCount: 103,
+      claimablePendingCount: 0,
+      unhandledPendingCount: 103,
+      deadLetterCount: 0,
+      oldestPendingSeconds: 3_449_299,
+      oldestClaimablePendingSeconds: 0,
+    });
+    const result = await checkOutboxHealth();
+    expect(result.status).toBe("ok");
+    expect(result.detail).toContain("103 without consumer");
+  });
+
   it("checkOutboxHealth reports degraded when DLQ or lag exceeds thresholds", async () => {
     mockReadOutboxMetrics.mockResolvedValueOnce({
       pendingCount: 150,
+      claimablePendingCount: 150,
+      unhandledPendingCount: 0,
       deadLetterCount: 60,
       oldestPendingSeconds: 400,
+      oldestClaimablePendingSeconds: 400,
     });
     const result = await checkOutboxHealth();
     expect(result.status).toBe("degraded");
     expect(result.detail).toContain("Outbox backlog");
+  });
+
+  it("checkOutboxHealth reports degraded when claimable events age without being drained", async () => {
+    mockReadOutboxMetrics.mockResolvedValueOnce({
+      pendingCount: 3,
+      claimablePendingCount: 3,
+      unhandledPendingCount: 0,
+      deadLetterCount: 0,
+      oldestPendingSeconds: 400,
+      oldestClaimablePendingSeconds: 400,
+    });
+    const result = await checkOutboxHealth();
+    expect(result.status).toBe("degraded");
   });
 
   it("checkPrintingHealth queries print_jobs table", async () => {
@@ -84,8 +117,11 @@ describe("Health Checks (Liveness, Readiness, Outbox & Printing)", () => {
     mockRuntimePoolQuery.mockResolvedValue({ rows: [] });
     mockReadOutboxMetrics.mockResolvedValue({
       pendingCount: 0,
+      claimablePendingCount: 0,
+      unhandledPendingCount: 0,
       deadLetterCount: 0,
       oldestPendingSeconds: 0,
+      oldestClaimablePendingSeconds: 0,
     });
 
     const readiness = await collectReadiness();

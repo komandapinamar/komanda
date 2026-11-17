@@ -211,6 +211,13 @@
       "when": 1793286400000,
       "tag": "0029_add_scheduled_for_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794666714923,
+      "tag": "0031_platform_service_rls_policies",
+      "breakpoints": true
     }
   ]
 }

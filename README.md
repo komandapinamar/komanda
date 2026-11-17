@@ -26,6 +26,54 @@ Fulfillment
    ↓
 Analytics
 
+## Background Workers
+
+Core has background workers that are deployed as their own processes. They are
+not part of the Next.js or Fastify runtime and they never serve traffic.
+
+| Worker | Command | What it does |
+| --- | --- | --- |
+| Outbox dispatcher | `npm run outbox:dispatch` | Claims pending `outbox_events` with a lease, applies the consumer registered for the event type and publishes the event. Also self-heals a missing kitchen ticket for `print.intent.created`. |
+| Payment reconciliation | `npm run payments:reconcile` | Resolves payments left in `verification_required` after an ambiguous provider response, by querying the provider and transitioning the order to `paid` or `failed`. |
+
+Both workers accept `--once` to run a single round and exit, which is the shape
+a scheduled job needs:
+
+```bash
+npm run outbox:dispatch -- --once
+npm run payments:reconcile -- --once
+```
+
+Continuous mode is the default and drains with an interval
+(`OUTBOX_DISPATCH_INTERVAL_MS`, `PAYMENT_RECONCILE_INTERVAL_MS`). Both workers
+handle `SIGTERM`/`SIGINT`: they finish the round in progress, close the
+database pool and exit, so a rollout never interrupts a delivery in flight.
+
+### RLS and platform services
+
+The dispatcher scans every tenant's events, and the reconciliation scanner
+every tenant's payment attempts. Under forced RLS that requires a policy that
+recognizes the platform `service_id`
+(`drizzle/0031_platform_service_rls_policies.sql`):
+
+| `app.service_id` | Allows |
+| --- | --- |
+| `outbox-dispatcher` | Claim, publish and fail events of every tenant |
+| `outbox:metrics` | Cross-tenant backlog counters for the health check |
+| `payment:reconciliation-scanner` | Read payment attempts of every tenant |
+
+Without that migration applied, the workers run and claim nothing. The
+dispatcher detects it and reports `outbox.claim_stalled` instead of failing
+silently.
+
+### Event types without a consumer
+
+The outbox also receives events that no consumer handles yet (`order.*`,
+`catalog.*`). Those events stay pending on purpose: the health check reports
+them separately as "without consumer" so a missing consumer is not confused
+with a stalled worker, and they are ready for the consumer that implements
+that behaviour later.
+
 ## Target Architecture
 
 This repository owns Komanda's operational product: `app.komanda.com`, tenant
@@ -143,3 +191,42 @@ The compose setup creates `komanda-dev-media` and enables anonymous reads for
 local previews. `src/.env.local` contains the matching `OBJECT_STORAGE_*`
 configuration. Use a private bucket plus a CDN/public media origin in staging
 and production, setting `OBJECT_STORAGE_PUBLIC_BASE_URL` accordingly.
+## Grafana Cloud telemetry (required)
+
+Server observability is part of the runtime contract, not a feature flag. The
+deployment `.env` only selects the profile:
+
+```sh
+KOMANDA_ENV=prod            # prod | stg | test
+KOMANDA_SECRETS_DIR=/run/secrets/komanda
+```
+
+Every variable and secret the app consumes is declared in
+`src/lib/config/index.ts`. Values are mounted as secret files (see
+`secrets/README.md`), never committed. `prod` and `stg` fail fast when a
+required value is missing, including the Grafana **OTLP base endpoint**
+(`https://…/otlp`), its authorization headers and `KOMANDA_TELEMETRY_IDENTIFIER_KEY`
+(at least 32 characters, shared by the four services). `test` never exports
+unless you point it at an explicit endpoint.
+
+What leaves the process: operation names, outcomes, durations, finite event
+counters and HMAC-SHA256 hashed identifiers. Request bodies, ticket/payment
+payloads, customer data, URLs, SQL, tokens and error strings are never exported.
+Traces are independent operation roots: there is no continuous checkout-to-printer
+trace. Instrumentation is Node-only, so edge/middleware execution is not covered.
+Compose assigns `komanda-web`, `komanda-fastify`, `komanda-outbox` and
+`komanda-reconcile` identities plus a 30-second stop grace period.
+
+Rebuild and redeploy after pulling this change: it adds runtime dependencies and
+`src/instrumentation.ts`, so environment changes alone are not enough. Outbound
+HTTPS to the OTLP gateway is required.
+
+The operator runbook lives in the Komanda workspace repository, not in this
+clone: `docs/telemetria.md`, with dashboards and alert templates under
+`infra/monitoring/`. Import `komanda-operations.json` into Grafana Cloud. If
+Grafana stays empty, check the startup `[telemetry]` line, the token/header
+syntax, the environment profile and the VPS egress path.
+
+Rollback: deploy the previous image or fix the configuration. Telemetry cannot
+be switched off in `prod`/`stg`, but export failures never block checkout,
+payments or printing. No database migration or API/client change is required.
