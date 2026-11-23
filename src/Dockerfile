@@ -25,9 +25,13 @@ RUN npm ci
 FROM node:24-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_SITE_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+# Next imports database modules while collecting route metadata. All database
+# pages are dynamic: the build needs a syntactically valid URL, not production
+# credentials or database access. This command-scoped value is not in runtime.
+RUN DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build npm run build
 
 FROM node:24-slim AS runtime
 WORKDIR /app
