@@ -5,7 +5,9 @@ node_modules
 .env
 .env.*
 *.log
-tests
+# Seed scripts import these fixtures during TypeScript validation.
+tests/*
+!tests/fixtures/
 playwright-report
 test-results
 coverage
