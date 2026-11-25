@@ -11,6 +11,7 @@ import {
   sessionCookieOptions,
 } from "@/features/identity/web/session-cookie";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
+import { logUnexpectedError } from "@/lib/observability/unexpected-error";
 import { problemResponse } from "@/lib/http/problem";
 
 const loginSchema = z
@@ -64,11 +65,11 @@ export async function POST(request: Request) {
       });
     }
 
+    logUnexpectedError(correlationId, "auth.login", error);
     return problemResponse({
       status: 500,
       title: "Error al iniciar sesión",
       code: "INTERNAL_ERROR",
-      detail: error instanceof Error ? error.message : "Error inesperado",
       correlationId,
     });
   }
