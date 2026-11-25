@@ -184,6 +184,11 @@ function parseHeaders(raw: string | undefined, problems: string[]): Record<strin
   return headers;
 }
 
+function optionalVersion(value: unknown): string | undefined {
+  // Next can replace NEXT_DEPLOYMENT_ID with boolean false at build time.
+  return typeof value === "string" ? value.trim() || undefined : undefined;
+}
+
 function configuration(serviceName: string) {
   const environment = config.environment();
   const endpointValue = config.telemetry.endpoint();
@@ -233,7 +238,7 @@ function configuration(serviceName: string) {
     ratio: config.telemetry.samplingRatio(),
     serviceName,
     environment,
-    version: process.env.KOMANDA_SERVICE_VERSION?.trim() || process.env.NEXT_DEPLOYMENT_ID?.trim() || undefined,
+    version: optionalVersion(process.env.KOMANDA_SERVICE_VERSION) || optionalVersion(process.env.NEXT_DEPLOYMENT_ID),
   };
 }
 
