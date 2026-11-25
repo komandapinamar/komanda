@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { withPlatformServiceTransaction, withTenantTransaction } from "@/db/tenant-transaction";
 import { mpFinancialRecords, tenantOrders } from "@/db/schema";
+import { moneyToCents } from "@/features/cart/domain/cart.rules";
 import { OrderRepository } from "@/features/orders/infrastructure/order.repository";
 import {
   IntegrationRepository,
@@ -23,6 +24,7 @@ export type ReceivedMercadoPagoWebhook = {
 
 export class MercadoPagoWebhookRoutingError extends Error {}
 export class MercadoPagoWebhookProviderError extends Error {}
+export class MercadoPagoWebhookPaymentMismatchError extends Error {}
 
 export type MercadoPagoPaymentFeeDetail = {
   type: string;
@@ -38,6 +40,8 @@ export type MercadoPagoPaymentTax = {
 export type MercadoPagoPayment = {
   id: string | number;
   status?: string;
+  external_reference?: string | null;
+  currency_id?: string;
   preference_id?: string | null;
   metadata?: Record<string, unknown> | null;
   date_approved?: string | null;
@@ -67,23 +71,28 @@ export class MercadoPagoTenantPaymentClient implements MercadoPagoPaymentLookup 
   constructor(private readonly timeoutMs = 5_000) {}
 
   async getPayment(accessToken: string, paymentId: string) {
-    const response = await fetch(
-      `https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-        signal: AbortSignal.timeout(this.timeoutMs),
-      },
-    );
-    if (response.status === 403 || response.status === 404) {
-      throw new MercadoPagoWebhookRoutingError("Payment is not owned by this seller.");
+    try {
+      const response = await fetch(
+        `https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: "no-store",
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
+      );
+      if (response.status === 403 || response.status === 404) {
+        throw new MercadoPagoWebhookRoutingError("Payment is not available to this seller.");
+      }
+      if (!response.ok) throw new MercadoPagoWebhookProviderError("Payment lookup failed.");
+      const payment = (await response.json()) as MercadoPagoPayment;
+      if (!payment?.id) throw new MercadoPagoWebhookProviderError("Invalid payment response.");
+      return payment;
+    } catch (error) {
+      if (error instanceof MercadoPagoWebhookRoutingError || error instanceof MercadoPagoWebhookProviderError) {
+        throw error;
+      }
+      throw new MercadoPagoWebhookProviderError("Payment lookup failed.", { cause: error });
     }
-    if (!response.ok) {
-      throw new MercadoPagoWebhookProviderError("Payment lookup failed.");
-    }
-    const payment = (await response.json()) as MercadoPagoPayment;
-    if (!payment.id) throw new MercadoPagoWebhookProviderError("Invalid payment response.");
-    return payment;
   }
 }
 
@@ -99,11 +108,18 @@ function paymentStatus(status: string | undefined) {
   }
 }
 
-function priority(status: string) {
-  if (status === "approved") return 4;
-  if (status === "pending" || status === "processing") return 3;
-  if (status === "initiated") return 2;
-  return 1;
+function shouldApplyStatus(
+  attempt: { status: string; providerPaymentId: string | null },
+  status: ReturnType<typeof paymentStatus>,
+  providerPaymentId: string,
+) {
+  if (attempt.status === "approved") {
+    return status === "approved" && attempt.providerPaymentId === providerPaymentId;
+  }
+  if (status === "pending") {
+    return ["initiated", "pending", "processing", "verification_required"].includes(attempt.status);
+  }
+  return status !== "failed" || attempt.status === "initiated";
 }
 
 function metadataString(metadata: Record<string, unknown> | null | undefined, key: string) {
@@ -155,6 +171,9 @@ async function receiveWebhook(input: {
     input.event.resourceId,
   );
   const providerPaymentId = String(payment.id);
+  if (providerPaymentId !== input.event.resourceId) {
+    throw new MercadoPagoWebhookProviderError("Payment response does not match the notification.");
+  }
   const status = paymentStatus(payment.status);
   const preferenceId = payment.preference_id ?? metadataString(payment.metadata, "preferenceId");
   const context = createVerifiedTenantContext({
@@ -188,25 +207,37 @@ async function receiveWebhook(input: {
           attemptId,
         })
       : null;
+    if (!attempt) {
+      // The preference or the local attempt may not be committed yet. Do not
+      // acknowledge or deduplicate an event that has not been applied.
+      throw new MercadoPagoWebhookRoutingError("Payment attempt not found.");
+    }
+    if (payment.external_reference && payment.external_reference !== attempt.cartId) {
+      throw new MercadoPagoWebhookPaymentMismatchError("Payment reference does not match the checkout.");
+    }
+    if (status === "approved") {
+      const amount = String(payment.transaction_amount ?? "");
+      if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(amount) ||
+          moneyToCents(amount) !== moneyToCents(attempt.amount) ||
+          payment.currency_id !== attempt.currency) {
+        throw new MercadoPagoWebhookPaymentMismatchError("Payment amount or currency does not match the checkout.");
+      }
+    }
     const event = await routing.persistEvent({
       tenantId: account.tenantId,
       providerEventId: input.event.providerEventId,
       topic: input.event.topic,
       correlationId: input.correlationId,
-      status: attempt ? "processed" : "ignored",
-      payload: { ...input.payload, resourceId: providerPaymentId, routed: Boolean(attempt) },
+      status: "processed",
+      payload: { ...input.payload, resourceId: providerPaymentId, routed: true },
     });
-    operationIdentifiers({ paymentAttemptId: attempt?.id });
+    operationIdentifiers({ paymentAttemptId: attempt.id });
     if (!event) {
       committedEvent("webhook.ignored", { result: "ignored" });
-      return { tenantId: account.tenantId, duplicate: true, routed: Boolean(attempt), paymentAttemptId: attempt?.id ?? null, webhookEventId: null };
-    }
-    if (!attempt) {
-      committedEvent("webhook.ignored", { result: "ignored" });
-      return { tenantId: account.tenantId, duplicate: false, routed: false, paymentAttemptId: null, webhookEventId: event.id };
+      return { tenantId: account.tenantId, duplicate: true, routed: true, paymentAttemptId: attempt.id, webhookEventId: null };
     }
 
-    const outOfOrder = priority(status) < priority(attempt.status);
+    const outOfOrder = !shouldApplyStatus(attempt, status, providerPaymentId);
     if (!outOfOrder) {
       await routing.attachPaymentResource({ tenantId: account.tenantId, integrationAccountId: account.id, paymentAttemptId: attempt.id, providerPaymentId });
       const updated = await routing.updatePaymentAttemptFromWebhook({
@@ -267,7 +298,7 @@ async function receiveWebhook(input: {
           }
         } else {
           const [existing] = await transaction
-            .select({ id: tenantOrders.id, locationId: tenantOrders.locationId })
+            .select({ id: tenantOrders.id, locationId: tenantOrders.locationId, paymentStatus: tenantOrders.paymentStatus })
             .from(tenantOrders)
             .where(
               and(
@@ -278,6 +309,15 @@ async function receiveWebhook(input: {
             .limit(1);
           if (existing) {
             targetOrder = existing;
+            if (existing.paymentStatus === "pending" || existing.paymentStatus === "verification_required") {
+              await orders.updatePaymentStatus({ orderId: existing.id, paymentStatus: "paid" });
+              await appendOutboxEvent(transaction, context, {
+                aggregateType: "order",
+                aggregateId: existing.id,
+                eventType: "order.paid",
+                payload: { orderId: existing.id, previousStatus: existing.paymentStatus },
+              });
+            }
           }
         }
 
@@ -366,6 +406,25 @@ async function receiveWebhook(input: {
                 updatedAt: new Date(),
               },
             });
+        } else {
+          // Roll back both the approval and event so a later delivery can complete the order.
+          throw new MercadoPagoWebhookRoutingError("Approved payment has no matching order.");
+        }
+      }
+      if (status === "rejected" && updated) {
+        const [existing] = await transaction
+          .select({ id: tenantOrders.id })
+          .from(tenantOrders)
+          .where(and(
+            eq(tenantOrders.tenantId, account.tenantId),
+            eq(tenantOrders.paymentAttemptId, updated.id),
+            eq(tenantOrders.paymentStatus, "verification_required"),
+          ))
+          .limit(1);
+        if (existing) {
+          await new OrderRepository(transaction, context).updatePaymentStatus({
+            orderId: existing.id, paymentStatus: "failed",
+          });
         }
       }
     }

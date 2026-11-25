@@ -374,7 +374,8 @@ export class WebhookRoutingRepository {
           eq(paymentAttempts.id, input.attemptId),
         ),
       )
-      .limit(1);
+      .limit(1)
+      .for("update");
     return attempt ?? null;
   }
 
@@ -442,7 +443,16 @@ export class WebhookRoutingRepository {
         signatureValid: true,
         status: input.status ?? "received",
       })
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: [webhookEvents.tenantId, webhookEvents.provider, webhookEvents.providerEventId, webhookEvents.topic],
+        set: {
+          status: input.status ?? "received",
+          correlationId: input.correlationId,
+          payload: input.payload,
+        },
+        // Repair old deliveries acknowledged before their attempt could be resolved.
+        setWhere: eq(webhookEvents.status, "ignored"),
+      })
       .returning();
     return event ?? null;
   }

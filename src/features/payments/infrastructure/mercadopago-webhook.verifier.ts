@@ -5,7 +5,7 @@ export class InvalidMercadoPagoWebhookError extends Error {}
 
 const payloadSchema = z
   .object({
-    id: z.union([z.string(), z.number()]).optional(),
+    id: z.union([z.string().min(1), z.number()]),
     type: z.string().optional(),
     action: z.string().optional(),
     data: z.object({ id: z.union([z.string(), z.number()]) }).passthrough(),
@@ -40,7 +40,7 @@ export function verifyMercadoPagoWebhook(input: {
 export function parseSanitizedMercadoPagoWebhook(value: unknown) {
   const parsed = payloadSchema.parse(value);
   return {
-    providerEventId: String(parsed.id ?? parsed.data.id),
+    providerEventId: String(parsed.id),
     resourceId: String(parsed.data.id),
     topic: parsed.type ?? "unknown",
     action: parsed.action ?? null,
