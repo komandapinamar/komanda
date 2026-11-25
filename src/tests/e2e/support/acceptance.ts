@@ -206,6 +206,12 @@ export function setTenantOperational(
   });
 }
 
+export function setTenantPreset(tenantId: string, preset: "gastronomy" | "express_retail") {
+  return withOwnerClient(async (client) => {
+    await client.query("update tenants set preset = $2 where id = $1", [tenantId, preset]);
+  });
+}
+
 export async function createPublishedCatalog(
   request: APIRequestContext,
   tenant: AcceptanceTenant,

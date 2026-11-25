@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { MediaUploader } from "@/features/catalog/web/MediaUploader";
+import { ProductBarcodeScanner } from "@/features/catalog/web/ProductBarcodeScanner";
 import {
   catalogFetch,
   catalogHeaders,
@@ -819,6 +820,7 @@ function ItemModal({
                     }
                   />
                 </label>
+                <ProductBarcodeScanner key={itemType} itemType={itemType} onCode={setBarcode} />
                 {itemType === "unit" ? (
                   <>
                     <label className="flex items-center gap-2 text-xs text-[#d4d4dc]">
