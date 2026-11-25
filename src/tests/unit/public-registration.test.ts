@@ -201,4 +201,42 @@ describe("Public Registration Feature", () => {
       }),
     );
   });
+
+  it("declares app.user_id before the session insert so RLS accepts the row", async () => {
+    const operations: string[] = [];
+    const transaction = {
+      execute: vi.fn(async () => {
+        operations.push("execute");
+      }),
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([]),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn(async (value: { tokenDigest?: string }) => {
+        operations.push(value?.tokenDigest ? "session" : "row");
+      }),
+    };
+    vi.mocked(db.transaction).mockImplementation(async (callback) =>
+      callback(transaction as never),
+    );
+
+    await new PublicRegistrationService(
+      () => new Date("2026-09-20T00:00:00.000Z"),
+      async () => "hashed-password",
+    ).register({
+      businessName: "Pinamar Demo",
+      slug: "pinamar-demo",
+      preset: "gastronomy",
+      location,
+      email: "owner@pinamar-demo.test",
+      password: "Password123!",
+    });
+
+    // platform context + tenant context + user context
+    expect(operations.filter((op) => op === "execute")).toHaveLength(3);
+    expect(operations.lastIndexOf("execute")).toBeLessThan(
+      operations.indexOf("session"),
+    );
+  });
 });

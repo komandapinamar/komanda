@@ -1,8 +1,10 @@
 import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import {
+  AccountDisabledError,
   EmailAlreadyTakenError,
   PublicRegistrationService,
+  SessionAccountMismatchError,
   SlugAlreadyTakenError,
 } from "@/features/provisioning/application/public-registration.service";
 import {
@@ -14,6 +16,7 @@ import {
   sessionTokenFromRequest,
 } from "@/features/identity/web/authenticated-session";
 import { correlationIdFromRequest } from "@/lib/observability/request-context";
+import { logUnexpectedError } from "@/lib/observability/unexpected-error";
 import { problemResponse } from "@/lib/http/problem";
 
 export const runtime = "nodejs";
@@ -95,12 +98,32 @@ export async function POST(request: Request) {
       });
     }
 
+    if (error instanceof SessionAccountMismatchError) {
+      return problemResponse({
+        status: 401,
+        title: "Sesión no válida",
+        code: "SESSION_ACCOUNT_MISMATCH",
+        correlationId,
+        detail: error.message,
+      });
+    }
+
+    if (error instanceof AccountDisabledError) {
+      return problemResponse({
+        status: 403,
+        title: "Cuenta deshabilitada",
+        code: "ACCOUNT_DISABLED",
+        correlationId,
+        detail: error.message,
+      });
+    }
+
+    logUnexpectedError(correlationId, "auth.register", error);
     return problemResponse({
       status: 500,
       title: "Error al registrar el negocio",
       code: "REGISTRATION_FAILED",
       correlationId,
-      detail: error instanceof Error ? error.message : "Error inesperado",
     });
   }
 }

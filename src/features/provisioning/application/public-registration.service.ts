@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { randomBytes, randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   setTenantTransactionContext,
@@ -33,6 +33,20 @@ export class EmailAlreadyTakenError extends Error {
   ) {
     super(message);
     this.name = "EmailAlreadyTakenError";
+  }
+}
+
+export class SessionAccountMismatchError extends Error {
+  constructor(message = "La sesión no corresponde a una cuenta activa.") {
+    super(message);
+    this.name = "SessionAccountMismatchError";
+  }
+}
+
+export class AccountDisabledError extends Error {
+  constructor(message = "La cuenta se encuentra deshabilitada.") {
+    super(message);
+    this.name = "AccountDisabledError";
   }
 }
 
@@ -145,10 +159,10 @@ export class PublicRegistrationService {
 
         if (authenticatedUser) {
           if (!existingUser || existingUser.id !== authenticatedUser.id) {
-            throw new Error("La sesión no corresponde a una cuenta activa.");
+            throw new SessionAccountMismatchError();
           }
           if (existingUser.status === "disabled") {
-            throw new Error("La cuenta se encuentra deshabilitada.");
+            throw new AccountDisabledError();
           }
           userId = existingUser.id;
         } else if (existingUser) {
@@ -160,7 +174,7 @@ export class PublicRegistrationService {
             throw new EmailAlreadyTakenError();
           }
           if (existingUser.status === "disabled") {
-            throw new Error("La cuenta se encuentra deshabilitada.");
+            throw new AccountDisabledError();
           }
           userId = existingUser.id;
         } else {
@@ -175,6 +189,14 @@ export class PublicRegistrationService {
             emailVerifiedAt: now,
           });
         }
+
+        // user_sessions exige que app.user_id coincida con el dueño de la fila
+        // (WITH CHECK de la política RLS). El contexto de servicio de plataforma
+        // deja app.user_id vacío, así que hay que declararlo antes de insertar
+        // la sesión; de lo contrario Postgres rechaza el INSERT.
+        await transaction.execute(
+          sql`select set_config('app.user_id', ${userId}, true)`,
+        );
 
         // 3. Create Tenant & Location
         const tenantId = randomUUID();
