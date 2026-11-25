@@ -5,6 +5,7 @@ import {
 } from "@/features/payments/infrastructure/mercadopago-webhook.verifier";
 import { ZodError } from "zod";
 import {
+  MercadoPagoWebhookPaymentMismatchError,
   MercadoPagoWebhookProviderError,
   MercadoPagoWebhookRoutingError,
   receiveMercadoPagoWebhook,
@@ -37,13 +38,23 @@ export async function POST(request: Request, route: RouteContext) {
     const event = parseSanitizedMercadoPagoWebhook(payload);
     const signature = request.headers.get("x-signature") ?? "";
     const requestId = request.headers.get("x-request-id") ?? "";
+    const queryDataId = new URL(request.url).searchParams.get("data.id");
+    if (!requestId || (queryDataId !== null && queryDataId !== event.resourceId)) {
+      return unauthorized(correlationId);
+    }
 
     verifyMercadoPagoWebhook({
       signature,
       requestId,
-      dataId: event.resourceId,
+      dataId: queryDataId ?? event.resourceId,
       secret,
     });
+
+    if (event.topic !== "payment") {
+      return problemResponse({
+        status: 422, title: "Unsupported webhook topic", code: "WEBHOOK_UNSUPPORTED_TOPIC", correlationId,
+      });
+    }
 
     const received = await receiveMercadoPagoWebhook({
       routingKey,
@@ -63,7 +74,7 @@ export async function POST(request: Request, route: RouteContext) {
         duplicate: received.duplicate,
       },
       {
-        status: 202,
+        status: 200,
         headers: { "X-Correlation-Id": correlationId },
       },
     );
@@ -78,6 +89,12 @@ export async function POST(request: Request, route: RouteContext) {
 
     if (error instanceof MercadoPagoWebhookRoutingError) {
       return nonDisclosingNotFound(correlationId);
+    }
+
+    if (error instanceof MercadoPagoWebhookPaymentMismatchError) {
+      return problemResponse({
+        status: 422, title: "Payment does not match the checkout", code: "WEBHOOK_PAYMENT_MISMATCH", correlationId,
+      });
     }
 
     if (error instanceof MercadoPagoWebhookProviderError) {

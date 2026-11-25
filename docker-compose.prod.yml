@@ -90,21 +90,6 @@ services:
       - ./secrets/komanda:/run/secrets/komanda:ro
     stop_grace_period: 30s
 
-  worker-reconcile:
-    build:
-      context: ./src
-      dockerfile: Dockerfile
-    command: ["npm", "run", "payments:reconcile"]
-    restart: unless-stopped
-    env_file:
-      - ./src/.env.production
-    environment:
-      OTEL_SERVICE_NAME: komanda-reconcile
-      KOMANDA_SECRETS_DIR: /run/secrets/komanda
-    volumes:
-      - ./secrets/komanda:/run/secrets/komanda:ro
-    stop_grace_period: 30s
-
   # Dead-man's switch: un ping a Healthchecks.io por minuto. Vive DENTRO del
   # VPS a proposito: si el VPS muere o se cuelga, los pings se cortan y
   # Healthchecks (externo) dispara la alerta.

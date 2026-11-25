@@ -28,26 +28,25 @@ Analytics
 
 ## Background Workers
 
-Core has background workers that are deployed as their own processes. They are
-not part of the Next.js or Fastify runtime and they never serve traffic.
+The outbox dispatcher is deployed separately from Next.js and Fastify and never serves traffic.
 
 | Worker | Command | What it does |
 | --- | --- | --- |
 | Outbox dispatcher | `npm run outbox:dispatch` | Claims pending `outbox_events` with a lease, applies the consumer registered for the event type and publishes the event. Also self-heals a missing kitchen ticket for `print.intent.created`. |
-| Payment reconciliation | `npm run payments:reconcile` | Resolves payments left in `verification_required` after an ambiguous provider response, by querying the provider and transitioning the order to `paid` or `failed`. |
-
-Both workers accept `--once` to run a single round and exit, which is the shape
-a scheduled job needs:
+The dispatcher accepts `--once` to run a single round and exit:
 
 ```bash
 npm run outbox:dispatch -- --once
-npm run payments:reconcile -- --once
 ```
 
-Continuous mode is the default and drains with an interval
-(`OUTBOX_DISPATCH_INTERVAL_MS`, `PAYMENT_RECONCILE_INTERVAL_MS`). Both workers
-handle `SIGTERM`/`SIGINT`: they finish the round in progress, close the
-database pool and exit, so a rollout never interrupts a delivery in flight.
+Continuous mode is the default (`OUTBOX_DISPATCH_INTERVAL_MS`). On
+`SIGTERM`/`SIGINT` the dispatcher finishes the active round and closes its pool.
+
+Mercado Pago payments are processed synchronously by the signed webhook. The
+endpoint reads the authoritative payment, commits the update, then returns HTTP
+200. Failed deliveries are retried by Mercado Pago, not by a periodic payment
+worker. Before stopping a separately deployed `komanda-reconcile`, verify a
+payment and its webhook delivery against the production endpoint.
 
 ### RLS and platform services
 
@@ -206,7 +205,7 @@ Every variable and secret the app consumes is declared in
 `secrets/README.md`), never committed. `prod` and `stg` fail fast when a
 required value is missing, including the Grafana **OTLP base endpoint**
 (`https://…/otlp`), its authorization headers and `KOMANDA_TELEMETRY_IDENTIFIER_KEY`
-(at least 32 characters, shared by the four services). `test` never exports
+(at least 32 characters, shared by the deployed services). `test` never exports
 unless you point it at an explicit endpoint.
 
 What leaves the process: operation names, outcomes, durations, finite event
@@ -214,8 +213,8 @@ counters and HMAC-SHA256 hashed identifiers. Request bodies, ticket/payment
 payloads, customer data, URLs, SQL, tokens and error strings are never exported.
 Traces are independent operation roots: there is no continuous checkout-to-printer
 trace. Instrumentation is Node-only, so edge/middleware execution is not covered.
-Compose assigns `komanda-web`, `komanda-fastify`, `komanda-outbox` and
-`komanda-reconcile` identities plus a 30-second stop grace period.
+Compose assigns `komanda-web`, `komanda-fastify` and `komanda-outbox`
+identities plus a 30-second stop grace period.
 
 Rebuild and redeploy after pulling this change: it adds runtime dependencies and
 `src/instrumentation.ts`, so environment changes alone are not enough. Outbound
